@@ -9,6 +9,10 @@ class AuthenticationController extends BaseController {
          */
         return this.unautharized(res, "unable to login")
     }
+
+    public static register(req: express.Request, res: express.Response): express.Response{
+        return this.ok(res);
+    }
 }
 
 export default AuthenticationController;

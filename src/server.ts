@@ -1,12 +1,15 @@
 import express from 'express';
+import dotenv from 'dotenv'; 
+import bodyParser from "body-parser";
 import AuthenticationController from './api/modules/auth/controllers/AuthenticationController';
-const router = express.Router();
+import oauthRouter from './api/modules/oauth2/routes';
+
 const app = express();
 
-//TODO : Move this to seperate routes folder
-app.post('/login',  (req, res) => {
-    return AuthenticationController.login(req, res);
-})
+app.use(bodyParser.json());
+dotenv.config();  // Load environment variables from .env file
+
+app.use('/oauth2', oauthRouter);
 
 app.listen(3000, () => {
     console.log(`Example app listening on port ${3000}`);

@@ -1,4 +1,4 @@
-import IResponseHandler from "./api/modules/interfaces/IResponseHandler";
+import IResponseHandler from "./api/interfaces/IResponseHandler";
 
 class ResponseHandler {
 
