@@ -2,6 +2,7 @@ import Joi from "joi";
 import BaseModel from "../../../models/BaseModel";
 import OauthClientDto from "../dtos/OauthClientDto";
 import CryptoHelper from "../../../../helpers/CryptoHelper";
+import { QueryResult } from "pg";
 
 class ClientModel extends BaseModel{
 
@@ -25,6 +26,11 @@ class ClientModel extends BaseModel{
         }
        const res =  await OauthClientDto.createClient({...attributes, "client_id": CryptoHelper.generateRandomString(16), "client_secret": CryptoHelper.generateRandomString(32)});
         return true;
+    }
+
+    public async getAll():  Promise<QueryResult<any>> {
+        const res = await OauthClientDto.getAllClients();
+        return res;
     }
 }
 

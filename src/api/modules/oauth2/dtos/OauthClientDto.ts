@@ -31,6 +31,11 @@ class OauthClientDto {
       return res;
       
     }
+
+    public static async getAllClients() {
+      const res = await pool.query(`SELECT * FROM auth.client`);
+      return res.rows;
+    }
 } 
 
 export default OauthClientDto;

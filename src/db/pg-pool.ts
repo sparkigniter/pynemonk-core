@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 
 const pool = new Pool({
-    host: 'localhost',
+    host: 'postgres',
     user: 'postgres',
     password: '@forsaken123',
     database: 'pynemonk_core',
