@@ -34,7 +34,7 @@ class OauthClientDto {
 
     public static async getAllClients() {
       const res = await pool.query(`SELECT * FROM auth.client`);
-      return res.rows;
+      return res;
     }
 } 
 

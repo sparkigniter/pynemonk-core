@@ -28,9 +28,9 @@ class ClientModel extends BaseModel{
         return true;
     }
 
-    public async getAll():  Promise<QueryResult<any>> {
+    public async getAll():  Promise<Array<any>> {
         const res = await OauthClientDto.getAllClients();
-        return res;
+        return res.rows;
     }
 }
 
