@@ -6,8 +6,8 @@ class BaseController {
         return ApiResponseHandler.unautharized(res, message);
     }
 
-    public static ok(res:express.Response, message?:String): express.Response {
-        return ApiResponseHandler.ok(res, message);
+    public static ok(res:express.Response, message?:String, data?:any): express.Response {
+        return ApiResponseHandler.ok(res, message, data);
     }
 
     public static badrequest(res:express.Response, message?:String): express.Response {

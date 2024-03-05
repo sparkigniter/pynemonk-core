@@ -8,8 +8,8 @@ class ApiResponseHandler extends ResponseHandler {
         return res.status(401).json(jsonRes);
     }
 
-    public static ok(res:express.Response, message?:String): express.Response {
-        let jsonRes:JSON = this.jsonResponse({message: message ?? "ok", success: true});
+    public static ok(res:express.Response, message?:String, data?:any): express.Response {
+        let jsonRes:JSON = this.jsonResponse({message: message ?? "ok", success: true, data: data});
         return res.status(res.statusCode).json(jsonRes);
     }
 
