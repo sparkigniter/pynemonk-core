@@ -1,5 +1,5 @@
 import * as express from 'express';
-import ClientController from './controllers/ClientController';
+import ClientController from './controllers/ClientController.ts';
 const oauthRouter = express.Router();
 
 

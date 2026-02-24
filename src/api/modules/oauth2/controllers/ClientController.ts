@@ -1,6 +1,6 @@
 import * as express from 'express'
-import BaseController from "../../../controllers/BaseController";
-import ClientModel from '../models/ClientModel';
+import BaseController from "../../../controllers/BaseController.ts";
+import ClientModel from '../models/ClientModel.ts';
 
 class ClientController extends BaseController {
 

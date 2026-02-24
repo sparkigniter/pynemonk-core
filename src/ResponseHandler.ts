@@ -1,4 +1,4 @@
-import IResponseHandler from "./api/interfaces/IResponseHandler";
+import type IResponseHandler from "./api/interfaces/IResponseHandler.ts";
 
 class ResponseHandler {
 
@@ -7,7 +7,7 @@ class ResponseHandler {
         if(response.data !== undefined){
             res["data"] = response.data;
         }
-        return <JSON>res;
+        return res as JSON;
     }
 }
 

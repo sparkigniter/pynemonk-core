@@ -1,5 +1,5 @@
 import Joi from "joi";
-import pool from "../../db/pg-pool";
+import pool from "../../db/pg-pool.ts";
 
 class BaseModel {
 

@@ -1,8 +1,8 @@
 import Joi from "joi";
-import BaseModel from "../../../models/BaseModel";
-import OauthClientDto from "../dtos/OauthClientDto";
-import CryptoHelper from "../../../../helpers/CryptoHelper";
-import { QueryResult } from "pg";
+import BaseModel from "../../../models/BaseModel.ts";
+import OauthClientDto from "../dtos/OauthClientDto.ts";
+import CryptoHelper from "../../../../helpers/CryptoHelper.ts";
+import type { QueryResult } from "pg";
 
 class ClientModel extends BaseModel{
 

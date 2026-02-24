@@ -1,7 +1,5 @@
-interface IResponseHandler {
-    message?: String,
-    success: boolean,
-    data?: any
+export default interface IResponseHandler {
+    message?: string;
+    success: boolean;
+    data?: any;
 }
-
-export default IResponseHandler;

@@ -1,5 +1,5 @@
-import pool from "../../../../db/pg-pool";
-import CreateClientRequest from "./requests/CreateClientRequest";
+import pool from "../../../../db/pg-pool.ts";
+import type CreateClientRequest from "./requests/CreateClientRequest.ts";
 
 class OauthClientDto {
 

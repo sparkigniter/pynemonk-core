@@ -1,8 +1,6 @@
-interface CreateClientRequest {
-     name: String; 
-     description: String;
-     client_id: String;
-     client_secret: String;
+export default interface CreateClientRequest {
+     name: string;
+     description: string;
+     client_id: string;
+     client_secret: string;
 }
-
-export default CreateClientRequest;

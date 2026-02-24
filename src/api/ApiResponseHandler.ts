@@ -1,5 +1,5 @@
 import * as express from 'express';
-import ResponseHandler from '../ResponseHandler';
+import ResponseHandler from '../ResponseHandler.ts';
 
 class ApiResponseHandler extends ResponseHandler {
 

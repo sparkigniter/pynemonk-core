@@ -1,5 +1,5 @@
 import * as express from 'express'
-import BaseController from '../../../controllers/BaseController';
+import BaseController from '../../../controllers/BaseController.ts';
 
 class AuthenticationController extends BaseController {
 

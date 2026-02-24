@@ -1,8 +1,8 @@
 import express from 'express';
 import dotenv from 'dotenv'; 
 import bodyParser from "body-parser";
-import AuthenticationController from './api/modules/auth/controllers/AuthenticationController';
-import oauthRouter from './api/modules/oauth2/routes';
+//import AuthenticationController from './api/modules/auth/controllers/AuthenticationController';
+import oauthRouter from './api/modules/oauth2/routes.ts';
 
 const app = express();
 
