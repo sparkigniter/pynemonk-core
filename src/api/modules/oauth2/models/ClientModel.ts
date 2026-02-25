@@ -1,8 +1,10 @@
 import Joi from "joi";
 import BaseModel from "../../../models/BaseModel.ts";
-import OauthClientDto from "../dtos/OauthClientDto.ts";
+import OauthClientHelper from "../../auth/helpers/OauthClientHelper.ts";
 import CryptoHelper from "../../../../helpers/CryptoHelper.ts";
-import type { QueryResult } from "pg";
+import CreateClientRequest from "../dtos/requests/CreateClientRequest.ts";
+import CreateClientResponse from "../dtos/responses/CreateClientRespons.ts";
+//import { QueryResult } from "pg";
 
 class ClientModel extends BaseModel{
 
@@ -17,19 +19,16 @@ class ClientModel extends BaseModel{
         return super.validate(this.rules(), attributes);
     }
 
-    public async save(attributes: any, validate: Boolean = true): Promise<Boolean> {
-        if(validate && !this.validate(attributes)){
-            return false;
+    public async save(attributes: any, skipValidation: Boolean = false): Promise<CreateClientResponse> {
+        if(!skipValidation && (!this.validate(attributes)  || this.error != undefined)){
+            throw new Error(this.error?.message);
         }
-        if(this.error != undefined){
-            return false;
-        }
-       const res =  await OauthClientDto.createClient({...attributes, "client_id": CryptoHelper.generateRandomString(16), "client_secret": CryptoHelper.generateRandomString(32)});
-        return true;
+        const res =  await OauthClientHelper.createClient({...attributes, "client_id": CryptoHelper.generateRandomString(16), "client_secret": CryptoHelper.generateRandomString(32)});
+        return res.rows[0];
     }
 
-    public async getAll():  Promise<Array<any>> {
-        const res = await OauthClientDto.getAllClients();
+    public async getAll():  Promise<Array<CreateClientResponse>> {
+        const res = await OauthClientHelper.getAllClients();
         return res.rows;
     }
 }

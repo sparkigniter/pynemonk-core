@@ -7,7 +7,7 @@ class ResponseHandler {
         if(response.data !== undefined){
             res["data"] = response.data;
         }
-        return res as JSON;
+        return res as JSON; // Type assertion to JSON
     }
 }
 

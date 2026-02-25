@@ -1,9 +1,9 @@
-import { Pool } from 'pg';
-
+import pkg from 'pg';
+const { Pool } = pkg;
 const pool = new Pool({
     host: 'postgres',
     user: 'postgres',
-    password: '@forsaken123',
+    password: 'password',
     database: 'pynemonk_core',
     max: 20,
     idleTimeoutMillis: 30000,

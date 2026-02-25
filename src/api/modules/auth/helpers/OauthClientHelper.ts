@@ -1,7 +1,7 @@
 import pool from "../../../../db/pg-pool.ts";
-import type CreateClientRequest from "./requests/CreateClientRequest.ts";
+import type CreateClientRequest from "../../oauth2/dtos/requests/CreateClientRequest.ts";
 
-class OauthClientDto {
+class OauthClientHelper {
 
     public static async createClient(client: CreateClientRequest) {
         const query = `
@@ -15,7 +15,7 @@ class OauthClientDto {
           updated_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7
-        ) RETURNING id`;
+        ) RETURNING id, name, description, client_id, created_at, updated_at;`;
       
       const values = [
         client.name, 
@@ -28,14 +28,15 @@ class OauthClientDto {
       ];
       
       const res = await pool.query(query, values);
+      console.log("Client created with ID:", res.rows);
       return res;
       
     }
 
     public static async getAllClients() {
-      const res = await pool.query(`SELECT * FROM auth.client`);
+      const res = await pool.query(`SELECT id, name, description, client_id, created_at, updated_at FROM auth.client`);
       return res;
     }
 } 
 
-export default OauthClientDto;
+export default OauthClientHelper;
