@@ -12,7 +12,7 @@ import { injectable } from "tsyringe";
  */
 @injectable()
 class ClientController extends BaseController {
-    
+
     /**
      * ClientModel instance for interacting with client data and performing operations such as validation and database interactions.
      */
@@ -35,9 +35,9 @@ class ClientController extends BaseController {
      * @returns 
      */
     public async create(req: e.Request, res: e.Response): Promise<e.Response> {
-        try { 
+        try {
             this.clientModel.setScenario("CREATE_CLIENT"); // Set the scenario for validation
-            if(!await this.clientModel.validate(req.body)) {
+            if (!await this.clientModel.validate(req.body)) {
                 return this.badrequest(res);
             }
             const responseData = await this.clientModel.save(req.body, true); // skip validation as it is already done above
@@ -57,7 +57,7 @@ class ClientController extends BaseController {
      * @param res 
      * @returns 
      */
-    public  async getAll(req: e.Request, res: e.Response): Promise<e.Response> {
+    public async getAll(req: e.Request, res: e.Response): Promise<e.Response> {
         try {
             const data = await this.clientModel.getAll();
             return this.ok(res, RESPONSE_TYPES.SUCCESS, data);
@@ -72,11 +72,11 @@ class ClientController extends BaseController {
      * @param res 
      * @returns 
      */
-    public  async get(req: e.Request, res: e.Response): Promise<e.Response> {
+    public async get(req: e.Request, res: e.Response): Promise<e.Response> {
         try {
             const clientId = req.params.clientId;
             const data = await this.clientModel.getClientById(clientId);
-            return this.ok(res, RESPONSE_TYPES.SUCCESS, {client_id: clientId, client_secret: data});
+            return this.ok(res, RESPONSE_TYPES.SUCCESS, { client_id: clientId, client_secret: data });
         } catch (error) {
             return this.internalservererror(res, "An error occurred while fetching client");
         }

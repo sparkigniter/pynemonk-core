@@ -1,9 +1,17 @@
-import pool from "../../../../db/pg-pool.ts";
+import { inject, injectable } from "tsyringe";
 import type CreateClientRequest from "../dtos/requests/CreateClientRequest.ts";
 
+@injectable()
 class OauthClientHelper {
 
-    public  async createClient(client: CreateClientRequest) {
+  protected db: any; // Replace with actual database connection type
+
+  constructor(@inject("DB") DB: any) {
+    // Initialize any necessary properties or dependencies
+    this.db = DB;
+  }
+
+    public  async createClient(client: CreateClientRequest) : Promise<any> {
         const query = `
         INSERT INTO auth.client (
           name, 
@@ -27,29 +35,29 @@ class OauthClientHelper {
         new Date()
       ];
       
-      const res = await pool.query(query, values);
+      const res = await this.db.query(query, values);
       console.log("Client created with ID:", res.rows);
       return res;
       
     }
 
     public  async getAllClients() {
-      const res = await pool.query(`SELECT id, name, description, client_id, created_at, updated_at FROM auth.client`);
+      const res = await this.db.query(`SELECT id, name, description, client_id, created_at, updated_at FROM auth.client`);
       return res;
     }
 
     public  async getClientByName(name: string) {
-      const res = await pool.query(`SELECT id, name, description, client_id, created_at, updated_at FROM auth.client WHERE name = $1`, [name]);
+      const res = await this.db.query(`SELECT id, name, description, client_id, created_at, updated_at FROM auth.client WHERE name = $1`, [name]);
       return res.rows[0];
     }
 
     public  async getClientById(clientId: string) {
-      const res = await pool.query(`SELECT id, name, description, client_id, created_at, updated_at FROM auth.client WHERE client_id = $1`, [clientId]);
+      const res = await this.db.query(`SELECT id, name, description, client_id, created_at, updated_at FROM auth.client WHERE id = $1`, [clientId]);
       return res.rows[0];
     }
 
     public  async getClientSecret(clientId: string) {
-      const res = await pool.query(`SELECT client_secret FROM auth.client WHERE client_id = $1`, [clientId]);
+      const res = await this.db.query(`SELECT client_secret FROM auth.client WHERE id = $1`, [clientId]);
       if(res.rows.length === 0) {
         throw new Error("Client not found");
       }

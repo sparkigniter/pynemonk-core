@@ -15,8 +15,6 @@ class ClientModel extends BaseModel{
     client_id!: string;
     client_secret!: string;
 
-    protected scenario: string = "";
-
     protected clientValidator: ClientValidator;
     protected oauthClientHelper: OauthClientHelper;
 
@@ -24,10 +22,6 @@ class ClientModel extends BaseModel{
         super();
         this.clientValidator = clientValidator;
         this.oauthClientHelper = oauthClientHelper;
-    }
-
-    public setScenario(scenario: string) {
-        this.scenario = scenario;
     }
 
     public async validate(attributes: any): Promise<boolean> {

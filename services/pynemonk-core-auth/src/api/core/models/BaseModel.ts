@@ -7,6 +7,8 @@ class BaseModel implements IBaseModel {
     
     protected error?: Joi.ValidationError;
 
+    protected scenario: string = "";
+
     id?: number | undefined;
     created_at?: Date | undefined;
     updated_at?: Date | undefined;
@@ -28,6 +30,12 @@ class BaseModel implements IBaseModel {
     protected ruels(): Joi.Schema {
         return Joi.object();
     }
+
+    public setScenario(scenario: string) {
+        this.scenario = scenario;
+    }    
+
+    
 
 }
 
