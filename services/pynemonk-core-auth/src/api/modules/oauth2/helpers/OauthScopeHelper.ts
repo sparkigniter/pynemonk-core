@@ -1,5 +1,5 @@
 import { inject, injectable } from "tsyringe";
-import CreateScopeRequest from "../dtos/requests/CreateScopeRequest.ts";
+import CreateScopeRequest from "../dtos/requests/CreateScopeRequest.js";
 
 @injectable()
 class OauthScopeHelper {

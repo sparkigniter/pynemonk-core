@@ -1,0 +1,105 @@
+import "reflect-metadata";
+import bcrypt from "bcrypt";
+import { injectable, inject } from "tsyringe";
+import TenantHelper from "../helpers/TenantHelper.js";
+import TenantValidator from "../validator/TenantValidator.js";
+import ValidationError from "../../../errors/ValidationError.js";
+
+/** Generates a URL-friendly slug from a school name */
+function slugify(name: string): string {
+    return name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-");
+}
+
+@injectable()
+class TenantService {
+
+    constructor(@inject(TenantHelper) private tenantHelper: TenantHelper, @inject(TenantValidator) private tenantValidator: TenantValidator, ) {}
+
+    /** Return all active packages */
+    public async getPackages(): Promise<any[]> {
+        return this.tenantHelper.getPackages();
+    }
+
+    /** Step 1: Register a new school tenant and provision its roles */
+    public async registerTenant(data: {
+        name: string;
+        email: string;
+        phone?: string;
+        address?: string;
+        city?: string;
+        state?: string;
+        country?: string;
+        package_id: number;
+    }): Promise<any> {
+        await this.tenantValidator.validate(data);
+
+        const existingTenant = await this.tenantHelper.getTenantByEmail(data.email);
+        if (existingTenant) {
+            const hasOwner = await this.tenantHelper.hasOwner(existingTenant.id);
+            if (hasOwner) {
+                throw new ValidationError("A school with this email is already fully registered. Please log in.");
+            }
+            // Tenant exists but no owner setup yet — allow resuming
+            // Ensure roles are seeded (idempotent)
+            await this.tenantHelper.createDefaultRoles(existingTenant.id);
+            return existingTenant;
+        }
+
+        const slug = slugify(data.name);
+        // Create tenant
+        const tenant = await this.tenantHelper.createTenant({ ...data, slug });
+
+        // Seed all system roles for this tenant
+        await this.tenantHelper.createDefaultRoles(tenant.id);
+
+        return tenant;
+    }
+
+    /**
+     * Step 2: Create the owner account for an already-registered tenant.
+     * Only succeeds if no owner user exists yet (one-time setup guard).
+     */
+    public async setupOwner(
+        tenantId: number,
+        data: { admin_email: string; admin_password: string }
+    ): Promise<any> {
+        await this.tenantValidator.validateOwner(data);
+
+        // Guard: owner can only be set up once
+        const alreadySetup = await this.tenantHelper.hasOwner(tenantId);
+        if (alreadySetup) {
+            throw new ValidationError(
+                "An owner account already exists for this school"
+            );
+        }
+
+        const roleMap = await this.tenantHelper.getRoleMap(tenantId);
+        if (!roleMap['owner']) {
+            throw new ValidationError("Role provisioning incomplete. Please contact support.");
+        }
+
+        const passwordHash = await bcrypt.hash(data.admin_password, 12);
+        const owner = await this.tenantHelper.createAdminUser(
+            tenantId,
+            roleMap['owner'],
+            data.admin_email,
+            passwordHash,
+        );
+
+        return { id: owner.id, email: owner.email };
+    }
+
+    /** Get tenant details by id */
+    public async getTenantById(id: number): Promise<any> {
+        const tenant = await this.tenantHelper.getTenantById(id);
+        if (!tenant) throw new ValidationError("Tenant not found");
+        return tenant;
+    }
+}
+
+export default TenantService;

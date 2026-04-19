@@ -1,17 +1,17 @@
 
 import e from "express";
-import BaseController from "../../../core/controllers/BaseController.ts";
-import ValidationError from "../../../errors/ValidationError.ts";
-import { RESPONSE_TYPES } from '../../../../constants/constants.ts';
-import { injectable } from "tsyringe";
-import ScopeModel from "../models/ScopeModel.ts";
+import BaseController from "../../../core/controllers/BaseController.js";
+import ValidationError from "../../../errors/ValidationError.js";
+import { RESPONSE_TYPES } from '../../../../constants/constants.js';
+import { injectable, inject } from "tsyringe";
+import ScopeModel from "../models/ScopeModel.js";
 
 @injectable()
 class ScopeController extends BaseController {
 
     private scopeModel: ScopeModel;
 
-    constructor(scopeModel: ScopeModel) {
+    constructor(@inject(ScopeModel) scopeModel: ScopeModel) {
         super();
         this.scopeModel = scopeModel;
     }

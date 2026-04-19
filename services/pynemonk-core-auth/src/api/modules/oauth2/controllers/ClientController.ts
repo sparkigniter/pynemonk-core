@@ -1,10 +1,10 @@
 import e from "express";
-import BaseController from "../../../core/controllers/BaseController.ts";
-import ClientModel from '../models/ClientModel.ts';
-import { RESPONSE_TYPES } from '../../../../constants/constants.ts';
-import ValidationError from "../../../errors/ValidationError.ts";
-import ClientValidator from "../validator/ClientValidator.ts";
-import { injectable } from "tsyringe";
+import BaseController from "../../../core/controllers/BaseController.js";
+import ClientModel from '../models/ClientModel.js';
+import { RESPONSE_TYPES } from '../../../../constants/constants.js';
+import ValidationError from "../../../errors/ValidationError.js";
+import ClientValidator from "../validator/ClientValidator.js";
+import { injectable, inject } from "tsyringe";
 
 /**
  * Controller for handling client-related operations in the OAuth2 module.
@@ -23,7 +23,7 @@ class ClientController extends BaseController {
      * @param clientModel 
      * @param clientValidator 
      */
-    constructor(clientModel: ClientModel) {
+    constructor(@inject(ClientModel) clientModel: ClientModel) {
         super();
         this.clientModel = clientModel;
     }

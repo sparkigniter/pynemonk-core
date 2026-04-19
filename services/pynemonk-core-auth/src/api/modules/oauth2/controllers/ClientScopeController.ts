@@ -1,15 +1,15 @@
-import BaseController from "../../../core/controllers/BaseController.ts";
-import { injectable } from "tsyringe";
-import ClientScopeModel from "../models/ClientScopeModel.ts";
+import BaseController from "../../../core/controllers/BaseController.js";
+import { injectable, inject } from "tsyringe";
+import ClientScopeModel from "../models/ClientScopeModel.js";
 import { connect } from "http2";
-import ValidationError from "../../../errors/ValidationError.ts";
+import ValidationError from "../../../errors/ValidationError.js";
 
 @injectable()
 class ClientScopeController extends BaseController {
 
     private clientScopeModel: ClientScopeModel;
 
-    constructor(clientScopeModel: ClientScopeModel) {
+    constructor(@inject(ClientScopeModel) clientScopeModel: ClientScopeModel) {
         super();
         this.clientScopeModel = clientScopeModel;
     }

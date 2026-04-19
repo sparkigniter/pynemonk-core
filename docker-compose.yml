@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# pynemonk — MONOLITH mode
+#
+# All services run as a single Node process.
+# Switch to microservices by using docker-compose.microservices.yml instead.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── API (monolith — all modules in one process) ───────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/pynemonk-monolith/Dockerfile
+    container_name: pynemonk-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - apps/pynemonk-monolith/.env
+    environment:
+      NODE_ENV: production
+      PGHOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pynemonk-net
+
+  # ── Frontend ──────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pynemonk-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    networks:
+      - pynemonk-net
+
+  # ── PostgreSQL (single shared DB for all modules) ─────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: pynemonk-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pynemonk_core
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Run SQL migrations on first boot
+      - ./services/pynemonk-core-auth/sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    networks:
+      - pynemonk-net
+
+networks:
+  pynemonk-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

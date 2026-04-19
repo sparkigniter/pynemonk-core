@@ -1,41 +1,73 @@
 import e from "express";
-import BaseController from "../../../core/controllers/BaseController.ts";
-import ClientModel from "../models/ClientModel.ts";
-import GrantHandlerFactory from "../factory/GrantHandlerFactory.ts";
+import { injectable, inject } from "tsyringe";
+import BaseController from "../../../core/controllers/BaseController.js";
+import ClientModel from "../models/ClientModel.js";
+import GrantHandlerFactory from "../factory/GrantHandlerFactory.js";
+import { RESPONSE_TYPES } from "../../../../constants/constants.js";
+import ValidationError from "../../../errors/ValidationError.js";
 
+/**
+ * TokenController — handles POST /api/v1/oauth2/token
+ *
+ * Supported grant_type values:
+ *   - authorization_code
+ *   - client_credentials
+ *   - password
+ *   - refresh_token
+ *   - implicit
+ */
+@injectable()
 class TokenController extends BaseController {
 
-    private clientModel: ClientModel;
-    private grantFactory: GrantHandlerFactory;
-
-    constructor(clientModel: ClientModel, grantFactory: GrantHandlerFactory) {
+    constructor(@inject(ClientModel) private clientModel: ClientModel, @inject(GrantHandlerFactory) private grantFactory: GrantHandlerFactory,) {
         super();
-        this.clientModel = clientModel;
-        this.grantFactory = grantFactory;
     }
 
     /**
-     * Issue a new token
-     * @param req 
-     * @param res 
-     * @returns 
+     * Issue a new token.
+     * Body must contain: { client_id, client_secret, grant_type, ...grant-specific fields }
      */
     public async issueToken(req: e.Request, res: e.Response): Promise<e.Response> {
         try {
-            // Implement token issuance logic here
-            const clientSecret = await this.clientModel.getClientSecret(req.body.client_id);
-            if (!clientSecret) {
+            const { client_id, client_secret, grant_type } = req.body;
+
+            if (!client_id || !client_secret || !grant_type) {
+                return this.badrequest(res, "client_id, client_secret and grant_type are required");
+            }
+
+            // Verify client credentials
+            let storedSecret: string;
+            try {
+                storedSecret = await this.clientModel.getClientSecret(client_id);
+            } catch {
                 return this.badrequest(res, "Invalid client_id");
             }
-            if (clientSecret !== req.body.client_secret) {
-                return this.badrequest(res, "Invalid client_secret");
-            }
-            const grantHandler = this.grantFactory.getHandler(req.body.grant_type);
-            const tokenResponse = await grantHandler.handle(req.body);
 
-            return this.ok(res, tokenResponse);
+            if (storedSecret !== client_secret) {
+                console.log("Invalid client_secret, token controller");
+                return this.unautharized(res, "Invalid client_secret");
+            }
+
+            // Dispatch to the correct grant handler
+            const handler = this.grantFactory.getHandler(grant_type);
+            console.log("Token handler: ", handler);
+            console.log("Token request body: ", req.body);
+            const tokenResponse = await handler.handle(req.body);
+
+            return this.ok(res, RESPONSE_TYPES.SUCCESS, {
+                access_token: tokenResponse.accessToken,
+                refresh_token: tokenResponse.refreshToken || undefined,
+                token_type: tokenResponse.tokenType,
+                expires_in: tokenResponse.expiresIn,
+            });
         } catch (error) {
-            return this.badrequest(res, error instanceof Error ? error.message : "An error occurred while issuing token");
+            if (error instanceof ValidationError) {
+                return this.badrequest(res, error.message);
+            }
+            return this.badrequest(
+                res,
+                error instanceof Error ? error.message : "An error occurred while issuing token"
+            );
         }
     }
 }

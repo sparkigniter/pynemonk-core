@@ -1,5 +1,5 @@
 import * as express from 'express'
-import ApiResponseHandler from '../ApiResponseHandler.ts';
+import ApiResponseHandler from '../ApiResponseHandler.js';
 
 class BaseController {
     public  unautharized(res:express.Response, message?:string): express.Response {

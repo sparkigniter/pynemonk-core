@@ -1,0 +1,40 @@
+{
+  "name": "pynemonk-core-accounting",
+  "version": "1.0.0",
+  "description": "Accounting module — fee and finance management for pynemonk",
+  "main": "dist/server.js",
+  "exports": {
+    ".": "./dist/server.js",
+    "./module": "./dist/module.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "build:watch": "tsc --watch",
+    "test": "echo \"Error: no test specified\""
+  },
+  "author": "Vikas Biradargoudar",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.1",
+    "express": "^4.18.2",
+    "joi": "^17.12.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
+    "reflect-metadata": "^0.2.2",
+    "tsyringe": "^4.10.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.11.16",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.3.3"
+  },
+  "type": "module"
+}

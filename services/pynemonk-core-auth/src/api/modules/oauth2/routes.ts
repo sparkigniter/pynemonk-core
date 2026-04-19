@@ -1,9 +1,9 @@
 import "reflect-metadata";
 import * as express from 'express';
-import ClientController from './controllers/ClientController.ts';
-import TokenController from './controllers/TokenController.ts';
-import ScopeController from './controllers/ScopeController.ts';
-import ClientScopeController from './controllers/ClientScopeController.ts';
+import ClientController from './controllers/ClientController.js';
+import TokenController from './controllers/TokenController.js';
+import ScopeController from './controllers/ScopeController.js';
+import ClientScopeController from './controllers/ClientScopeController.js';
 import { container } from 'tsyringe';
 const oauthRouter = express.Router();
 

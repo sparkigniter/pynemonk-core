@@ -1,30 +1,39 @@
+import { injectable, inject } from "tsyringe";
+import TokenService from "../../../../services/TokenService.js";
+import GrantHandler from "../../../interfaces/GrantHandler.js";
+import AuthorizationCodeGrantHandler from "../handlers/AuthorizationCodeGrantHandler.js";
+import ClientCredentialsGrantHandler from "../handlers/ClientCredentialsGrantHandler.js";
+import PasswordGrantHandler from "../handlers/PasswordGrantHandler.js";
+import RefreshTokenGrantHandler from "../handlers/RefreshTokenGrantHandler.js";
+import ImplicitGrantHandler from "../handlers/ImplicitGrantHandler.js";
 
-import AuthorizationCodeGrantHandler from "../handlers/AuthorizationCodeGrantHandler.ts";
-import ClientCredentialsGrantHandler from "../handlers/ClientCredentialsGrantHandler.ts";
-import PasswordGrantHandler from "../handlers/PasswordGrantHandler.ts";
-import RefreshTokenGrantHandler from "../handlers/RefreshTokenGrantHandler.ts";
-import ImplicitGrantHandler from "../handlers/ImplicitGrantHandler.ts";
-import { inject, injectable } from "tsyringe";
-
+/**
+ * GrantHandlerFactory — resolves the correct grant handler by grant_type string.
+ * Handlers are injected via constructor so tsyringe manages their dependencies.
+ */
 @injectable()
 class GrantHandlerFactory {
 
-    private grantHandlers: Map<string, GrantHandler> = new Map(
-        "authorization_code": new AuthorizationCodeGrantHandler(),
-        "client_credentials": new ClientCredentialsGrantHandler(),
-        "password": new PasswordGrantHandler(),
-        "refresh_token": new RefreshTokenGrantHandler(),
-        "implicit": new ImplicitGrantHandler(),
-    );
+    private grantHandlers: Map<string, GrantHandler>;
 
-    public getHandler(grant: string) {
-        const handler = this.grantHandlers.get(grant);
+    constructor(@inject(AuthorizationCodeGrantHandler) private authorizationCodeHandler: AuthorizationCodeGrantHandler, @inject(ClientCredentialsGrantHandler) private clientCredentialsHandler: ClientCredentialsGrantHandler, @inject(PasswordGrantHandler) private passwordHandler: PasswordGrantHandler, @inject(RefreshTokenGrantHandler) private refreshTokenHandler: RefreshTokenGrantHandler, @inject(ImplicitGrantHandler) private implicitHandler: ImplicitGrantHandler, ) {
+        this.grantHandlers = new Map<string, GrantHandler>([
+            ["authorization_code", this.authorizationCodeHandler],
+            ["client_credentials", this.clientCredentialsHandler],
+            ["password",           this.passwordHandler],
+            ["refresh_token",      this.refreshTokenHandler],
+            ["implicit",           this.implicitHandler],
+        ]);
+    }
+
+    public getHandler(grantType: string): GrantHandler {
+        const handler = this.grantHandlers.get(grantType);
         if (!handler) {
-            throw new Error(`Unsupported grant type: ${grant}`);
+            throw new Error(`Unsupported grant_type: "${grantType}". ` +
+                `Supported: ${[...this.grantHandlers.keys()].join(", ")}`);
         }
         return handler;
     }
 }
 
 export default GrantHandlerFactory;
-

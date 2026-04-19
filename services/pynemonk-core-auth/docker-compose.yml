@@ -1,20 +1,48 @@
-version: '2'
+version: '3.8'
+
 services:
   api:
     build: .
-    #command: npm start
-    volumes:
-      - .:/opt/app/
-      - /opt/app/node_modules
     ports:
       - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      # Explicit app port — must be set here so it isn't shadowed by PGPORT
+      PORT: 3000
+      # Override DB host to use the compose service name
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: password
+      PGDATABASE: pynemonk_core
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy   # Wait for the healthcheck to pass
+    restart: on-failure
+
   postgres:
     image: postgres:14-alpine
     ports:
-      - 5432:5432
-    volumes:
-      - ./sql/init.sql:/docker-entrypoint-initdb.d/db.sql
+      - "5432:5432"
     environment:
-      POSTGRES_PASSWORD: "password"
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pynemonk_core
+    volumes:
+      # Postgres runs all *.sql files in this dir on first boot, in alphabetical order.
+      # Prefix with numbers to guarantee correct execution sequence:
+      #   01_init.sql    — schema + base tables (original)
+      #   02_migrate.sql — user_credential, refresh_token, seed roles (new)
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./sql/migrate.sql:/docker-entrypoint-initdb.d/02_migrate.sql
+      # Named volume so data persists across container restarts
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pynemonk_core"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres_data:

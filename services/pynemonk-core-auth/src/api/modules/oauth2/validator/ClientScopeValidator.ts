@@ -1,10 +1,10 @@
-import Validator from "../../../core/Validator.ts";
+import Validator from "../../../core/Validator.js";
 import Joi from "joi";
-import OauthClientHelper from "../helpers/OauthClientHelper.ts";
-import OauthScopeHelper from "../helpers/OauthScopeHelper.ts";
-import { injectable } from "tsyringe";
-import ValidationError from "../../../errors/ValidationError.ts";
-import ClientScopeHelper from "../helpers/ClientScopeHelper.ts";
+import OauthClientHelper from "../helpers/OauthClientHelper.js";
+import OauthScopeHelper from "../helpers/OauthScopeHelper.js";
+import { injectable, inject } from "tsyringe";
+import ValidationError from "../../../errors/ValidationError.js";
+import ClientScopeHelper from "../helpers/ClientScopeHelper.js";
 
 @injectable()
 class ClientScopeValidator extends Validator{
@@ -13,7 +13,7 @@ class ClientScopeValidator extends Validator{
     private oauthScopeHelper: OauthScopeHelper;
     private clientScopeHelper: ClientScopeHelper; 
 
-    constructor(oauthClientHelper: OauthClientHelper, oauthScopeHelper: OauthScopeHelper, clientScopeHelper: ClientScopeHelper) {
+    constructor(@inject(OauthClientHelper) oauthClientHelper: OauthClientHelper, @inject(OauthScopeHelper) oauthScopeHelper: OauthScopeHelper, @inject(ClientScopeHelper) clientScopeHelper: ClientScopeHelper) {
         super();
         this.oauthClientHelper = oauthClientHelper;
         this.oauthScopeHelper = oauthScopeHelper;

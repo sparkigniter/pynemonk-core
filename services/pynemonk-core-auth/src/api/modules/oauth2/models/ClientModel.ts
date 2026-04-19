@@ -1,11 +1,11 @@
 import Joi from "joi";
-import BaseModel from "../../../core/models/BaseModel.ts";
-import OauthClientHelper from "../helpers/OauthClientHelper.ts";
-import CryptoHelper from "../../../../helpers/CryptoHelper.ts";
-import type {CreateClientResponse} from "../dtos/responses/CreateClientRespons.ts";
-import ValidationError from "../../../errors/ValidationError.ts";
-import { injectable } from "tsyringe";
-import ClientValidator from "../validator/ClientValidator.ts";
+import BaseModel from "../../../core/models/BaseModel.js";
+import OauthClientHelper from "../helpers/OauthClientHelper.js";
+import CryptoHelper from "../../../../helpers/CryptoHelper.js";
+import type {CreateClientResponse} from "../dtos/responses/CreateClientRespons.js";
+import ValidationError from "../../../errors/ValidationError.js";
+import { injectable, inject } from "tsyringe";
+import ClientValidator from "../validator/ClientValidator.js";
 
 @injectable()
 class ClientModel extends BaseModel{
@@ -18,7 +18,7 @@ class ClientModel extends BaseModel{
     protected clientValidator: ClientValidator;
     protected oauthClientHelper: OauthClientHelper;
 
-    constructor(clientValidator: ClientValidator, oauthClientHelper: OauthClientHelper) {
+    constructor(@inject(ClientValidator) clientValidator: ClientValidator, @inject(OauthClientHelper) oauthClientHelper: OauthClientHelper) {
         super();
         this.clientValidator = clientValidator;
         this.oauthClientHelper = oauthClientHelper;
@@ -48,9 +48,8 @@ class ClientModel extends BaseModel{
     }
 
     public async getClientById(clientId: string): Promise<string> {
-        const res = await this.oauthClientHelper.getClientById(clientId);
-        const client = res.rows.find((row: CreateClientResponse) => row.client_id === clientId);
-        if(!client) {
+        const client = await this.oauthClientHelper.getClientById(clientId);
+        if (!client) {
             throw new Error("Client not found");
         }
         return client.client_secret;

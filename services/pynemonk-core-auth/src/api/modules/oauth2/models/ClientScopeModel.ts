@@ -1,17 +1,17 @@
-import BaseModel from "../../../core/models/BaseModel.ts";
-import ValidationError from "../../../errors/ValidationError.ts";
-import { injectable } from "tsyringe";
+import BaseModel from "../../../core/models/BaseModel.js";
+import ValidationError from "../../../errors/ValidationError.js";
+import { injectable, inject } from "tsyringe";
 import Joi from "joi";
 import e from "express";
-import ClientScopeHelper from "../helpers/ClientScopeHelper.ts";
-import ClientScopeValidator from "../validator/ClientScopeValidator.ts";
+import ClientScopeHelper from "../helpers/ClientScopeHelper.js";
+import ClientScopeValidator from "../validator/ClientScopeValidator.js";
 
 @injectable()
 class ClientScopeModel extends BaseModel {
 
     private clientScopeHelper: ClientScopeHelper; 
     private clientScopeValidator: ClientScopeValidator; 
-    constructor(clientScopeHelper: ClientScopeHelper, clientScopeValidator: ClientScopeValidator) {
+    constructor(@inject(ClientScopeHelper) clientScopeHelper: ClientScopeHelper, @inject(ClientScopeValidator) clientScopeValidator: ClientScopeValidator) {
         super();
         this.clientScopeHelper = clientScopeHelper;
         this.clientScopeValidator = clientScopeValidator;

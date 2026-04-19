@@ -1,16 +1,16 @@
 import Joi from "joi";
-import OauthClientHelper from "../helpers/OauthClientHelper.ts";
-import ValidationError from "../../../errors/ValidationError.ts";
-import Validator from "../../../core/Validator.ts";
-import { injectable } from "tsyringe";
-import OauthScopeHelper from "../helpers/OauthScopeHelper.ts";
+import OauthClientHelper from "../helpers/OauthClientHelper.js";
+import ValidationError from "../../../errors/ValidationError.js";
+import Validator from "../../../core/Validator.js";
+import { injectable, inject } from "tsyringe";
+import OauthScopeHelper from "../helpers/OauthScopeHelper.js";
 
 @injectable()
 class ScopeValidator extends Validator {
 
     private OauthScopeHelper: OauthScopeHelper;
 
-    constructor(oauthScopeHelper: OauthScopeHelper) {
+    constructor(@inject(OauthScopeHelper) oauthScopeHelper: OauthScopeHelper) {
         super();
         this.OauthScopeHelper = oauthScopeHelper;
     }

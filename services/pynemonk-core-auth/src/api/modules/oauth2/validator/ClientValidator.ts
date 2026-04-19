@@ -1,15 +1,15 @@
 import Joi from "joi";
-import OauthClientHelper from "../helpers/OauthClientHelper.ts";
-import ValidationError from "../../../errors/ValidationError.ts";
-import Validator from "../../../core/Validator.ts";
-import { injectable } from "tsyringe";
+import OauthClientHelper from "../helpers/OauthClientHelper.js";
+import ValidationError from "../../../errors/ValidationError.js";
+import Validator from "../../../core/Validator.js";
+import { injectable, inject } from "tsyringe";
 
 @injectable()
 class ClientValidator extends Validator {
 
     private OauthClientHelper: OauthClientHelper;
 
-    constructor(oauthClientHelper: OauthClientHelper) {
+    constructor(@inject(OauthClientHelper) oauthClientHelper: OauthClientHelper) {
         super();
         this.OauthClientHelper = oauthClientHelper;
     }

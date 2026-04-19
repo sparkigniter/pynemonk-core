@@ -1,8 +1,8 @@
-import BaseModel from "../../../core/models/BaseModel.ts";
-import ValidationError  from "../../../errors/ValidationError.ts";
-import OauthScopeHelper from "../helpers/OauthScopeHelper.ts";
-import { injectable } from "tsyringe";
-import ScopeValidator from "../validator/ScopeValidator.ts";
+import BaseModel from "../../../core/models/BaseModel.js";
+import ValidationError  from "../../../errors/ValidationError.js";
+import OauthScopeHelper from "../helpers/OauthScopeHelper.js";
+import { injectable, inject } from "tsyringe";
+import ScopeValidator from "../validator/ScopeValidator.js";
 import Joi from "joi";
 
 @injectable()
@@ -12,7 +12,7 @@ class ScopeModel extends BaseModel {
 
     private scopeValidator: ScopeValidator; // TODO: Create ScopeValidator and replace 'any' with the correct type
 
-    constructor(oauthScopeHelper: OauthScopeHelper, scopeValidator: ScopeValidator) {
+    constructor(@inject(OauthScopeHelper) oauthScopeHelper: OauthScopeHelper, @inject(ScopeValidator) scopeValidator: ScopeValidator) {
         super();
         this.oauthScopeHelper = oauthScopeHelper;
         this.scopeValidator = scopeValidator;
