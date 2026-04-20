@@ -1,11 +1,10 @@
-import * as express from 'express'
-import ApiResponseHandler from '../ApiResponseHandler.js';
+import * as express from "express";
+import ApiResponseHandler from "../ApiResponseHandler.js";
 
-import { UserContext, AuthenticatedRequest } from '../middleware/AuthMiddleware.js';
+import { UserContext, AuthenticatedRequest } from "../middleware/AuthMiddleware.js";
 
 class BaseController {
-    constructor() { }
-
+    constructor() {}
 
     /** Get tenant ID from user context */
     protected getTenantId(req: express.Request): number {
@@ -27,15 +26,20 @@ class BaseController {
     }
 
     public internalservererror(res: express.Response, message?: string): express.Response {
-        let jsonRes: JSON = ApiResponseHandler.jsonResponse({ message: message ?? "Internal Server Error", success: false })
+        const jsonRes: JSON = ApiResponseHandler.jsonResponse({
+            message: message ?? "Internal Server Error",
+            success: false,
+        });
         return res.status(500).json(jsonRes);
     }
 
     public notfound(res: express.Response, message?: string): express.Response {
-        let jsonRes: JSON = ApiResponseHandler.jsonResponse({ message: message ?? "Not Found", success: false })
+        const jsonRes: JSON = ApiResponseHandler.jsonResponse({
+            message: message ?? "Not Found",
+            success: false,
+        });
         return res.status(404).json(jsonRes);
     }
-
 }
 
 export default BaseController;

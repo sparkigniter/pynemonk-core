@@ -9,14 +9,20 @@ import jwt from "jsonwebtoken";
 export function requireAuth(req: e.Request, res: e.Response, next: e.NextFunction): void {
     const authHeader = req.headers["authorization"];
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        res.status(401).json({ success: false, message: "Missing or malformed Authorization header" });
+        res.status(401).json({
+            success: false,
+            message: "Missing or malformed Authorization header",
+        });
         return;
     }
 
     const token = authHeader.slice(7);
     const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
     if (!secret) {
-        res.status(500).json({ success: false, message: "Server misconfiguration: missing JWT secret" });
+        res.status(500).json({
+            success: false,
+            message: "Server misconfiguration: missing JWT secret",
+        });
         return;
     }
 

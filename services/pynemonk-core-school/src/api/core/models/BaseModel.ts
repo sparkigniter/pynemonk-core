@@ -4,7 +4,6 @@ import ValidationError from "../../errors/ValidationError.js";
 import IBaseModel from "../interfaces/IBaseModel.js";
 
 class BaseModel implements IBaseModel {
-    
     protected error?: Joi.ValidationError;
 
     protected scenario: string = "";
@@ -17,7 +16,7 @@ class BaseModel implements IBaseModel {
         throw new Error("Method not implemented.");
     }
 
-    async validate(attributes: any): Promise<any>{
+    async validate(attributes: any): Promise<any> {
         try {
             const rules = this.ruels();
             return await rules.validateAsync(attributes);
@@ -33,10 +32,7 @@ class BaseModel implements IBaseModel {
 
     public setScenario(scenario: string) {
         this.scenario = scenario;
-    }    
-
-    
-
+    }
 }
 
 export default BaseModel;

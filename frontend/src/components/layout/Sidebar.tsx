@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, GraduationCap, CalendarCheck,
     Settings, School, BookOpen, DollarSign, BarChart2,
-    ChevronRight, LogOut, ChevronDown, Building2
+    ChevronRight, LogOut, ChevronDown, Building2, Layers
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -11,6 +11,7 @@ const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, badge: null },
     { name: 'Students', path: '/students', icon: GraduationCap, badge: '1,248' },
     { name: 'Teachers', path: '/teachers', icon: Users, badge: '84' },
+    { name: 'Grades', path: '/grades', icon: Layers, badge: null },
     { name: 'Attendance', path: '/attendance', icon: CalendarCheck, badge: null },
     { name: 'Courses', path: '/courses', icon: BookOpen, badge: '32' },
     { name: 'Finance', path: '/finance', icon: DollarSign, badge: null },

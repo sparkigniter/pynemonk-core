@@ -22,7 +22,7 @@ export default class RoleService {
              WHERE (tenant_id = $1 OR tenant_id IS NULL) 
              AND is_deleted = false 
              ORDER BY name ASC`,
-            [tenantId]
+            [tenantId],
         );
         return res.rows;
     }
@@ -34,7 +34,7 @@ export default class RoleService {
         // 1. Get role ID
         const roleRes = await this.db.query(
             `SELECT id FROM auth.role WHERE (tenant_id = $1 OR tenant_id IS NULL) AND slug = $2 AND is_deleted = false`,
-            [tenantId, roleSlug]
+            [tenantId, roleSlug],
         );
 
         if (roleRes.rows.length === 0) {
@@ -48,7 +48,7 @@ export default class RoleService {
             `INSERT INTO auth.user_role (user_id, role_id, is_primary) 
              VALUES ($1, $2, false) 
              ON CONFLICT (user_id, role_id) DO UPDATE SET is_deleted = false`,
-            [userId, roleId]
+            [userId, roleId],
         );
     }
 
@@ -58,14 +58,14 @@ export default class RoleService {
     public async removeRole(tenantId: number, userId: number, roleSlug: string): Promise<void> {
         const roleRes = await this.db.query(
             `SELECT id FROM auth.role WHERE (tenant_id = $1 OR tenant_id IS NULL) AND slug = $2`,
-            [tenantId, roleSlug]
+            [tenantId, roleSlug],
         );
 
         if (roleRes.rows.length > 0) {
             await this.db.query(
                 `UPDATE auth.user_role SET is_deleted = true 
                  WHERE user_id = $1 AND role_id = $2`,
-                [userId, roleRes.rows[0].id]
+                [userId, roleRes.rows[0].id],
             );
         }
     }
@@ -79,7 +79,7 @@ export default class RoleService {
              FROM auth.role r
              JOIN auth.user_role ur ON r.id = ur.role_id
              WHERE ur.user_id = $1 AND ur.is_deleted = false`,
-            [userId]
+            [userId],
         );
         return res.rows;
     }

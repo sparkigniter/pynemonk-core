@@ -5,9 +5,7 @@ import ApiResponseHandler from "../../../core/ApiResponseHandler.js";
 import ResourceController from "../../../core/controllers/ResourceController.js";
 @injectable()
 export default class StudentController extends ResourceController {
-    constructor(
-        @inject(StudentService) private studentService: StudentService
-    ) {
+    constructor(@inject(StudentService) private studentService: StudentService) {
         super();
     }
 
@@ -43,11 +41,15 @@ export default class StudentController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const scope = await this.getScope(req);
+            const { page, limit, search } = req.query;
 
-            const limit = parseInt(req.query.limit as string, 10) || 50;
-            const offset = parseInt(req.query.offset as string, 10) || 0;
+            const filters = {
+                page: page ? parseInt(page as string, 10) : 1,
+                limit: limit ? parseInt(limit as string, 10) : 10,
+                search: search as string,
+            };
 
-            const students = await this.studentService.listStudents(tenantId, scope, limit, offset);
+            const students = await this.studentService.listStudents(tenantId, filters, scope);
             ApiResponseHandler.ok(res, "Success", students);
         } catch (error: any) {
             console.error(error);

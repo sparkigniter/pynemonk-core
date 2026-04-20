@@ -12,6 +12,10 @@ export default function Courses() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
+    // Search & Pagination state
+    const [search, setSearch] = useState('');
+    const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 });
+
     // Form state
     const [formData, setFormData] = useState({
         name: '',
@@ -20,9 +24,15 @@ export default function Courses() {
     });
 
     const fetchCourses = async () => {
+        setLoading(true);
         try {
-            const data = await courseApi.getCourseList();
-            setCourses(data);
+            const response = await courseApi.getCourseList({
+                search,
+                page: pagination.page,
+                limit: pagination.limit
+            });
+            setCourses(response.data);
+            setPagination(response.pagination);
         } catch (err) {
             console.error('Failed to fetch courses:', err);
         } finally {
@@ -31,8 +41,11 @@ export default function Courses() {
     };
 
     useEffect(() => {
-        fetchCourses();
-    }, []);
+        const timer = setTimeout(() => {
+            fetchCourses();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [search, pagination.page]);
 
     const handleAddCourse = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -111,6 +124,8 @@ export default function Courses() {
                                 type="text"
                                 placeholder="Search courses..."
                                 className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
                             />
                         </div>
                         <button className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 font-medium hidden sm:flex items-center gap-2">

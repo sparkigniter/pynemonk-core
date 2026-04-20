@@ -6,12 +6,11 @@ import { IAuthClient } from "../../../core/interfaces/IAuthClient.js";
 export default class StaffService {
     constructor(
         @inject(StaffHelper) private staffHelper: StaffHelper,
-        @inject("IAuthClient") private authClient: IAuthClient
-    ) { }
+        @inject("IAuthClient") private authClient: IAuthClient,
+    ) {}
 
-    public async getStaffList(tenantId: number, scope: any) {
-        // In the future, we can apply scoping here if needed (e.g. teachers only see colleagues in their dept)
-        return this.staffHelper.findAll(tenantId);
+    public async getStaffList(tenantId: number, filters: any = {}) {
+        return this.staffHelper.findAll(tenantId, filters);
     }
 
     public async addStaff(tenantId: number, data: any) {
@@ -19,8 +18,8 @@ export default class StaffService {
         const authUser = await this.authClient.createUser({
             email: data.email,
             password: data.password,
-            role_slug: data.role_slug || 'teacher', // Default to teacher
-            tenant_id: tenantId
+            role_slug: data.role_slug || "teacher", // Default to teacher
+            tenant_id: tenantId,
         });
 
         // 2. Create staff record in School service

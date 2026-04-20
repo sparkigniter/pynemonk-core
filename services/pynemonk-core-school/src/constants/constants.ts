@@ -4,5 +4,5 @@ export const RESPONSE_TYPES = {
     FORBIDDEN: "forbidden",
     NOT_FOUND: "not_found",
     INTERNAL_SERVER_ERROR: "internal_server_error",
-    SUCCESS: "success"
-}
+    SUCCESS: "success",
+};

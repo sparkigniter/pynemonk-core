@@ -7,14 +7,52 @@ export default class CourseHelper extends BaseModel {
         super();
     }
 
-    public async findAll(tenantId: number) {
-        const query = `
-            SELECT * FROM school.course 
+    public async findAll(
+        tenantId: number,
+        filters: {
+            page?: number;
+            limit?: number;
+            search?: string;
+        } = {},
+    ) {
+        const page = Math.max(1, filters.page || 1);
+        const limit = Math.max(1, Math.min(100, filters.limit || 10));
+        const offset = (page - 1) * limit;
+
+        let query = `
+            SELECT *, COUNT(*) OVER() as total_count 
+            FROM school.course 
             WHERE tenant_id = $1 AND is_deleted = FALSE 
-            ORDER BY created_at DESC
         `;
-        const result = await this.db.query(query, [tenantId]);
-        return result.rows;
+        const values: any[] = [tenantId];
+        let paramIndex = 2;
+
+        if (filters.search) {
+            query += ` AND (name ILIKE $${paramIndex} OR code ILIKE $${paramIndex})`;
+            values.push(`%${filters.search}%`);
+            paramIndex++;
+        }
+
+        query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        values.push(limit, offset);
+
+        const result = await this.db.query(query, values);
+
+        const totalCount = result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
+        const courses = result.rows.map((row: any) => {
+            const { total_count, ...data } = row;
+            return data;
+        });
+
+        return {
+            data: courses,
+            pagination: {
+                total: totalCount,
+                page,
+                limit,
+                pages: Math.ceil(totalCount / limit),
+            },
+        };
     }
 
     public async findById(tenantId: number, id: number) {

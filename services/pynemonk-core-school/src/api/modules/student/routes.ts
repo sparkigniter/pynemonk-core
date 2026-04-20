@@ -19,18 +19,28 @@ studentRouter.post("/", requireAuth, requireRole(["school_admin", "principal"]),
  * GET /api/v1/school/students
  * List students
  */
-studentRouter.get("/", requireAuth, requireRole(["school_admin", "principal", "teacher"]), (req, res) => {
-    const ctrl = container.resolve(StudentController);
-    return ctrl.list(req, res);
-});
+studentRouter.get(
+    "/",
+    requireAuth,
+    requireRole(["school_admin", "principal", "teacher"]),
+    (req, res) => {
+        const ctrl = container.resolve(StudentController);
+        return ctrl.list(req, res);
+    },
+);
 
 /**
  * GET /api/v1/school/students/:id
  * Get single student details
  */
-studentRouter.get("/:id", requireAuth, requireRole(["school_admin", "principal", "teacher"]), (req, res) => {
-    const ctrl = container.resolve(StudentController);
-    return ctrl.get(req, res);
-});
+studentRouter.get(
+    "/:id",
+    requireAuth,
+    requireRole(["school_admin", "principal", "teacher"]),
+    (req, res) => {
+        const ctrl = container.resolve(StudentController);
+        return ctrl.get(req, res);
+    },
+);
 
 export default studentRouter;

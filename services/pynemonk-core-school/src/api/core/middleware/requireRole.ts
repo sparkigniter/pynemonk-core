@@ -18,7 +18,7 @@ export function requireRole(allowedRoles?: string[], opts?: { minTier?: number }
         try {
             const roleRes = await pool.query(
                 `SELECT slug, tier FROM auth.role WHERE id = $1 AND is_deleted = false`,
-                [user.role_id]
+                [user.role_id],
             );
 
             if (roleRes.rows.length === 0) {
@@ -31,9 +31,9 @@ export function requireRole(allowedRoles?: string[], opts?: { minTier?: number }
             // Tier check (lower tier number = higher authority)
             if (opts?.minTier !== undefined) {
                 if (role.tier > opts.minTier) {
-                    res.status(403).json({ 
-                        success: false, 
-                        message: `Access denied. Requires tier ${opts.minTier} or higher (current: ${role.tier}).`
+                    res.status(403).json({
+                        success: false,
+                        message: `Access denied. Requires tier ${opts.minTier} or higher (current: ${role.tier}).`,
                     });
                     return;
                 }
@@ -42,9 +42,9 @@ export function requireRole(allowedRoles?: string[], opts?: { minTier?: number }
             // Explicit role check
             if (allowedRoles && allowedRoles.length > 0) {
                 if (!allowedRoles.includes(role.slug)) {
-                    res.status(403).json({ 
-                        success: false, 
-                        message: `Access denied. Requires one of roles: ${allowedRoles.join(', ')}.`
+                    res.status(403).json({
+                        success: false,
+                        message: `Access denied. Requires one of roles: ${allowedRoles.join(", ")}.`,
                     });
                     return;
                 }
@@ -55,7 +55,10 @@ export function requireRole(allowedRoles?: string[], opts?: { minTier?: number }
             next();
         } catch (err) {
             console.error("Error in requireRole middleware:", err);
-            res.status(500).json({ success: false, message: "Internal server error during role validation" });
+            res.status(500).json({
+                success: false,
+                message: "Internal server error during role validation",
+            });
         }
     };
 }

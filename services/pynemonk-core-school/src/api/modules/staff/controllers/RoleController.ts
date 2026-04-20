@@ -22,7 +22,7 @@ export default class RoleController extends ResourceController {
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }
-    }
+    };
 
     /**
      * POST /api/v1/school/roles/assign
@@ -44,7 +44,7 @@ export default class RoleController extends ResourceController {
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }
-    }
+    };
 
     /**
      * DELETE /api/v1/school/roles/remove
@@ -61,7 +61,7 @@ export default class RoleController extends ResourceController {
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }
-    }
+    };
 
     /**
      * GET /api/v1/school/roles/my-roles
@@ -76,5 +76,5 @@ export default class RoleController extends ResourceController {
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }
-    }
+    };
 }
