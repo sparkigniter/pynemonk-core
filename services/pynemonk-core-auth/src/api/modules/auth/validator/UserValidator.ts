@@ -41,6 +41,7 @@ class UserValidator extends Validator {
             client_id: Joi.string().required(),
             client_secret: Joi.string().required(),
             grant_type: Joi.string().required(),
+            school_slug: Joi.string().optional(),
             scope: Joi.string().optional(),
         }),
 

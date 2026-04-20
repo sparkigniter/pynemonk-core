@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, School, ArrowRight, AlertCircle, Sparkles, Building2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,14 +10,26 @@ const Login: React.FC = () => {
 
     const from = (location.state as any)?.from?.pathname ?? '/dashboard';
 
+    const [schoolSlug, setSchoolSlug] = useState(location.state?.schoolSlug || '');
     const [email,    setEmail]    = useState('');
     const [password, setPassword] = useState('');
     const [showPass, setShowPass] = useState(false);
     const [error,    setError]    = useState('');
     const [loading,  setLoading]  = useState(false);
+    const [tenants,  setTenants]  = useState<any[]>([]);
+    const [step,     setStep]     = useState<'LOGIN' | 'SELECT_TENANT'>('LOGIN');
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    useEffect(() => {
+        if (location.state?.schoolSlug) {
+            setSchoolSlug(location.state.schoolSlug);
+        }
+    }, [location.state?.schoolSlug]);
+
+    const handleSubmit = async (e: React.FormEvent, selectedSlug?: string) => {
+        if (e) e.preventDefault();
+        
+        const slugToUse = selectedSlug || schoolSlug || undefined;
+
         if (!email || !password) {
             setError('Please enter your email and password.');
             return;
@@ -25,14 +37,69 @@ const Login: React.FC = () => {
         setError('');
         setLoading(true);
         try {
-            await login(email, password);
-            navigate(from, { replace: true });
+            const result = await login(email, password, slugToUse);
+            
+            if ('status' in result && result.status === 'MULTIPLE_TENANTS') {
+                setTenants(result.tenants);
+                setStep('SELECT_TENANT');
+            } else {
+                navigate(from, { replace: true });
+            }
         } catch (err: any) {
             setError(err?.message ?? 'Login failed. Please try again.');
         } finally {
             setLoading(false);
         }
     };
+
+    const handleSelectTenant = (slug: string) => {
+        handleSubmit(null as any, slug);
+    };
+
+    if (step === 'SELECT_TENANT') {
+        return (
+            <div className="min-h-screen flex" style={{ background: 'linear-gradient(135deg, var(--page-bg-from) 0%, var(--page-bg-to) 100%)' }}>
+                <div className="flex-1 flex items-center justify-center p-6">
+                    <div className="w-full max-w-md animate-fade-in-up">
+                        <div className="mb-8 text-center">
+                            <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg"
+                                style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}>
+                                <Building2 size={32} className="text-white" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-slate-900 font-heading">Choose your school</h2>
+                            <p className="text-slate-500 text-sm mt-1.5">Multiple schools are associated with your account.</p>
+                        </div>
+
+                        <div className="space-y-3">
+                            {tenants.map(t => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => handleSelectTenant(t.slug)}
+                                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group"
+                                >
+                                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
+                                        <School size={20} className="text-slate-400 group-hover:text-indigo-500" />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <p className="font-bold text-slate-800">{t.name}</p>
+                                        <p className="text-xs text-slate-400">ID: {t.slug}</p>
+                                    </div>
+                                    <ArrowRight size={18} className="text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => setStep('LOGIN')}
+                            className="w-full mt-6 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                        >
+                            Back to login
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex" style={{ background: 'linear-gradient(135deg, var(--page-bg-from) 0%, var(--page-bg-to) 100%)' }}>

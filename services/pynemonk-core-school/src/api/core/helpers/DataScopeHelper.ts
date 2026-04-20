@@ -1,5 +1,5 @@
 import { injectable, inject } from "tsyringe";
-import { UserContext } from "../middlewares/AuthMiddleware.js";
+import { UserContext } from "../middleware/AuthMiddleware.js";
 
 export enum AccessLevel {
     FULL = "FULL",

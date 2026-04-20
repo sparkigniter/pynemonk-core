@@ -83,3 +83,17 @@ export type TokenResponse = {
     tokenType: string;
     expiresIn: number;
 }
+
+export interface TenantInfo {
+    id: number;
+    uuid: string;
+    name: string;
+    slug: string;
+}
+
+export interface TenantListResponse {
+    status: 'MULTIPLE_TENANTS';
+    tenants: TenantInfo[];
+}
+
+export type LoginResult = TokenResponse | TenantListResponse;

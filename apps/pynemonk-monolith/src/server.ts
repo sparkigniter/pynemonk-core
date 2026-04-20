@@ -15,8 +15,12 @@ import * as schoolModule from "pynemonk-core-school/module";
 import * as accountingModule from "pynemonk-core-accounting/module";
 // import * as notifyModule  from "pynemonk-core-notifications/module";
 
+import path from "path";
+import { fileURLToPath } from "url";
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 // Initialize Global Event Bus for inter-module communication
 const eventBus = new EventEmitter();

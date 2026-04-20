@@ -6,7 +6,7 @@ import ValidationError from "../../../errors/ValidationError.js";
 import OauthClientHelper from "../../oauth2/helpers/OauthClientHelper.js";
 import GrantHandlerFactory from "../../oauth2/factory/GrantHandlerFactory.js";
 import type { RegisterUserRequest, LoginRequest, UserRecord } from "../../../../types/User.js";
-import type { TokenResponse, TokenPayload } from "../../../../types/Token.js";
+import type { TokenResponse, TokenPayload, LoginResult } from "../../../../types/Token.js";
 
 const SALT_ROUNDS = 12;
 const REFRESH_TTL_DAYS = 7;
@@ -43,6 +43,7 @@ class AuthService {
             role_id: user.role_id,
             created_at: user.created_at,
             updated_at: user.updated_at,
+            tenant_id: user.tenant_id
         };
     }
 
@@ -52,7 +53,7 @@ class AuthService {
      * Validates client + user credentials, then dispatches token generation
      * to the appropriate grant handler based on the requested grant_type.
      */
-    public async login(data: LoginRequest): Promise<TokenResponse> {
+    public async login(data: LoginRequest): Promise<LoginResult> {
         // 1. Validate input shape
         await this.userValidator.validate("LOGIN", data);
 
@@ -75,11 +76,6 @@ class AuthService {
             throw new ValidationError("Invalid email or password");
         }
 
-        // 3b. Fetch all roles for this user
-        const roles = await this.userHelper.getUserRoles(user.id);
-        const roleSlugs = roles.map(r => r.slug);
-        const primaryRole = roles.find(r => r.is_primary) || roles[0];
-
         // 4. Verify password
         const passwordHash = await this.userHelper.getPasswordHash(user.id);
         if (!passwordHash) {
@@ -90,26 +86,83 @@ class AuthService {
             throw new ValidationError("Invalid email or password");
         }
 
-        // 5. Build token payload — grant_type comes from the request
+        // 5. Handle Tenancy
+        let selectedTenantId: number | undefined;
+
+        if (data.school_slug) {
+            // Specific school requested
+            const tenant = await this.userHelper.getTenantBySlug(data.school_slug);
+            if (!tenant) {
+                throw new ValidationError("Invalid School ID");
+            }
+
+            // Check if user has roles in this tenant
+            const userRoles = await this.userHelper.getUserRoles(user.id);
+            const rolesInTenant = userRoles.filter(r => r.tenant_id === tenant.id);
+
+            if (rolesInTenant.length === 0) {
+                throw new ValidationError("This user is not registered at " + tenant.name);
+            }
+
+            selectedTenantId = tenant.id;
+        } else {
+            // No school requested - find user's schools
+            const tenants = await this.userHelper.getUserTenants(user.id);
+
+            if (tenants.length === 0) {
+                // If no tenants, check for global roles (tenant_id IS NULL)
+                const userRoles = await this.userHelper.getUserRoles(user.id);
+                const hasGlobalRole = userRoles.some(r => r.tenant_id === null);
+
+                if (!hasGlobalRole) {
+                    throw new ValidationError("No schools associated with this account.");
+                }
+                // Global admin, selectedTenantId remains undefined
+            } else if (tenants.length > 1) {
+                return {
+                    status: 'MULTIPLE_TENANTS',
+                    tenants: tenants.map(t => ({
+                        id: t.id,
+                        uuid: t.uuid,
+                        name: t.name,
+                        slug: t.slug
+                    }))
+                };
+            } else {
+                // Exactly one tenant
+                selectedTenantId = tenants[0].id;
+            }
+        }
+
+        // 6. Fetch all roles for this user (filtered by tenant if selected)
+        const allRoles = await this.userHelper.getUserRoles(user.id);
+        const roles = selectedTenantId
+            ? allRoles.filter(r => r.tenant_id === selectedTenantId || r.tenant_id === null)
+            : allRoles;
+
+        const roleSlugs = roles.map(r => r.slug);
+        const primaryRole = roles.find(r => r.is_primary) || roles[0];
+
+        // 7. Build token payload
         const payload: TokenPayload = {
             grant_type: data.grant_type,
             client_id: data.client_id,
             client_secret: data.client_secret,
             scope: data.scope,
-            username: data.email, // OAuth2 expects 'username'
+            username: data.email,
             password: data.password,
-            // Custom claims — carried in the JWT
             sub: String(user.id),
             email: user.email,
             role_id: primaryRole ? primaryRole.id : user.role_id,
             roles: roleSlugs,
+            tenant_id: selectedTenantId,
         } as any;
 
-        // 6. Dispatch to the grant handler chosen by the caller
+        // 8. Dispatch to the grant handler
         const handler = this.grantFactory.getHandler(data.grant_type);
         const tokenPair = await handler.handle(payload);
 
-        // 7. Persist refresh token for rotation / revocation
+        // 9. Persist refresh token
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + REFRESH_TTL_DAYS);
         await this.userHelper.saveRefreshToken(user.id, 0, tokenPair.refreshToken, expiresAt);
@@ -181,6 +234,13 @@ class AuthService {
      */
     public async logout(userId: number): Promise<void> {
         await this.userHelper.revokeAllUserRefreshTokens(userId);
+    }
+
+    /**
+     * Get all tenants associated with the user.
+     */
+    public async getUserTenants(userId: number): Promise<any[]> {
+        return this.userHelper.getUserTenants(userId);
     }
 }
 

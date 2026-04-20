@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
 import * as authApi from '../api/auth.api';
 
 // ── OAuth client credentials ─────────────────────────────────────────────────
@@ -13,6 +13,7 @@ export interface AuthUser {
     sub: string;        // user id
     email: string;
     role_id: number;
+    tenant_id?: number;
 }
 
 interface AuthSession {
@@ -26,8 +27,11 @@ interface AuthContextType {
     user: AuthUser | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (email: string, password: string) => Promise<void>;
+    tenants: authApi.TenantInfo[];
+    tenantFetchError: string | null;
+    login: (email: string, password: string, schoolSlug?: string) => Promise<authApi.LoginResult>;
     logout: () => Promise<void>;
+    refreshTenants: () => Promise<void>;
 }
 
 // ── Storage helpers ──────────────────────────────────────────────────────────
@@ -59,7 +63,12 @@ function parseUser(accessToken: string): AuthUser | null {
     try {
         // JWT payload is the second base64url segment
         const payload = JSON.parse(atob(accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-        return { sub: payload.sub, email: payload.email, role_id: payload.role_id };
+        return { 
+            sub: payload.sub, 
+            email: payload.email, 
+            role_id: payload.role_id,
+            tenant_id: payload.tenant_id
+        };
     } catch {
         return null;
     }
@@ -71,26 +80,85 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     isAuthenticated: false,
     isLoading: true,
-    login: async () => { },
+    tenants: [],
+    tenantFetchError: null,
+    login: async () => { return {} as any; },
     logout: async () => { },
+    refreshTenants: async () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [session, setSession] = useState<AuthSession | null>(null);
+    const [tenants, setTenants] = useState<authApi.TenantInfo[]>([]);
     const [isLoading, setLoading] = useState(true);
+    const [tenantFetchError, setTenantFetchError] = useState<string | null>(null);
+    const retryRef = useRef(0);
+
+    const refreshTenants = useCallback(async (token?: string) => {
+        const t = token || session?.accessToken;
+        if (!t) return;
+        
+        if (retryRef.current >= 5) {
+            console.error('Max retries reached for tenant discovery');
+            setTenantFetchError('Failed to load your schools after multiple attempts. Please try logging out and in again.');
+            return;
+        }
+
+        try {
+            setTenantFetchError(null);
+            const list = await authApi.getMyTenants(t);
+            setTenants(list);
+            retryRef.current = 0; // Reset on success
+        } catch (err: any) {
+            console.error('Failed to fetch tenants', err);
+            retryRef.current += 1;
+            
+            // If it's a 500 or network error, it might be temporary, 
+            // but for "Server misconfiguration" we should probably stop soon.
+            if (retryRef.current >= 5) {
+                setTenantFetchError(err?.message || 'Could not connect to school service');
+            } else {
+                // Exponential backoff or simple delay
+                setTimeout(() => refreshTenants(t), 1000 * retryRef.current);
+            }
+        }
+    }, [session]);
 
     // Restore session from localStorage on mount
     useEffect(() => {
         const stored = loadSession();
-        if (stored) setSession(stored);
+        if (stored) {
+            setSession(stored);
+            // Use local variable to avoid dependency on 'session' state
+            authApi.getMyTenants(stored.accessToken)
+                .then(setTenants)
+                .catch(err => console.error('Failed to fetch tenants on mount', err));
+        }
         setLoading(false);
-    }, []);
+    }, []); // Run ONLY once on mount
 
-    const login = useCallback(async (email: string, password: string) => {
-        const tokens = await authApi.login({ email, password, client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'password' });
+    const login = useCallback(async (email: string, password: string, schoolSlug?: string): Promise<authApi.LoginResult> => {
+        const payload: authApi.LoginPayload = { 
+            email, 
+            password, 
+            client_id: CLIENT_ID, 
+            client_secret: CLIENT_SECRET, 
+            grant_type: 'password' 
+        };
 
+        if (schoolSlug && schoolSlug.trim() !== '') {
+            payload.school_slug = schoolSlug;
+        }
+
+        const result = await authApi.login(payload);
+
+        if ('status' in result && result.status === 'MULTIPLE_TENANTS') {
+            return result;
+        }
+
+        const tokens = result as authApi.TokenResponse;
         const user = parseUser(tokens.access_token);
         if (!user) throw new Error('Invalid token received from server');
 
@@ -103,7 +171,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         saveSession(newSession);
         setSession(newSession);
-    }, []);
+        
+        // Fetch tenants after successful login
+        refreshTenants(tokens.access_token);
+        
+        return result;
+    }, [refreshTenants]);
 
     const logout = useCallback(async () => {
         if (session?.accessToken) {
@@ -122,8 +195,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             user: session?.user ?? null,
             isAuthenticated: session !== null,
             isLoading,
+            tenants,
+            tenantFetchError,
             login,
             logout,
+            refreshTenants,
         }}>
             {children}
         </AuthContext.Provider>

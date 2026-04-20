@@ -2,6 +2,7 @@
 
 export interface UserRecord {
     id: number;
+    tenant_id: number;
     email: string;
     role_id: number;
     is_deleted: boolean;
@@ -33,6 +34,7 @@ export interface LoginRequest {
     grant_type: string;
     email: string;
     password: string;
+    school_slug?: string;
     scope?: string;
 }
 

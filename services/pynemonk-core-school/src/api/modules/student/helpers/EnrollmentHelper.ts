@@ -11,8 +11,8 @@ export default class EnrollmentHelper {
         classroom_id: number;
         academic_year_id: number;
         roll_number?: string;
-    }): Promise<any> {
-        const res = await this.db.query(
+    }, db: Pool | any = this.db): Promise<any> {
+        const res = await db.query(
             `INSERT INTO school.student_enrollment
                 (tenant_id, student_id, classroom_id, academic_year_id, roll_number)
              VALUES ($1, $2, $3, $4, $5)

@@ -1,7 +1,7 @@
 import * as express from 'express'
 import { container } from 'tsyringe';
 import BaseController from './BaseController.js';
-import { UserContext } from '../middlewares/AuthMiddleware.js';
+import { UserContext, AuthenticatedRequest } from '../middleware/AuthMiddleware.js';
 import { DataScopeHelper, DataScope } from '../helpers/DataScopeHelper.js';
 
 class ResourceController extends BaseController {
@@ -14,7 +14,7 @@ class ResourceController extends BaseController {
 
     /** Extract user context and resolve effective data scope */
     protected async getScope(req: express.Request): Promise<DataScope> {
-        const user = (req as any).user as UserContext;
+        const user = (req as AuthenticatedRequest).user;
         if (!user) throw new Error("Unauthorized: No user context found");
         return this.scopeHelper.resolveScope(user);
     }

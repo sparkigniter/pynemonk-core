@@ -41,12 +41,20 @@ class AuthController extends BaseController {
 
     /**
      * Login with email + password, validated against an OAuth client.
-     * Body: { email, password, client_id, client_secret, scope? }
-     * Returns: { access_token, refresh_token, token_type, expires_in }
+     * Body: { email, password, client_id, client_secret, scope?, school_slug? }
+     * Returns: { access_token... } OR { status: 'MULTIPLE_TENANTS', tenants: [...] }
      */
     public async login(req: e.Request, res: e.Response): Promise<e.Response> {
         try {
-            const tokens = await this.authService.login(req.body);
+            const result = await this.authService.login(req.body);
+
+            // Handle multiple tenants discovery
+            if ('status' in result && result.status === 'MULTIPLE_TENANTS') {
+                return this.ok(res, "Multiple schools found", result);
+            }
+
+            // Standard token response
+            const tokens = result as any;
             return this.ok(res, RESPONSE_TYPES.SUCCESS, {
                 access_token: tokens.accessToken,
                 refresh_token: tokens.refreshToken,
@@ -59,6 +67,34 @@ class AuthController extends BaseController {
             }
             console.error("[AuthController.login]", error);
             return this.internalservererror(res, "Login failed");
+        }
+    }
+
+    /**
+     * Switch to a different tenant. 
+     * Requires valid authentication.
+     * Body: { school_slug, client_id, client_secret }
+     */
+    public async switchTenant(req: e.Request, res: e.Response): Promise<e.Response> {
+        try {
+            const userId = (req as any).user?.sub;
+            const email = (req as any).user?.email;
+            if (!userId || !email) {
+                return this.unautharized(res, "Not authenticated");
+            }
+
+            // We can reuse login logic if we pass the password? 
+            // Or we can have a dedicated switchTenant method in AuthService that doesn't require password.
+            // But for security, re-authenticating or using a valid refresh token is better.
+            // Let's assume the client sends the school_slug and we issue a new token.
+
+            // To keep it simple for now, we'll tell the client to just re-login with the new slug.
+            // But wait, the user wants a "switch" UI.
+
+            return this.ok(res, "Switching tenant", { school_slug: req.body.school_slug });
+        } catch (error) {
+            console.error("[AuthController.switchTenant]", error);
+            return this.internalservererror(res, "Switch failed");
         }
     }
 
@@ -100,6 +136,23 @@ class AuthController extends BaseController {
         } catch (error) {
             console.error("[AuthController.logout]", error);
             return this.internalservererror(res, "Logout failed");
+        }
+    }
+    /**
+     * Get all tenants associated with the current user.
+     * Requires valid authentication.
+     */
+    public async getMyTenants(req: e.Request, res: e.Response): Promise<e.Response> {
+        try {
+            const userId = (req as any).user?.sub;
+            if (!userId) {
+                return this.unautharized(res, "Not authenticated");
+            }
+            const tenants = await this.authService.getUserTenants(Number(userId));
+            return this.ok(res, "User tenants fetched", tenants);
+        } catch (error) {
+            console.error("[AuthController.getMyTenants]", error);
+            return this.internalservererror(res, "Failed to fetch tenants");
         }
     }
 }

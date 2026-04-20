@@ -165,6 +165,13 @@ class TenantHelper {
             [tenantId, email, roleId]
         );
         const user = userRes.rows[0];
+        
+        // Assign role in the join table for multi-tenant discovery
+        await this.db.query(
+            `INSERT INTO auth.user_role (user_id, role_id, is_primary)
+             VALUES ($1, $2, TRUE)`,
+            [user.id, roleId]
+        );
 
         // Create credential (no profile — admin is not the principal)
         await this.db.query(

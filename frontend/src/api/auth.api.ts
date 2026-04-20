@@ -12,6 +12,7 @@ const BASE_URL = (import.meta as any).env?.VITE_AUTH_API_URL ?? 'http://localhos
 export interface LoginPayload {
     email: string;
     password: string;
+    school_slug?: string;
     client_id: string;
     client_secret: string;
     grant_type: string;
@@ -33,6 +34,20 @@ export interface IntrospectResponse {
     scope?: string | null;
     exp?: number;
 }
+
+export interface TenantInfo {
+    id: number;
+    uuid: string;
+    name: string;
+    slug: string;
+}
+
+export interface TenantListResponse {
+    status: 'MULTIPLE_TENANTS';
+    tenants: TenantInfo[];
+}
+
+export type LoginResult = TokenResponse | TenantListResponse;
 
 export interface ApiError {
     success: false;
@@ -63,8 +78,8 @@ async function post<T>(path: string, body: object, token?: string): Promise<T> {
 // ── Auth endpoints ────────────────────────────────────────────────────────────
 
 /** POST /api/v1/auth/login */
-export async function login(payload: LoginPayload): Promise<TokenResponse> {
-    return post<TokenResponse>('/api/v1/auth/login', payload);
+export async function login(payload: LoginPayload): Promise<LoginResult> {
+    return post<LoginResult>('/api/v1/auth/login', payload);
 }
 
 /** POST /api/v1/auth/refresh */
@@ -84,4 +99,13 @@ export async function logout(accessToken: string): Promise<void> {
 /** POST /api/v1/auth/introspect */
 export async function introspect(token: string): Promise<IntrospectResponse> {
     return post<IntrospectResponse>('/api/v1/auth/introspect', { token });
+}
+
+/** GET /api/v1/auth/my-tenants */
+export async function getMyTenants(token: string): Promise<TenantInfo[]> {
+    const res = await fetch(`${BASE_URL}/api/v1/auth/my-tenants`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const json = await res.json();
+    return json.data ?? json;
 }

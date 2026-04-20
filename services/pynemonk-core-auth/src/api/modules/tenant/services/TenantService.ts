@@ -28,6 +28,7 @@ class TenantService {
     /** Step 1: Register a new school tenant and provision its roles */
     public async registerTenant(data: {
         name: string;
+        school_id?: string;
         email: string;
         phone?: string;
         address?: string;
@@ -44,13 +45,18 @@ class TenantService {
             if (hasOwner) {
                 throw new ValidationError("A school with this email is already fully registered. Please log in.");
             }
-            // Tenant exists but no owner setup yet — allow resuming
-            // Ensure roles are seeded (idempotent)
             await this.tenantHelper.createDefaultRoles(existingTenant.id);
             return existingTenant;
         }
 
-        const slug = slugify(data.name);
+        const slug = data.school_id ? slugify(data.school_id) : slugify(data.name);
+
+        // Check if slug is unique
+        const exists = await this.tenantHelper.tenantExists(slug, data.email);
+        if (exists) {
+            throw new ValidationError("This School ID is already taken. Please choose another one.");
+        }
+
         // Create tenant
         const tenant = await this.tenantHelper.createTenant({ ...data, slug });
 

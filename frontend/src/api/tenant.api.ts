@@ -36,6 +36,7 @@ export interface Package {
 
 export interface RegisterTenantPayload {
     name: string;
+    school_id?: string; // The unique text ID (slug)
     email: string;
     phone?: string;
     address?: string;
@@ -54,7 +55,7 @@ export interface Tenant {
     id: number;
     uuid: string;
     name: string;
-    slug: string;
+    slug: string; // school_id maps to slug
     email: string;
     package_id: number;
     created_at: string;

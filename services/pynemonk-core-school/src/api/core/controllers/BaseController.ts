@@ -1,16 +1,17 @@
 import * as express from 'express'
 import ApiResponseHandler from '../ApiResponseHandler.js';
 
-import { UserContext } from '../middlewares/AuthMiddleware.js';
+import { UserContext, AuthenticatedRequest } from '../middleware/AuthMiddleware.js';
 
 class BaseController {
-    constructor() {}
+    constructor() { }
 
 
     /** Get tenant ID from user context */
     protected getTenantId(req: express.Request): number {
-        const user = (req as any).user as UserContext;
-        return user?.tenantId;
+        const user = (req as AuthenticatedRequest).user;
+        if (!user) throw new Error("Unauthorized: No user context found");
+        return user.tenantId;
     }
 
     public unautharized(res: express.Response, message?: string): express.Response {

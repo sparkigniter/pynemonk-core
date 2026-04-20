@@ -15,15 +15,23 @@ import ClassroomService from "./api/modules/classroom/services/ClassroomService.
 import ClassroomController from "./api/modules/classroom/controllers/ClassroomController.js";
 import AdmissionService from "./api/modules/admission/services/AdmissionService.js";
 import AdmissionController from "./api/modules/admission/controllers/AdmissionController.js";
+import RoleService from "./api/modules/staff/services/RoleService.js";
+import RoleController from "./api/modules/staff/controllers/RoleController.js";
+import CourseHelper from "./api/modules/course/helpers/CourseHelper.js";
+import CourseService from "./api/modules/course/services/CourseService.js";
+import CourseController from "./api/modules/course/controllers/CourseController.js";
 import EnrollmentHelper from "./api/modules/student/helpers/EnrollmentHelper.js";
 import GuardianHelper from "./api/modules/guardian/helpers/GuardianHelper.js";
 
 
 import { InternalAuthClient } from "./api/core/clients/InternalAuthClient.js";
 
+import { EventEmitter } from "events";
+
 function setupDI(): void {
     // ── Infrastructure ──────────────────────────────────────────────────────
     container.registerInstance("DB", pool);
+    container.registerInstance("EventBus", new EventEmitter());
     container.register("IAuthClient", { useClass: InternalAuthClient });
 
     // ── Student Module ──────────────────────────────────────────────────────
@@ -48,6 +56,15 @@ function setupDI(): void {
     container.register(GuardianHelper, { useClass: GuardianHelper });
     container.register(AdmissionService, { useClass: AdmissionService });
     container.register(AdmissionController, { useClass: AdmissionController });
+
+    // ── Role Management ──────────────────────────────────────────────────────
+    container.register(RoleService, { useClass: RoleService });
+    container.register(RoleController, { useClass: RoleController });
+
+    // ── Course Module ────────────────────────────────────────────────────────
+    container.register(CourseHelper, { useClass: CourseHelper });
+    container.register(CourseService, { useClass: CourseService });
+    container.register(CourseController, { useClass: CourseController });
 }
 
 export default setupDI;

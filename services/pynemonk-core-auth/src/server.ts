@@ -3,8 +3,12 @@ import dotenv from "dotenv";
 import setupDI from "./di.js";
 import { createApp } from "./app.js";
 
+import path from "path";
+import { fileURLToPath } from "url";
+
 // Load env vars first so JWT secrets, DB config, etc. are available
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 // Boot DI container
 setupDI();

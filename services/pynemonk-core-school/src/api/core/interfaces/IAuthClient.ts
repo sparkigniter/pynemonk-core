@@ -14,7 +14,7 @@ export interface IAuthClient {
         password?: string;
         role_slug: string;
         tenant_id: number;
-    }): Promise<AuthUserResponse>;
+    }, db?: any): Promise<AuthUserResponse>;
 
     /**
      * Get the role ID for a given slug in a tenant.

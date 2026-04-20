@@ -47,6 +47,24 @@ authRouter.post("/logout", requireAuth, (req, res) => {
 });
 
 /**
+ * POST /api/v1/auth/switch-tenant
+ * Switch the active tenant for the current user.
+ */
+authRouter.post("/switch-tenant", requireAuth, (req, res) => {
+    const ctrl = container.resolve(AuthController);
+    return ctrl.switchTenant(req, res);
+});
+
+/**
+ * GET /api/v1/auth/my-tenants
+ * Get all schools the current user belongs to.
+ */
+authRouter.get("/my-tenants", requireAuth, (req, res) => {
+    const ctrl = container.resolve(AuthController);
+    return ctrl.getMyTenants(req, res);
+});
+
+/**
  * POST /api/v1/auth/introspect
  * Introspect an access token (RFC 7662 inspired).
  * Body: { token }

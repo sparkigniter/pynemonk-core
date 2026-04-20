@@ -288,6 +288,7 @@ export default function Register() {
                                     />
                                 </div>
 
+
                                 <div>
                                     <label className="block text-sm font-medium text-white/70 mb-1.5">Official Email <span className="text-red-400">*</span></label>
                                     <input

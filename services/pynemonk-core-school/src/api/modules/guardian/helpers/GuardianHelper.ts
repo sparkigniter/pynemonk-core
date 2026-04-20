@@ -14,8 +14,8 @@ export default class GuardianHelper {
         email: string;
         address?: string;
         occupation?: string;
-    }): Promise<any> {
-        const res = await this.db.query(
+    }, db: Pool | any = this.db): Promise<any> {
+        const res = await db.query(
             `INSERT INTO school.guardian
                 (tenant_id, user_id, first_name, last_name, phone, email, address, occupation)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -34,8 +34,8 @@ export default class GuardianHelper {
         return res.rows[0];
     }
 
-    public async linkStudent(tenantId: number, studentId: number, guardianId: number, relation: string): Promise<void> {
-        await this.db.query(
+    public async linkStudent(tenantId: number, studentId: number, guardianId: number, relation: string, db: Pool | any = this.db): Promise<void> {
+        await db.query(
             `INSERT INTO school.student_guardian (tenant_id, student_id, guardian_id, relation)
              VALUES ($1, $2, $3, $4)
              ON CONFLICT (student_id, guardian_id) DO UPDATE SET relation = $4, is_deleted = FALSE`,

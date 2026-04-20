@@ -41,11 +41,37 @@ class UserHelper {
 
     public async getUserRoles(userId: number): Promise<any[]> {
         const res = await this.db.query(
-            `SELECT r.id, r.slug, r.name, r.tier, ur.is_primary
+            `SELECT r.id, r.slug, r.name, r.tier, r.tenant_id, ur.is_primary
              FROM auth.role r
              JOIN auth.user_role ur ON r.id = ur.role_id
              WHERE ur.user_id = $1 AND ur.is_deleted = FALSE
-             ORDER BY r.tier ASC`, // Lowest tier (highest priority) first
+             
+             UNION
+             
+             SELECT r.id, r.slug, r.name, r.tier, r.tenant_id, TRUE as is_primary
+             FROM auth.role r
+             JOIN auth.user u ON r.id = u.role_id
+             WHERE u.id = $1 AND u.is_deleted = FALSE
+             
+             ORDER BY tier ASC`,
+            [userId]
+        );
+        return res.rows;
+    }
+
+    public async getUserTenants(userId: number): Promise<any[]> {
+        const res = await this.db.query(
+            `SELECT DISTINCT t.id, t.uuid, t.name, t.slug
+             FROM auth.tenant t
+             LEFT JOIN auth.role r ON t.id = r.tenant_id
+             LEFT JOIN auth.user_role ur ON r.id = ur.role_id
+             LEFT JOIN auth.user u ON u.id = $1
+             WHERE t.is_deleted = FALSE
+               AND (
+                 (ur.user_id = $1 AND ur.is_deleted = FALSE)
+                 OR 
+                 (u.tenant_id = t.id AND u.is_deleted = FALSE)
+               )`,
             [userId]
         );
         return res.rows;
@@ -53,7 +79,7 @@ class UserHelper {
 
     public async getUserByEmail(email: string): Promise<UserRecord | undefined> {
         const res = await this.db.query(
-            `SELECT id, email, role_id, is_deleted, created_at, updated_at
+            `SELECT id, tenant_id, email, role_id, is_deleted, created_at, updated_at
              FROM auth.user WHERE email = $1 AND is_deleted = $2`,
             [email, false]
         );
@@ -62,7 +88,7 @@ class UserHelper {
 
     public async getUserById(id: number): Promise<UserRecord | undefined> {
         const res = await this.db.query(
-            `SELECT id, email, role_id, is_deleted, created_at, updated_at
+            `SELECT id, tenant_id, email, role_id, is_deleted, created_at, updated_at
              FROM auth.user WHERE id = $1 AND is_deleted = $2`,
             [id, false]
         );
@@ -149,6 +175,15 @@ class UserHelper {
             `UPDATE auth.refresh_token SET revoked = $1 WHERE user_id = $2`,
             [true, userId]
         );
+    }
+
+    // ── Tenant ────────────────────────────────────────────────────────────────
+    public async getTenantBySlug(slug: string): Promise<any> {
+        const res = await this.db.query(
+            `SELECT id, uuid, name, slug FROM auth.tenant WHERE slug = $1 AND is_deleted = FALSE`,
+            [slug]
+        );
+        return res.rows[0];
     }
 }
 

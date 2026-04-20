@@ -18,8 +18,8 @@ export default class StudentHelper {
         religion?: string;
         phone?: string;
         address?: string;
-    }): Promise<any> {
-        const res = await this.db.query(
+    }, db: Pool | any = this.db): Promise<any> {
+        const res = await db.query(
             `INSERT INTO school.student
                 (tenant_id, user_id, admission_no, first_name, last_name, gender, date_of_birth,
                  blood_group, nationality, religion, phone, address)

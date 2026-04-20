@@ -52,7 +52,7 @@ export default class AdmissionService {
                 email: data.student.email,
                 password: "ChangeMe123!", // Initial default password
                 role_slug: 'student'
-            });
+            }, client);
 
             // 2. Create Guardian Auth User
             const guardianAuth = await this.authClient.createUser({
@@ -60,31 +60,31 @@ export default class AdmissionService {
                 email: data.guardian.email,
                 password: "ChangeMe123!",
                 role_slug: 'parent'
-            });
+            }, client);
 
             // 3. Create Student Profile
             const student = await this.studentHelper.createStudent({
                 tenant_id: tenantId,
                 user_id: studentAuth.id,
                 ...data.student
-            });
+            }, client);
 
             // 4. Create Guardian Profile
             const guardian = await this.guardianHelper.createGuardian({
                 tenant_id: tenantId,
                 user_id: guardianAuth.id,
                 ...data.guardian
-            });
+            }, client);
 
             // 5. Link Student and Guardian
-            await this.guardianHelper.linkStudent(tenantId, student.id, guardian.id, data.guardian.relation);
+            await this.guardianHelper.linkStudent(tenantId, student.id, guardian.id, data.guardian.relation, client);
 
             // 6. Enroll Student in Classroom
             const enrollment = await this.enrollmentHelper.enrollStudent({
                 tenant_id: tenantId,
                 student_id: student.id,
                 ...data.enrollment
-            });
+            }, client);
 
             await client.query('COMMIT');
 
