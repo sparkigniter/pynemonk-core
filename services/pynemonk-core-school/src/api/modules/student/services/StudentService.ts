@@ -15,7 +15,7 @@ export default class StudentService {
         private studentHelper: StudentHelper,
         private studentValidator: StudentValidator,
         @inject("IAuthClient") private authClient: IAuthClient,
-        @inject("DB") private db: Pool
+        @inject("DB") private db: Pool,
     ) {}
 
     public async registerStudent(tenantId: number, data: any): Promise<any> {
@@ -24,36 +24,40 @@ export default class StudentService {
         // Start transaction for the school-specific parts
         const client = await this.db.connect();
         try {
-            await client.query('BEGIN');
+            await client.query("BEGIN");
 
             // 1. Create auth.user via the client (Abstracted)
             const authUser = await this.authClient.createUser({
                 email: data.email,
                 password: data.password,
-                role_slug: 'student',
-                tenant_id: tenantId
+                role_slug: "student",
+                tenant_id: tenantId,
             });
 
             // 2. Create school.student
-            const student = await this.studentHelper.createStudent({
-                tenant_id: tenantId,
-                user_id: authUser.id,
-                admission_no: data.admission_no,
-                first_name: data.first_name,
-                last_name: data.last_name,
-                gender: data.gender,
-                date_of_birth: data.date_of_birth,
-                blood_group: data.blood_group,
-                nationality: data.nationality,
-                religion: data.religion,
-                phone: data.phone,
-                address: data.address,
-            });
+            const student = await this.studentHelper.createStudent(
+                {
+                    tenant_id: tenantId,
+                    user_id: authUser.id,
+                    admission_no: data.admission_no,
+                    first_name: data.first_name,
+                    last_name: data.last_name,
+                    gender: data.gender,
+                    date_of_birth: data.date_of_birth,
+                    blood_group: data.blood_group,
+                    nationality: data.nationality,
+                    religion: data.religion,
+                    phone: data.phone,
+                    address: data.address,
+                    avatar_url: data.avatar_url,
+                },
+                client,
+            );
 
-            await client.query('COMMIT');
+            await client.query("COMMIT");
             return student;
         } catch (error) {
-            await client.query('ROLLBACK');
+            await client.query("ROLLBACK");
             throw error;
         } finally {
             client.release();
@@ -64,7 +68,7 @@ export default class StudentService {
         return this.studentHelper.getStudentById(tenantId, studentId);
     }
 
-    public async listStudents(tenantId: number, scope: any, limit: number, offset: number): Promise<any[]> {
-        return this.studentHelper.listStudents(tenantId, scope, limit, offset);
+    public async listStudents(tenantId: number, filters: any, scope: any): Promise<any> {
+        return this.studentHelper.listStudents(tenantId, filters, scope);
     }
 }

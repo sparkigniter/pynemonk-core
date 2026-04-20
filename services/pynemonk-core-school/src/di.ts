@@ -22,7 +22,8 @@ import CourseService from "./api/modules/course/services/CourseService.js";
 import CourseController from "./api/modules/course/controllers/CourseController.js";
 import EnrollmentHelper from "./api/modules/student/helpers/EnrollmentHelper.js";
 import GuardianHelper from "./api/modules/guardian/helpers/GuardianHelper.js";
-
+import { GradeService } from "./api/modules/grade/services/GradeService.js";
+import { GradeController } from "./api/modules/grade/controllers/GradeController.js";
 
 import { InternalAuthClient } from "./api/core/clients/InternalAuthClient.js";
 
@@ -65,6 +66,10 @@ function setupDI(): void {
     container.register(CourseHelper, { useClass: CourseHelper });
     container.register(CourseService, { useClass: CourseService });
     container.register(CourseController, { useClass: CourseController });
+
+    // ── Grade Module ─────────────────────────────────────────────────────────
+    container.register(GradeService, { useClass: GradeService });
+    container.register(GradeController, { useClass: GradeController });
 }
 
 export default setupDI;

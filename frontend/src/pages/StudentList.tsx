@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, Filter, MoreVertical, GraduationCap, Download, CheckCircle2, Loader2, UserCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import * as studentApi from '../api/student.api';
 import Modal from '../components/ui/Modal';
 
@@ -8,6 +9,10 @@ const StudentList = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    // Search & Pagination state
+    const [search, setSearch] = useState('');
+    const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 });
 
     // Admission form state
     const [formData, setFormData] = useState({
@@ -22,9 +27,15 @@ const StudentList = () => {
     });
 
     const fetchStudents = async () => {
+        setLoading(true);
         try {
-            const data = await studentApi.getStudentList();
-            setStudents(data);
+            const response = await studentApi.getStudentList({
+                search,
+                page: pagination.page,
+                limit: pagination.limit
+            });
+            setStudents(response.data);
+            setPagination(response.pagination);
         } catch (err) {
             console.error('Failed to fetch students:', err);
         } finally {
@@ -33,8 +44,11 @@ const StudentList = () => {
     };
 
     useEffect(() => {
-        fetchStudents();
-    }, []);
+        const timer = setTimeout(() => {
+            fetchStudents();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [search, pagination.page]);
 
     const handleAdmission = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -90,6 +104,8 @@ const StudentList = () => {
                             type="text"
                             placeholder="Search students by name or ID..."
                             className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                     <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors w-full sm:w-auto justify-center">
@@ -134,11 +150,14 @@ const StudentList = () => {
                                     <tr key={student.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-400">
                                                     {student.first_name[0]}{student.last_name[0]}
                                                 </div>
                                                 <div>
-                                                    <div className="text-sm font-bold text-slate-800">{student.first_name} {student.last_name}</div>
+                                                    <Link to={`/students/${student.id}`} className="text-sm font-bold text-slate-800 hover:text-theme-primary transition-colors cursor-pointer">
+                                                        {student.first_name} {student.last_name}
+                                                    </Link>
+                                                    <p className="text-xs text-slate-400 font-medium">Class: {(student as any).classroom_name || 'Unassigned'}</p>
                                                 </div>
                                             </div>
                                         </td>

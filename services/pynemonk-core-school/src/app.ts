@@ -2,6 +2,7 @@ import "reflect-metadata";
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
+import { router as schoolRouter } from "./module.js";
 
 /**
  * Creates and configures the Express application without starting the HTTP
@@ -31,16 +32,21 @@ export function createApp(opts?: { prefix?: string }): express.Application {
             methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
             allowedHeaders: ["Content-Type", "Authorization"],
             credentials: true,
-        })
+        }),
     );
 
     app.use(bodyParser.json());
 
-    // ── Routes (To be added later) ────────────────────────────────────────────
+    // ── Routes ────────────────────────────────────────────────────────────────
+    app.use(prefix, schoolRouter);
 
     // ── Health check ──────────────────────────────────────────────────────────
     app.get(`${prefix}/health`, (_req, res) => {
-        res.json({ status: "ok", service: "pynemonk-core-school", timestamp: new Date().toISOString() });
+        res.json({
+            status: "ok",
+            service: "pynemonk-core-school",
+            timestamp: new Date().toISOString(),
+        });
     });
 
     app.use((_req, res) => {

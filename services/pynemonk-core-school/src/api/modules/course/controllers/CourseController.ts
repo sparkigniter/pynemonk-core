@@ -13,12 +13,20 @@ export default class CourseController extends BaseController {
     public list = async (req: AuthenticatedRequest, res: Response) => {
         try {
             const tenantId = this.getTenantId(req);
-            const courses = await this.courseService.getCourseList(tenantId);
+            const { page, limit, search } = req.query;
+
+            const filters = {
+                page: page ? parseInt(page as string, 10) : 1,
+                limit: limit ? parseInt(limit as string, 10) : 10,
+                search: search as string,
+            };
+
+            const courses = await this.courseService.getCourseList(tenantId, filters);
             return this.ok(res, "Courses retrieved successfully", courses);
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }
-    }
+    };
 
     public get = async (req: AuthenticatedRequest, res: Response) => {
         try {
@@ -30,7 +38,7 @@ export default class CourseController extends BaseController {
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }
-    }
+    };
 
     public create = async (req: AuthenticatedRequest, res: Response) => {
         try {
@@ -40,7 +48,7 @@ export default class CourseController extends BaseController {
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }
-    }
+    };
 
     public update = async (req: AuthenticatedRequest, res: Response) => {
         try {
@@ -51,7 +59,7 @@ export default class CourseController extends BaseController {
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }
-    }
+    };
 
     public delete = async (req: AuthenticatedRequest, res: Response) => {
         try {
@@ -62,5 +70,5 @@ export default class CourseController extends BaseController {
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }
-    }
+    };
 }

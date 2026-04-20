@@ -7,17 +7,23 @@ import { Pool } from "pg";
 
 @injectable()
 export default class StaffController extends ResourceController {
-    constructor(
-        @inject(StaffService) private staffService: StaffService
-    ) {
+    constructor(@inject(StaffService) private staffService: StaffService) {
         super();
     }
 
     public async list(req: Request, res: Response) {
         try {
             const tenantId = this.getTenantId(req);
-            const scope = await this.getScope(req);
-            const staff = await this.staffService.getStaffList(tenantId, scope);
+            const { page, limit, search, status } = req.query;
+
+            const filters = {
+                page: page ? parseInt(page as string) : 1,
+                limit: limit ? parseInt(limit as string) : 10,
+                search: search as string,
+                status: status as string,
+            };
+
+            const staff = await this.staffService.getStaffList(tenantId, filters);
             return this.ok(res, "Staff list retrieved", staff);
         } catch (error: any) {
             return this.internalservererror(res, error.message);

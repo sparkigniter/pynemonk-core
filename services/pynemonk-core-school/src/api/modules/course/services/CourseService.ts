@@ -3,10 +3,10 @@ import CourseHelper from "../helpers/CourseHelper.js";
 
 @injectable()
 export default class CourseService {
-    constructor(@inject(CourseHelper) private courseHelper: CourseHelper) { }
+    constructor(@inject(CourseHelper) private courseHelper: CourseHelper) {}
 
-    public async getCourseList(tenantId: number) {
-        return this.courseHelper.findAll(tenantId);
+    public async getCourseList(tenantId: number, filters: any = {}) {
+        return this.courseHelper.findAll(tenantId, filters);
     }
 
     public async getCourseById(tenantId: number, id: number) {

@@ -7,47 +7,81 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * A simple utility to execute migrate.sql on startup.
- * Ensures the schema is always in sync with the code.
+ * Production-ready Migration Runner.
+ * Tracks applied migrations in the database to ensure exactly-once execution.
  */
 export async function runMigrations(pool: Pool): Promise<void> {
+    const client = await pool.connect();
     try {
-        // Find migrate.sql (tries a few common locations based on dev vs prod)
-        const possiblePaths = [
-            // Relative to the compiled JS in dist/
-            path.join(__dirname, "../../sql/migrate.sql"),
-            path.join(__dirname, "../sql/migrate.sql"),
-            // Relative to project root (Docker /app or local repo)
-            path.join(process.cwd(), "services/pynemonk-core-auth/sql/migrate.sql"),
-            path.join(process.cwd(), "sql/migrate.sql"),
+        console.log("[MigrationRunner] Checking for pending migrations...");
+
+        // 1. Ensure the migrations tracking table exists
+        await client.query(`
+            CREATE SCHEMA IF NOT EXISTS school;
+            CREATE TABLE IF NOT EXISTS school.migrations (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) UNIQUE NOT NULL,
+                applied_at TIMESTAMPTZ DEFAULT NOW()
+            );
+        `);
+
+        // 2. Identify migration files
+        const possibleDirs = [
+            path.join(process.cwd(), "sql/migrations"),
+            path.join(process.cwd(), "services/pynemonk-core-school/sql/migrations"),
+            path.join(__dirname, "../../sql/migrations"),
+            path.join(__dirname, "../sql/migrations"),
         ];
 
-        let migrationSql = "";
-        let foundPath = "";
-
-        for (const p of possiblePaths) {
-            if (fs.existsSync(p)) {
-                migrationSql = fs.readFileSync(p, "utf8");
-                foundPath = p;
+        let activeDir = "";
+        for (const dir of possibleDirs) {
+            if (fs.existsSync(dir)) {
+                activeDir = dir;
                 break;
             }
         }
 
-        if (!migrationSql) {
-            console.warn("[MigrationRunner] migrate.sql not found. Skipping auto-migrations.");
+        if (!activeDir) {
+            console.warn("[MigrationRunner] No migrations directory found. Checked:", possibleDirs);
             return;
         }
 
-        console.log(`[MigrationRunner] Applying migrations from ${foundPath}...`);
+        console.log(`[MigrationRunner] Using migrations from: ${activeDir}`);
 
-        // Execute the entire SQL script in a transaction
-        await pool.query("BEGIN");
-        await pool.query(migrationSql);
-        await pool.query("COMMIT");
+        const files = fs
+            .readdirSync(activeDir)
+            .filter((f) => f.endsWith(".sql"))
+            .sort(); // Ensure 001 runs before 002
 
-        console.log("[MigrationRunner] Migrations applied successfully.");
+        // 3. Apply pending migrations
+        for (const file of files) {
+            const { rows } = await client.query(
+                "SELECT id FROM school.migrations WHERE name = $1",
+                [file],
+            );
+
+            if (rows.length === 0) {
+                console.log(`[MigrationRunner] Applying migration: ${file}`);
+                const sql = fs.readFileSync(path.join(activeDir, file), "utf8");
+
+                await client.query("BEGIN");
+                try {
+                    await client.query(sql);
+                    await client.query("INSERT INTO school.migrations (name) VALUES ($1)", [file]);
+                    await client.query("COMMIT");
+                    console.log(`[MigrationRunner] Successfully applied ${file}`);
+                } catch (err: any) {
+                    await client.query("ROLLBACK");
+                    console.error(`[MigrationRunner] FAILED to apply ${file}:`, err.message);
+                    throw err; // Stop the sequence on failure
+                }
+            }
+        }
+
+        console.log("[MigrationRunner] All migrations are up to date.");
     } catch (error: any) {
-        await pool.query("ROLLBACK").catch((error: any) => { });
-        console.error("[MigrationRunner] FAILED to apply migrations:", error.message);
+        console.error("[MigrationRunner] Fatal migration error:", error.message);
+    } finally {
+        client.release();
     }
 }

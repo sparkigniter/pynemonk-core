@@ -1,8 +1,8 @@
-import * as express from 'express'
-import { container } from 'tsyringe';
-import BaseController from './BaseController.js';
-import { UserContext, AuthenticatedRequest } from '../middleware/AuthMiddleware.js';
-import { DataScopeHelper, DataScope } from '../helpers/DataScopeHelper.js';
+import * as express from "express";
+import { container } from "tsyringe";
+import BaseController from "./BaseController.js";
+import { UserContext, AuthenticatedRequest } from "../middleware/AuthMiddleware.js";
+import { DataScopeHelper, DataScope } from "../helpers/DataScopeHelper.js";
 
 class ResourceController extends BaseController {
     protected scopeHelper: DataScopeHelper;

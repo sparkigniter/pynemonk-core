@@ -5,8 +5,10 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import StudentList from './pages/StudentList';
+import StudentProfile from './pages/StudentProfile';
 import Attendance from './pages/Attendance';
 import Teachers from './pages/Teachers';
+import Grades from './pages/Grades';
 import Courses from './pages/Courses';
 import Finance from './pages/Finance';
 import Reports from './pages/Reports';
@@ -32,7 +34,9 @@ export default function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="students" element={<StudentList />} />
+          <Route path="students/:id" element={<StudentProfile />} />
           <Route path="teachers" element={<Teachers />} />
+          <Route path="grades" element={<Grades />} />
           <Route path="attendance" element={<Attendance />} />
           <Route path="courses" element={<Courses />} />
           <Route path="finance" element={<Finance />} />

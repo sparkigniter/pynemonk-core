@@ -32,5 +32,5 @@ export default class AdmissionController extends ResourceController {
             console.error("Admission Error:", error);
             return this.badrequest(res, error.message || "Failed to process admission");
         }
-    }
+    };
 }
