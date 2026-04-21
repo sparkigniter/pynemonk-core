@@ -55,10 +55,10 @@ class TokenController extends BaseController {
             const tokenResponse = await handler.handle(req.body);
 
             return this.ok(res, RESPONSE_TYPES.SUCCESS, {
-                access_token: tokenResponse.accessToken,
-                refresh_token: tokenResponse.refreshToken || undefined,
-                token_type: tokenResponse.tokenType,
-                expires_in: tokenResponse.expiresIn,
+                access_token: tokenResponse.access_token,
+                refresh_token: tokenResponse.refresh_token || undefined,
+                token_type: tokenResponse.token_type,
+                expires_in: tokenResponse.expires_in,
             });
         } catch (error) {
             if (error instanceof ValidationError) {

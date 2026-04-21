@@ -58,7 +58,7 @@ const UpcomingEvents: React.FC = () => {
                     <h3 className="text-base font-semibold text-slate-800 font-heading">Upcoming Events</h3>
                     <p className="text-xs text-slate-400 mt-0.5">Next 2 weeks</p>
                 </div>
-                <button className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
+                <button className="text-xs font-medium text-primary hover:opacity-80 transition-colors">
                     View calendar →
                 </button>
             </div>
@@ -81,7 +81,7 @@ const UpcomingEvents: React.FC = () => {
 
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
-                                <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-indigo-700 transition-colors">
+                                <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-primary transition-colors">
                                     {event.title}
                                 </p>
                             </div>
@@ -104,7 +104,7 @@ const UpcomingEvents: React.FC = () => {
                             >
                                 {event.tag}
                             </span>
-                            <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-400 transition-colors" />
+                            <ChevronRight size={14} className="text-slate-300 group-hover:text-primary transition-colors" />
                         </div>
                     </div>
                 ))}

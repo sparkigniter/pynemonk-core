@@ -6,8 +6,13 @@ import feeRouter from "./api/modules/fee/routes.js";
 import FeeAdmissionListener from "./api/modules/fee/listeners/FeeAdmissionListener.js";
 
 
+import { runMigrations } from "./db/MigrationRunner.js";
+import pool from "./db/pg-pool.js";
+export { runMigrations, pool };
+
 export async function init(): Promise<void> {
     setupDI();
+    // Migrations are now managed via CLI tool: npm run migrate
     // Start listeners
     container.resolve(FeeAdmissionListener);
 }

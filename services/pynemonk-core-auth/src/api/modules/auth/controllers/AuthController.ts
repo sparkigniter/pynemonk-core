@@ -54,13 +54,7 @@ class AuthController extends BaseController {
             }
 
             // Standard token response
-            const tokens = result as any;
-            return this.ok(res, RESPONSE_TYPES.SUCCESS, {
-                access_token: tokens.accessToken,
-                refresh_token: tokens.refreshToken,
-                token_type: tokens.tokenType,
-                expires_in: tokens.expiresIn,
-            });
+            return this.ok(res, RESPONSE_TYPES.SUCCESS, result);
         } catch (error) {
             if (error instanceof ValidationError) {
                 return this.badrequest(res, error.message);
@@ -105,12 +99,7 @@ class AuthController extends BaseController {
     public async refresh(req: e.Request, res: e.Response): Promise<e.Response> {
         try {
             const tokens = await this.authService.refreshTokens(req.body);
-            return this.ok(res, RESPONSE_TYPES.SUCCESS, {
-                access_token: tokens.accessToken,
-                refresh_token: tokens.refreshToken,
-                token_type: tokens.tokenType,
-                expires_in: tokens.expiresIn,
-            });
+            return this.ok(res, RESPONSE_TYPES.SUCCESS, tokens);
         } catch (error) {
             if (error instanceof ValidationError) {
                 return this.badrequest(res, error.message);

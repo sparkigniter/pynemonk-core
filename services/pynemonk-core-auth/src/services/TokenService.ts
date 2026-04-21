@@ -64,10 +64,10 @@ class TokenService {
         const accessToken: string = this.generateToken(tokenPayload);
         const refreshToken: string = this.generateRefreshToken(tokenPayload);
         return {
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            tokenType: "Bearer",
-            expiresIn: this.accessTokenExpiryTime
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            token_type: "Bearer",
+            expires_in: this.accessTokenExpiryTime
         };
     }
 

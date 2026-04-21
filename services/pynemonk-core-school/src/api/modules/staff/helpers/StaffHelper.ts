@@ -72,7 +72,12 @@ export default class StaffHelper extends BaseModel {
         return result.rows[0];
     }
 
-    public async create(data: any) {
+    private nullIfEmpty(val: any) {
+        if (val === "" || val === undefined) return null;
+        return val;
+    }
+
+    public async create(data: any, db: any = this.db) {
         const query = `
             INSERT INTO school.staff (
                 tenant_id, user_id, employee_code, first_name, last_name, 
@@ -86,35 +91,35 @@ export default class StaffHelper extends BaseModel {
             RETURNING *
         `;
         const values = [
-            data.tenant_id,
-            data.user_id,
-            data.employee_code,
-            data.first_name,
-            data.last_name,
-            data.gender,
-            data.date_of_birth,
-            data.phone,
-            data.address,
-            data.qualification,
-            data.specialization,
-            data.joining_date,
-            data.designation,
-            data.avatar_url,
-            data.blood_group,
-            data.religion,
-            data.nationality,
-            data.emergency_contact_name,
-            data.emergency_contact_phone,
-            data.marital_status,
-            data.experience_years,
-            data.status || "active",
-            data.aadhaar_number,
-            data.pan_number,
-            data.bank_account_no,
-            data.bank_name,
-            data.ifsc_code,
+            this.nullIfEmpty(data.tenant_id),
+            this.nullIfEmpty(data.user_id),
+            this.nullIfEmpty(data.employee_code),
+            this.nullIfEmpty(data.first_name),
+            this.nullIfEmpty(data.last_name),
+            this.nullIfEmpty(data.gender),
+            this.nullIfEmpty(data.date_of_birth),
+            this.nullIfEmpty(data.phone),
+            this.nullIfEmpty(data.address),
+            this.nullIfEmpty(data.qualification),
+            this.nullIfEmpty(data.specialization),
+            this.nullIfEmpty(data.joining_date),
+            this.nullIfEmpty(data.designation),
+            this.nullIfEmpty(data.avatar_url),
+            this.nullIfEmpty(data.blood_group),
+            this.nullIfEmpty(data.religion),
+            this.nullIfEmpty(data.nationality),
+            this.nullIfEmpty(data.emergency_contact_name),
+            this.nullIfEmpty(data.emergency_contact_phone),
+            this.nullIfEmpty(data.marital_status),
+            this.nullIfEmpty(data.experience_years) || 0,
+            this.nullIfEmpty(data.status) || "active",
+            this.nullIfEmpty(data.aadhaar_number),
+            this.nullIfEmpty(data.pan_number),
+            this.nullIfEmpty(data.bank_account_no),
+            this.nullIfEmpty(data.bank_name),
+            this.nullIfEmpty(data.ifsc_code),
         ];
-        const result = await this.db.query(query, values);
+        const result = await db.query(query, values);
         return result.rows[0];
     }
 
@@ -153,31 +158,31 @@ export default class StaffHelper extends BaseModel {
         const values = [
             tenantId,
             id,
-            data.employee_code,
-            data.first_name,
-            data.last_name,
-            data.gender,
-            data.date_of_birth,
-            data.phone,
-            data.address,
-            data.qualification,
-            data.specialization,
-            data.joining_date,
-            data.designation,
-            data.avatar_url,
-            data.blood_group,
-            data.religion,
-            data.nationality,
-            data.emergency_contact_name,
-            data.emergency_contact_phone,
-            data.marital_status,
-            data.experience_years,
-            data.status,
-            data.aadhaar_number,
-            data.pan_number,
-            data.bank_account_no,
-            data.bank_name,
-            data.ifsc_code,
+            this.nullIfEmpty(data.employee_code),
+            this.nullIfEmpty(data.first_name),
+            this.nullIfEmpty(data.last_name),
+            this.nullIfEmpty(data.gender),
+            this.nullIfEmpty(data.date_of_birth),
+            this.nullIfEmpty(data.phone),
+            this.nullIfEmpty(data.address),
+            this.nullIfEmpty(data.qualification),
+            this.nullIfEmpty(data.specialization),
+            this.nullIfEmpty(data.joining_date),
+            this.nullIfEmpty(data.designation),
+            this.nullIfEmpty(data.avatar_url),
+            this.nullIfEmpty(data.blood_group),
+            this.nullIfEmpty(data.religion),
+            this.nullIfEmpty(data.nationality),
+            this.nullIfEmpty(data.emergency_contact_name),
+            this.nullIfEmpty(data.emergency_contact_phone),
+            this.nullIfEmpty(data.marital_status),
+            this.nullIfEmpty(data.experience_years),
+            this.nullIfEmpty(data.status),
+            this.nullIfEmpty(data.aadhaar_number),
+            this.nullIfEmpty(data.pan_number),
+            this.nullIfEmpty(data.bank_account_no),
+            this.nullIfEmpty(data.bank_name),
+            this.nullIfEmpty(data.ifsc_code),
         ];
         const result = await this.db.query(query, values);
         return result.rows[0];

@@ -44,6 +44,15 @@ export interface RegisterTenantPayload {
     state?: string;
     country?: string;
     package_id: number;
+    academic_year?: {
+        name: string;
+        start_date: string;
+        end_date: string;
+    };
+    settings?: {
+        language: string;
+        date_format: string;
+    };
 }
 
 export interface SetupOwnerPayload {

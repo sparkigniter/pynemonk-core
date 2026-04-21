@@ -143,6 +143,8 @@ class AuthService {
         const roleSlugs = roles.map(r => r.slug);
         const primaryRole = roles.find(r => r.is_primary) || roles[0];
 
+        console.log(`[AuthService] Login successful. User: ${user.email}, Selected Tenant: ${selectedTenantId}`);
+
         // 7. Build token payload
         const payload: TokenPayload = {
             grant_type: data.grant_type,
@@ -158,14 +160,15 @@ class AuthService {
             tenant_id: selectedTenantId,
         } as any;
 
+        console.log(`[AuthService] Generated token payload:`, JSON.stringify(payload));
+
         // 8. Dispatch to the grant handler
         const handler = this.grantFactory.getHandler(data.grant_type);
         const tokenPair = await handler.handle(payload);
 
-        // 9. Persist refresh token
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + REFRESH_TTL_DAYS);
-        await this.userHelper.saveRefreshToken(user.id, 0, tokenPair.refreshToken, expiresAt);
+        await this.userHelper.saveRefreshToken(user.id, 0, tokenPair.refresh_token, expiresAt);
 
         return tokenPair;
     }
@@ -207,6 +210,15 @@ class AuthService {
         const user = await this.userHelper.getUserById(stored.user_id);
         if (!user) throw new ValidationError("User not found");
 
+        // Load roles and tenancy
+        const roles = await this.userHelper.getUserRoles(user.id);
+        const roleSlugs = roles.map(r => r.slug);
+        const primaryRole = roles.find(r => r.is_primary) || roles[0];
+        
+        // Find tenant_id (if not explicitly stored in token, derive from user or roles)
+        const tenants = await this.userHelper.getUserTenants(user.id);
+        const tenantId = stored.tenant_id || (tenants.length === 1 ? tenants[0].id : user.tenant_id);
+
         const payload: TokenPayload = {
             grant_type: 'refresh_token',
             client_id: data.client_id,
@@ -214,7 +226,9 @@ class AuthService {
             exp: Math.floor(Date.now() / 1000) + 3600,
             sub: String(user.id),
             email: user.email,
-            role_id: user.role_id,
+            role_id: primaryRole ? primaryRole.id : user.role_id,
+            roles: roleSlugs,
+            tenant_id: tenantId,
         } as any;
 
         const handler = this.grantFactory.getHandler('refresh_token');
@@ -222,7 +236,7 @@ class AuthService {
 
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + REFRESH_TTL_DAYS);
-        await this.userHelper.saveRefreshToken(user.id, 0, tokenPair.refreshToken, expiresAt);
+        await this.userHelper.saveRefreshToken(user.id, 0, tokenPair.refresh_token, expiresAt);
 
         return tokenPair;
     }

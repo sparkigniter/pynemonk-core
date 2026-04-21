@@ -17,7 +17,7 @@ const statsData = [
         icon: GraduationCap,
         trend: '+12 this month',
         trendUp: true,
-        gradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+        gradient: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
         subtitle: 'Enrolled this year',
         delay: 'delay-100',
     },
@@ -54,7 +54,7 @@ const statsData = [
 ];
 
 const miniStats = [
-    { label: 'Active Classes', value: '48', icon: BookOpen, color: '#6366f1', bg: '#eef2ff' },
+    { label: 'Active Classes', value: '48', icon: BookOpen, color: 'var(--primary)', bg: 'var(--primary-50)' },
     { label: 'Scholarships', value: '32', icon: Award, color: '#f59e0b', bg: '#fffbeb' },
     { label: 'Monthly Reports', value: '18', icon: FileBarChart, color: '#10b981', bg: '#ecfdf5' },
 ];
@@ -87,14 +87,14 @@ const Dashboard = () => {
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <Sparkles size={16} className="text-yellow-300" />
-                            <span className="text-indigo-200 text-sm font-medium">
+                            <span className="opacity-80 text-sm font-medium" style={{ color: 'var(--primary-light)' }}>
                                 {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                             </span>
                         </div>
                         <h1 className="text-2xl sm:text-3xl font-bold font-heading text-white leading-tight">
                             {greeting()}, Principal! 👋
                         </h1>
-                        <p className="text-indigo-200 text-sm mt-1.5 max-w-md">
+                        <p className="opacity-80 text-sm mt-1.5 max-w-md" style={{ color: 'var(--primary-light)' }}>
                             Here's what's happening at EduERP today. All systems operational.
                         </p>
                     </div>
@@ -129,7 +129,7 @@ const Dashboard = () => {
                                 </div>
                                 <div>
                                     <p className="text-lg font-bold text-white leading-none">{stat.value}</p>
-                                    <p className="text-xs text-indigo-300">{stat.label}</p>
+                                    <p className="text-xs opacity-70" style={{ color: 'var(--primary-light)' }}>{stat.label}</p>
                                 </div>
                             </div>
                         );

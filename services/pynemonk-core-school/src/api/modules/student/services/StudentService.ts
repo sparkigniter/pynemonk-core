@@ -1,6 +1,7 @@
 import { injectable, inject } from "tsyringe";
 import StudentHelper from "../helpers/StudentHelper.js";
 import StudentValidator from "../validator/StudentValidator.js";
+import AcademicYearHelper from "../../academics/helpers/AcademicYearHelper.js";
 
 // Note: To register a student, we also need to create their auth.user record.
 // In a monolith this is easy (import UserHelper), in microservices we might do an HTTP call.
@@ -14,6 +15,7 @@ export default class StudentService {
     constructor(
         private studentHelper: StudentHelper,
         private studentValidator: StudentValidator,
+        private academicYearHelper: AcademicYearHelper,
         @inject("IAuthClient") private authClient: IAuthClient,
         @inject("DB") private db: Pool,
     ) {}
@@ -69,6 +71,10 @@ export default class StudentService {
     }
 
     public async listStudents(tenantId: number, filters: any, scope: any): Promise<any> {
+        if (!filters.academic_year_id && !filters.classroom_id) {
+            const currentYear = await this.academicYearHelper.findCurrent(tenantId);
+            filters.academic_year_id = currentYear?.id;
+        }
         return this.studentHelper.listStudents(tenantId, filters, scope);
     }
 }

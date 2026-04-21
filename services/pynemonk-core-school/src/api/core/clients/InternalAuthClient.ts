@@ -70,4 +70,27 @@ export class InternalAuthClient implements IAuthClient {
         }
         return roleRes.rows[0].id;
     }
+
+    private async provisionDefaultRoles(tenantId: number, db: Pool | any): Promise<void> {
+        // Fetch all templates
+        const templates = await db.query(`SELECT slug, name, description, tier, is_system, data_scope FROM auth.role_template WHERE is_system = TRUE`);
+
+        for (const template of templates.rows) {
+            await db.query(
+                `INSERT INTO auth.role
+                    (tenant_id, slug, name, description, tier, is_system, data_scope, is_deleted, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, FALSE, NOW(), NOW())
+                 ON CONFLICT (tenant_id, slug) WHERE (is_deleted = false) 
+                 DO UPDATE SET 
+                    name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    tier = EXCLUDED.tier,
+                    is_system = EXCLUDED.is_system,
+                    data_scope = EXCLUDED.data_scope,
+                    updated_at = NOW()`,
+                [tenantId, template.slug, template.name, template.description, template.tier, template.is_system,
+                    typeof template.data_scope === 'string' ? template.data_scope : JSON.stringify(template.data_scope || [])]
+            );
+        }
+    }
 }

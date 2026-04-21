@@ -1,9 +1,13 @@
 import { injectable, inject } from "tsyringe";
 import { Grade } from "../helpers/GradeHelper.js";
+import AcademicYearHelper from "../../academics/helpers/AcademicYearHelper.js";
 
 @injectable()
 export class GradeService {
-    constructor(@inject("DB") private db: any) {}
+    constructor(
+        @inject("DB") private db: any,
+        private academicYearHelper: AcademicYearHelper
+    ) {}
 
     async createGrade(tenantId: number, data: Partial<Grade>) {
         const query = `
@@ -20,7 +24,12 @@ export class GradeService {
         return result.rows[0];
     }
 
-    async getGrades(tenantId: number) {
+    async getGrades(tenantId: number, academicYearId?: number) {
+        if (!academicYearId) {
+            const currentYear = await this.academicYearHelper.findCurrent(tenantId);
+            academicYearId = currentYear?.id;
+        }
+
         const query = `
             SELECT 
                 g.*,
@@ -31,6 +40,7 @@ export class GradeService {
                     WHERE c.grade_id = g.id 
                       AND se.is_deleted = FALSE 
                       AND se.status = 'active'
+                      AND se.academic_year_id = $2
                 ) as student_count,
                 (
                     SELECT COUNT(s.id) 
@@ -43,12 +53,13 @@ export class GradeService {
                     FROM school.classroom c 
                     WHERE c.grade_id = g.id 
                       AND c.is_deleted = FALSE
+                      AND c.academic_year_id = $2
                 ) as classroom_count
             FROM school.grade g
             WHERE g.tenant_id = $1 AND g.is_deleted = FALSE 
             ORDER BY g.sequence_order ASC, g.name ASC
         `;
-        const result = await this.db.query(query, [tenantId]);
+        const result = await this.db.query(query, [tenantId, academicYearId]);
         return result.rows;
     }
 

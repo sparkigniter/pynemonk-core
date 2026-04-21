@@ -24,6 +24,12 @@ import EnrollmentHelper from "./api/modules/student/helpers/EnrollmentHelper.js"
 import GuardianHelper from "./api/modules/guardian/helpers/GuardianHelper.js";
 import { GradeService } from "./api/modules/grade/services/GradeService.js";
 import { GradeController } from "./api/modules/grade/controllers/GradeController.js";
+import AcademicYearHelper from "./api/modules/academics/helpers/AcademicYearHelper.js";
+import RolloverService from "./api/modules/academics/services/RolloverService.js";
+import RolloverController from "./api/modules/academics/controllers/RolloverController.js";
+
+import { TimetableService } from "./api/modules/timetable/services/TimetableService.js";
+import { TimetableController } from "./api/modules/timetable/controllers/TimetableController.js";
 
 import { InternalAuthClient } from "./api/core/clients/InternalAuthClient.js";
 
@@ -70,6 +76,16 @@ function setupDI(): void {
     // ── Grade Module ─────────────────────────────────────────────────────────
     container.register(GradeService, { useClass: GradeService });
     container.register(GradeController, { useClass: GradeController });
+
+    // ── Timetable Module ─────────────────────────────────────────────────────
+    container.register(TimetableService, { useClass: TimetableService });
+    container.register(TimetableController, { useClass: TimetableController });
+
+    // ── Academics Module ─────────────────────────────────────────────────────
+    container.register(AcademicYearHelper, { useClass: AcademicYearHelper });
+    container.register(RolloverService, { useClass: RolloverService });
+    container.register(RolloverController, { useClass: RolloverController });
+    container.register("AcademicYearHelper", { useClass: AcademicYearHelper }); // Alias for legacy usage
 }
 
 export default setupDI;

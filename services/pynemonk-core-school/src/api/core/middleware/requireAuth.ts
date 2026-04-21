@@ -27,8 +27,17 @@ export function requireAuth(req: e.Request, res: e.Response, next: e.NextFunctio
     }
 
     try {
-        const decoded = jwt.verify(token, secret, { algorithms: ["HS256"] });
-        (req as any).user = decoded;
+        const decoded = jwt.verify(token, secret, { algorithms: ["HS256"] }) as any;
+        
+        // Standardize context fields
+        (req as any).user = {
+            userId: decoded.sub || decoded.userId || decoded.id,
+            tenantId: decoded.tenant_id || decoded.tenantId || decoded.tid,
+            roles: decoded.roles || [],
+            email: decoded.email,
+            ...decoded // Preserve other fields if needed
+        };
+        
         next();
     } catch (err) {
         if (err instanceof jwt.TokenExpiredError) {

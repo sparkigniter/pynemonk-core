@@ -38,18 +38,18 @@ const Attendance = () => {
                     <input
                         type="date"
                         defaultValue={new Date().toISOString().split('T')[0]}
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none"
                     />
                 </div>
                 <div className="flex-1 w-full">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Class / Grade</label>
-                    <select className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                    <select className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none bg-white">
                         <option>Grade 10 - Section A</option>
                         <option>Grade 10 - Section B</option>
                         <option>Grade 11 - Section A</option>
                     </select>
                 </div>
-                <button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm h-[38px]">
+                <button className="w-full sm:w-auto bg-primary hover:opacity-90 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm h-[38px]">
                     Fetch Students
                 </button>
             </div>
@@ -105,7 +105,7 @@ const Attendance = () => {
                 </div>
 
                 <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
-                    <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                    <button className="bg-primary hover:opacity-90 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
                         Save Attendance
                     </button>
                 </div>

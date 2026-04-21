@@ -61,7 +61,7 @@ export default function StudentProfile() {
                 {/* Left Column: Basic Info */}
                 <div className="lg:col-span-4 space-y-8">
                     <div className="card p-8 bg-white border-slate-100 shadow-xl space-y-8 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-accent to-pink-500" />
                         
                         <div className="flex flex-col items-center text-center space-y-4">
                             <div className="relative">
@@ -130,11 +130,11 @@ export default function StudentProfile() {
                     <div className="card p-10 bg-white border-slate-100 shadow-xl relative overflow-hidden">
                         <div className="flex items-center justify-between mb-12">
                             <div className="space-y-1">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase tracking-widest">
                                     <TrendingUp size={14} />
                                     Growth Trajectory
                                 </div>
-                                <h3 className="text-3xl font-black text-slate-800 leading-none">Academic <span className="text-indigo-600">Journey</span></h3>
+                                <h3 className="text-3xl font-black text-slate-800 leading-none">Academic <span className="text-primary">Journey</span></h3>
                                 <p className="text-slate-400 text-sm font-medium">Visualization of passed, current, and future academic milestones.</p>
                             </div>
                         </div>
@@ -153,7 +153,7 @@ export default function StudentProfile() {
                                         {/* Status Icon */}
                                         <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center border-4 border-white shadow-lg transition-all ${
                                             isPassed ? 'bg-emerald-500 text-white' : 
-                                            isCurrent ? 'bg-indigo-600 text-white scale-125 ring-4 ring-indigo-100' : 
+                                            isCurrent ? 'bg-primary text-white scale-125 ring-4 ring-primary/10' : 
                                             'bg-white text-slate-200 border-slate-100'
                                         }`}>
                                             {isPassed ? <CheckCircle2 size={16} /> : isCurrent ? <Map size={16} /> : <Circle size={16} />}
@@ -161,12 +161,12 @@ export default function StudentProfile() {
 
                                         {/* Content Card */}
                                         <div className={`flex-1 p-6 rounded-3xl border transition-all ${
-                                            isCurrent ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-xl shadow-indigo-200 -translate-y-2' : 
+                                            isCurrent ? 'bg-gradient-to-br from-primary to-accent text-white shadow-xl shadow-primary/20 -translate-y-2' : 
                                             'bg-slate-50/50 border-slate-100'
                                         }`}>
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${isCurrent ? 'text-indigo-100' : 'text-slate-400'}`}>
+                                                    <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${isCurrent ? 'text-white/80' : 'text-slate-400'}`}>
                                                         {isPassed ? 'Completed Level' : isCurrent ? 'Active Level' : 'Upcoming Milestone'}
                                                     </p>
                                                     <h4 className="text-xl font-black">{grade.name}</h4>
@@ -186,11 +186,11 @@ export default function StudentProfile() {
                                             {isCurrent && (
                                                 <div className="mt-6 grid grid-cols-2 gap-4">
                                                     <div className="p-3 bg-white/10 rounded-2xl">
-                                                        <p className="text-[9px] font-black text-indigo-100 uppercase tracking-widest mb-1">Subjects</p>
+                                                        <p className="text-[9px] font-black text-white/70 uppercase tracking-widest mb-1">Subjects</p>
                                                         <p className="text-lg font-black leading-none">Core Curriculum</p>
                                                     </div>
                                                     <div className="p-3 bg-white/10 rounded-2xl">
-                                                        <p className="text-[9px] font-black text-indigo-100 uppercase tracking-widest mb-1">Status</p>
+                                                        <p className="text-[9px] font-black text-white/70 uppercase tracking-widest mb-1">Status</p>
                                                         <p className="text-lg font-black leading-none">In Progress</p>
                                                     </div>
                                                 </div>

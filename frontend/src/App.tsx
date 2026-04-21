@@ -9,10 +9,13 @@ import StudentProfile from './pages/StudentProfile';
 import Attendance from './pages/Attendance';
 import Teachers from './pages/Teachers';
 import Grades from './pages/Grades';
-import Courses from './pages/Courses';
 import Finance from './pages/Finance';
 import Reports from './pages/Reports';
+import Subjects from './pages/Subjects';
 import Settings from './pages/Settings';
+import Timetable from './pages/Timetable';
+import Classrooms from './pages/Classrooms';
+import Rollover from './pages/Rollover';
 
 export default function App() {
   return (
@@ -38,10 +41,13 @@ export default function App() {
           <Route path="teachers" element={<Teachers />} />
           <Route path="grades" element={<Grades />} />
           <Route path="attendance" element={<Attendance />} />
-          <Route path="courses" element={<Courses />} />
+          <Route path="subjects" element={<Subjects />} />
           <Route path="finance" element={<Finance />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="timetable" element={<Timetable />} />
+          <Route path="classrooms" element={<Classrooms />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="rollover" element={<Rollover />} />
         </Route>
 
         {/* Catch-all */}

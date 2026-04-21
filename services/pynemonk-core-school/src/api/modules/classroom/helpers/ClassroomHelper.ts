@@ -12,8 +12,8 @@ export default class ClassroomHelper extends BaseModel {
         let query = `
             SELECT c.*, g.name as grade_name, s.first_name as teacher_first_name, s.last_name as teacher_last_name
             FROM school.classroom c
-            JOIN school.grade g ON c.grade_id = g.id
-            LEFT JOIN school.staff s ON c.class_teacher_id = s.id
+            JOIN school.grade g ON c.grade_id = g.id AND g.is_deleted = FALSE
+            LEFT JOIN school.staff s ON c.class_teacher_id = s.id AND s.is_deleted = FALSE
             WHERE c.tenant_id = $1 AND c.is_deleted = FALSE
         `;
         const params: any[] = [tenantId];

@@ -45,6 +45,8 @@ COPY --from=builder /repo/services/pynemonk-core-school/dist            ./servic
 COPY --from=builder /repo/services/pynemonk-core-accounting/dist        ./services/pynemonk-core-accounting/dist
 COPY --from=builder /repo/apps/pynemonk-monolith/dist                   ./apps/pynemonk-monolith/dist
 COPY --from=builder /repo/services/pynemonk-core-auth/sql               ./services/pynemonk-core-auth/sql
+COPY --from=builder /repo/services/pynemonk-core-school/sql             ./services/pynemonk-core-school/sql
+COPY --from=builder /repo/services/pynemonk-core-accounting/sql         ./services/pynemonk-core-accounting/sql
 
 ENV NODE_ENV=production
 

@@ -73,6 +73,7 @@ export default class StudentHelper {
             limit?: number;
             search?: string;
             classroom_id?: number;
+            academic_year_id?: number;
         } = {},
         scope: any = { accessLevel: "FULL" },
     ): Promise<any> {
@@ -89,13 +90,24 @@ export default class StudentHelper {
         const params: any[] = [tenantId];
         let paramIndex = 2;
 
-        // Apply Scope Filters
-        if (scope.accessLevel === "ASSIGNED") {
+        // Apply Scope and Academic Year Filters
+        if (filters.academic_year_id || filters.classroom_id || scope.accessLevel === "ASSIGNED") {
             query += ` JOIN school.student_enrollment se ON s.id = se.student_id AND se.is_deleted = FALSE`;
-            conditions.push(`se.classroom_id = ANY($${paramIndex}::int[])`);
-            params.push(scope.classroomIds);
-            paramIndex++;
-        } else if (scope.accessLevel === "SELF") {
+            
+            if (filters.academic_year_id) {
+                conditions.push(`se.academic_year_id = $${paramIndex}`);
+                params.push(filters.academic_year_id);
+                paramIndex++;
+            }
+            
+            if (filters.classroom_id) {
+                conditions.push(`se.classroom_id = $${paramIndex}`);
+                params.push(filters.classroom_id);
+                paramIndex++;
+            }
+        }
+
+        if (scope.accessLevel === "ASSIGNED") {
             conditions.push(`s.id = $${paramIndex}`);
             params.push(scope.studentId);
             paramIndex++;

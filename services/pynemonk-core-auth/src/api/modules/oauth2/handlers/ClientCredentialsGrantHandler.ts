@@ -17,10 +17,10 @@ class ClientCredentialsGrantHandler implements GrantHandler {
         // client_credentials issues only an access token — no refresh token
         const accessToken = this.tokenService.generateToken(payload);
         return {
-            accessToken,
-            refreshToken: "",
-            tokenType: "Bearer",
-            expiresIn: 3600,
+            access_token: accessToken,
+            refresh_token: "",
+            token_type: "Bearer",
+            expires_in: 3600,
         };
     }
 }

@@ -16,6 +16,7 @@ import tenantRouter from "./api/modules/tenant/routes.js";
 
 import { runMigrations } from "./db/MigrationRunner.js";
 import pool from "./db/pg-pool.js";
+export { runMigrations, pool };
 
 /**
  * Initializes all DI bindings and runs database migrations.
@@ -23,7 +24,7 @@ import pool from "./db/pg-pool.js";
  */
 export async function init(): Promise<void> {
     setupDI();
-    await runMigrations(pool);
+    // Migrations are now managed via CLI tool: npm run migrate
 }
 
 /**

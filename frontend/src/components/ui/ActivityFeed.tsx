@@ -27,7 +27,7 @@ const ActivityFeed: React.FC = () => {
                     <h3 className="text-base font-semibold text-slate-800 font-heading">Recent Activity</h3>
                     <p className="text-xs text-slate-400 mt-0.5">Latest updates from your school</p>
                 </div>
-                <button className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
+                <button className="text-xs font-medium text-primary hover:opacity-80 transition-colors">
                     View all →
                 </button>
             </div>
@@ -46,7 +46,7 @@ const ActivityFeed: React.FC = () => {
                             {item.emoji}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-800 group-hover:text-indigo-700 transition-colors truncate">
+                            <p className="text-sm font-medium text-slate-800 group-hover:text-primary transition-colors truncate">
                                 {item.title}
                             </p>
                             <p className="text-xs text-slate-500 truncate">{item.subtitle}</p>
