@@ -15,6 +15,15 @@ class TenantValidator {
         state:      Joi.string().max(100).optional().allow(""),
         country:    Joi.string().max(100).optional().allow(""),
         package_id: Joi.number().integer().positive().required(),
+        academic_year: Joi.object({
+            name: Joi.string().required(),
+            start_date: Joi.date().iso().required(),
+            end_date: Joi.date().iso().min(Joi.ref('start_date')).required(),
+        }).optional(),
+        settings: Joi.object({
+            language: Joi.string().optional(),
+            date_format: Joi.string().optional(),
+        }).optional(),
     });
 
     /** Schema for step 2 — create the owner account after school is registered */

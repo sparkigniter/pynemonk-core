@@ -29,6 +29,24 @@ CREATE TABLE IF NOT EXISTS school.academic_year (
 CREATE INDEX IF NOT EXISTS idx_academic_year_tenant ON school.academic_year (tenant_id) WHERE is_deleted = FALSE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Course
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS school.course (
+    id          serial        NOT NULL,
+    tenant_id   int           NOT NULL REFERENCES auth.tenant(id),
+    name        varchar(100)  NOT NULL,
+    code        varchar(20),
+    description text,
+    is_deleted  BOOLEAN       NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_tenant ON school.course (tenant_id) WHERE is_deleted = FALSE;
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- Grade (Level)
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS school.grade (
@@ -174,15 +192,15 @@ CREATE INDEX IF NOT EXISTS idx_teacher_assignment_classroom ON school.teacher_as
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Timetable  (period schedule per class-subject-day)
 -- ─────────────────────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS school.timetable (
+DROP TABLE IF EXISTS school.timetable CASCADE;
+CREATE TABLE school.timetable (
     id               serial      NOT NULL,
     tenant_id        int         NOT NULL REFERENCES auth.tenant(id),
     classroom_id     int         NOT NULL REFERENCES school.classroom(id),
     subject_id       int         NOT NULL REFERENCES school.subject(id),
-    staff_id         int         NOT NULL REFERENCES school.staff(id),
-    academic_year_id int         NOT NULL REFERENCES school.academic_year(id),
+    teacher_id       int         NOT NULL REFERENCES school.staff(id),
+    academic_year_id int         REFERENCES school.academic_year(id),
     day_of_week      smallint    NOT NULL CHECK (day_of_week BETWEEN 1 AND 7), -- 1=Mon
-    period_number    smallint    NOT NULL,
     start_time       TIME        NOT NULL,
     end_time         TIME        NOT NULL,
     room             varchar(30),                        -- Override room for this period
@@ -190,10 +208,11 @@ CREATE TABLE IF NOT EXISTS school.timetable (
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (id),
-    CONSTRAINT uq_timetable_slot UNIQUE (classroom_id, day_of_week, period_number, academic_year_id)
+    CONSTRAINT uq_timetable_slot UNIQUE (classroom_id, day_of_week, start_time, academic_year_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_timetable_classroom ON school.timetable (classroom_id, academic_year_id) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_timetable_teacher ON school.timetable (teacher_id, day_of_week) WHERE is_deleted = FALSE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Student  (linked to auth.user)
@@ -490,3 +509,6 @@ CREATE TABLE IF NOT EXISTS school.student_guardian (
     PRIMARY KEY (id),
     CONSTRAINT uq_student_guardian UNIQUE (student_id, guardian_id)
 );
+
+
+

@@ -80,15 +80,15 @@ export default function Grades() {
     return (
         <div className="p-8 space-y-8 animate-fade-in">
             {/* Header section with Stats */}
-            <div className="relative overflow-hidden bg-gradient-hero rounded-[2.5rem] p-10 text-white shadow-2xl shadow-indigo-200">
+            <div className="relative overflow-hidden bg-primary rounded-[2.5rem] p-10 text-white shadow-2xl shadow-primary/20">
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-2">
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20 text-xs font-black uppercase tracking-widest text-indigo-100">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20 text-xs font-black uppercase tracking-widest text-white/80">
                             <Layers size={14} className="animate-pulse" />
                             Academic Structure
                         </div>
-                        <h1 className="text-5xl font-black tracking-tight leading-none">Grade <span className="text-indigo-200">Management</span></h1>
-                        <p className="text-indigo-100/80 text-lg font-medium max-w-xl">Configure academic levels, progression paths, and curriculum mapping.</p>
+                        <h1 className="text-5xl font-black tracking-tight leading-none">Grade <span className="opacity-80 text-white/90">Management</span></h1>
+                        <p className="opacity-80 text-lg font-medium max-w-xl text-white/70">Configure academic levels, progression paths, and curriculum mapping.</p>
                     </div>
                     
                     <div className="flex items-center gap-4">
@@ -108,7 +108,7 @@ export default function Grades() {
                         </div>
                         <button 
                             onClick={() => { setEditingGrade(null); setFormData({ name: '', slug: '', sequence_order: 0 }); setIsModalOpen(true); }}
-                            className="group relative flex items-center gap-3 px-8 py-4 bg-white text-theme-primary rounded-2xl font-black text-sm uppercase tracking-wider hover:bg-indigo-50 transition-all active:scale-95 shadow-xl shadow-indigo-900/20"
+                            className="group relative flex items-center gap-3 px-8 py-4 bg-white text-theme-primary rounded-2xl font-black text-sm uppercase tracking-wider hover:bg-primary/5 transition-all active:scale-95 shadow-xl shadow-primary/20"
                         >
                             <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
                             Create New Grade
@@ -124,38 +124,38 @@ export default function Grades() {
 
             {viewMode === 'roadmap' ? (
                 <div className="relative overflow-hidden bg-white rounded-[3rem] border border-slate-100 shadow-2xl p-10 md:p-20">
-                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(var(--primary) 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
                     
                     <div className="relative flex flex-col items-center gap-20">
                         {sortedGrades.map((grade, idx) => (
                             <div key={grade.id} className="relative w-full max-w-4xl">
                                 {/* Connection Line */}
                                 {idx < sortedGrades.length - 1 && (
-                                    <div className="absolute top-24 left-1/2 -translate-x-1/2 w-1.5 h-20 bg-gradient-to-b from-indigo-500/20 to-indigo-500/50 z-0" 
+                                    <div className="absolute top-24 left-1/2 -translate-x-1/2 w-1.5 h-20 bg-gradient-to-b from-primary/20 to-primary/50 z-0" 
                                          style={{ marginTop: '1.5rem' }} />
                                 )}
 
                                 <div className="group relative z-10 flex flex-col md:flex-row items-center gap-10">
                                     {/* Central Badge */}
-                                    <div className="flex-shrink-0 w-24 h-24 rounded-[2.5rem] bg-white border-4 border-indigo-50 shadow-2xl flex items-center justify-center transition-all group-hover:scale-110 group-hover:border-indigo-500 group-hover:rotate-6">
-                                        <div className="w-16 h-16 rounded-3xl bg-indigo-600 text-white flex items-center justify-center text-2xl font-black shadow-inner">
+                                    <div className="flex-shrink-0 w-24 h-24 rounded-[2.5rem] bg-white border-4 border-primary/10 shadow-2xl flex items-center justify-center transition-all group-hover:scale-110 group-hover:border-primary group-hover:rotate-6">
+                                        <div className="w-16 h-16 rounded-3xl bg-primary text-white flex items-center justify-center text-2xl font-black shadow-inner">
                                             {grade.sequence_order}
                                         </div>
                                     </div>
 
                                     {/* Data Card */}
-                                    <div className="flex-grow bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl transition-all group-hover:shadow-2xl group-hover:border-indigo-100 group-hover:-translate-y-1">
+                                    <div className="flex-grow bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl transition-all group-hover:shadow-2xl group-hover:border-primary/20 group-hover:-translate-y-1">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                             <div className="space-y-1">
                                                 <div className="flex items-center gap-3">
                                                     <h3 className="text-3xl font-black text-slate-800 tracking-tight">{grade.name}</h3>
-                                                    <span className="px-3 py-1 bg-indigo-50 text-indigo-500 rounded-lg text-[10px] font-black uppercase tracking-[0.2em]">{grade.slug}</span>
+                                                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase tracking-[0.2em]">{grade.slug}</span>
                                                 </div>
                                                 <p className="text-slate-400 font-medium">Academic Level {idx + 1} — Primary Progression Path</p>
                                             </div>
 
                                             <div className="flex items-center gap-3">
-                                                <button onClick={() => handleEdit(grade)} className="p-4 bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 rounded-2xl transition-all">
+                                                <button onClick={() => handleEdit(grade)} className="p-4 bg-slate-50 text-slate-400 hover:bg-primary/10 hover:text-primary rounded-2xl transition-all">
                                                     <Edit2 size={20} />
                                                 </button>
                                                 <button onClick={() => handleDelete(grade.id)} className="p-4 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all">
@@ -165,35 +165,35 @@ export default function Grades() {
                                         </div>
 
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-                                            <div className="p-5 rounded-3xl bg-slate-50/50 border border-slate-50 group-hover:bg-indigo-50/30 group-hover:border-indigo-100 transition-colors">
+                                            <div className="p-5 rounded-3xl bg-slate-50/50 border border-slate-50 group-hover:bg-primary/5 group-hover:border-primary/10 transition-colors">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Success Rate</p>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                                     <p className="text-2xl font-black text-slate-800">98.2%</p>
                                                 </div>
                                             </div>
-                                            <div className="p-5 rounded-3xl bg-slate-50/50 border border-slate-50 group-hover:bg-indigo-50/30 group-hover:border-indigo-100 transition-colors">
+                                            <div className="p-5 rounded-3xl bg-slate-50/50 border border-slate-50 group-hover:bg-primary/5 group-hover:border-primary/10 transition-colors">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Students</p>
                                                 <div className="flex items-center gap-2">
-                                                    <GraduationCap size={18} className="text-indigo-500" />
+                                                    <GraduationCap size={18} className="text-primary" />
                                                     <p className="text-2xl font-black text-slate-800">{grade.student_count || 0}</p>
                                                 </div>
                                             </div>
-                                            <div className="p-5 rounded-3xl bg-slate-50/50 border border-slate-50 group-hover:bg-indigo-50/30 group-hover:border-indigo-100 transition-colors">
+                                            <div className="p-5 rounded-3xl bg-slate-50/50 border border-slate-50 group-hover:bg-primary/5 group-hover:border-primary/10 transition-colors">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Subjects</p>
                                                 <div className="flex items-center gap-2">
-                                                    <BookOpen size={18} className="text-indigo-500" />
+                                                    <BookOpen size={18} className="text-primary" />
                                                     <p className="text-2xl font-black text-slate-800">{grade.subject_count || 0}</p>
                                                 </div>
                                             </div>
-                                            <div className="p-5 rounded-3xl bg-slate-50/50 border border-slate-50 group-hover:bg-indigo-50/30 group-hover:border-indigo-100 transition-colors">
+                                            <div className="p-5 rounded-3xl bg-slate-50/50 border border-slate-50 group-hover:bg-primary/5 group-hover:border-primary/10 transition-colors">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Classrooms</p>
                                                 <div className="flex items-center gap-2">
-                                                    <Layers size={18} className="text-indigo-500" />
+                                                    <Layers size={18} className="text-primary" />
                                                     <p className="text-2xl font-black text-slate-800">{grade.classroom_count || 0}</p>
                                                 </div>
                                             </div>
-                                            <div className="p-5 rounded-3xl bg-indigo-600 border border-indigo-500 shadow-lg shadow-indigo-200 flex items-center justify-center cursor-pointer hover:bg-indigo-700 transition-all">
+                                            <div className="p-5 rounded-3xl bg-primary border border-primary/50 shadow-lg shadow-primary/20 flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-all">
                                                 <span className="text-[10px] font-black text-white uppercase tracking-widest">Manage All</span>
                                                 <ChevronRight size={16} className="text-white ml-2" />
                                             </div>
@@ -202,8 +202,8 @@ export default function Grades() {
 
                                     {/* Left Side Label (Desktop Only) */}
                                     <div className="hidden xl:block absolute right-full mr-12 text-right">
-                                        <p className="text-xs font-black text-indigo-500 uppercase tracking-[0.3em] mb-1">PHASE</p>
-                                        <p className="text-3xl font-black text-slate-200 group-hover:text-indigo-100 transition-colors">0{idx + 1}</p>
+                                        <p className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-1">PHASE</p>
+                                        <p className="text-3xl font-black text-slate-200 group-hover:text-primary/20 transition-colors">0{idx + 1}</p>
                                     </div>
                                 </div>
                             </div>
@@ -228,7 +228,7 @@ export default function Grades() {
                     <div className="lg:col-span-1 space-y-6">
                         <div className="card p-8 bg-white border-slate-100 shadow-sm space-y-6">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
                                     <ArrowUpDown size={24} />
                                 </div>
                                 <div>
@@ -387,7 +387,7 @@ export default function Grades() {
                         </button>
                         <button 
                             disabled={isSaving}
-                            className="flex-[2] px-8 py-4 bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl shadow-slate-900/20"
+                            className="flex-[2] px-8 py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl shadow-primary/20"
                         >
                             {isSaving ? (
                                 <>

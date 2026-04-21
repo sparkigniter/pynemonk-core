@@ -36,6 +36,8 @@ class TenantService {
         state?: string;
         country?: string;
         package_id: number;
+        academic_year?: { name: string; start_date: string; end_date: string };
+        settings?: { language: string; date_format: string };
     }): Promise<any> {
         await this.tenantValidator.validate(data);
 
@@ -62,6 +64,9 @@ class TenantService {
 
         // Seed all system roles for this tenant
         await this.tenantHelper.createDefaultRoles(tenant.id);
+
+        // Seed the specified academic year
+        await this.tenantHelper.provisionAcademicYear(tenant.id, data.academic_year);
 
         return tenant;
     }

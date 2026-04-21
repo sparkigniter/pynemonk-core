@@ -13,6 +13,8 @@ const subjects: SubjectData[] = [
     { subject: 'English', score: 78, color: '#f59e0b', gradient: 'linear-gradient(90deg, #f59e0b, #fbbf24)' },
     { subject: 'Social Studies', score: 84, color: '#0ea5e9', gradient: 'linear-gradient(90deg, #0ea5e9, #38bdf8)' },
     { subject: 'Computer Science', score: 95, color: '#8b5cf6', gradient: 'linear-gradient(90deg, #8b5cf6, #a78bfa)' },
+    { subject: 'Social Studies', score: 84, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
+    { subject: 'Computer Science', score: 95, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
 ];
 
 const SubjectPerformance: React.FC = () => {
@@ -23,7 +25,7 @@ const SubjectPerformance: React.FC = () => {
                     <h3 className="text-base font-semibold text-slate-800 font-heading">Subject Performance</h3>
                     <p className="text-xs text-slate-400 mt-0.5">Average scores this semester</p>
                 </div>
-                <span className="text-xs font-medium px-2 py-1 rounded-full bg-indigo-50 text-indigo-600">
+                <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary/10 text-primary">
                     This Semester
                 </span>
             </div>

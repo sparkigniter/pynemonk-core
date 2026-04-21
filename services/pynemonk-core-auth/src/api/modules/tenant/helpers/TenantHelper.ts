@@ -86,62 +86,36 @@ class TenantHelper {
      * Returns a map of { slug → role_id } for immediate use.
      */
     public async createDefaultRoles(tenantId: number): Promise<Record<string, number>> {
-        const roles = [
-            // Tier 0 — Account Management
-            {
-                slug: 'owner', name: 'Account Owner', tier: 0,
-                description: 'Registered the school. Manages billing and plan. No student data access by default.'
-            },
-            // Tier 1 — School Leadership
-            {
-                slug: 'principal', name: 'Principal', tier: 1,
-                description: 'Head of school. Full academic, attendance, and disciplinary access.'
-            },
-            {
-                slug: 'vice_principal', name: 'Vice Principal', tier: 1,
-                description: 'Deputy head. Same scope as Principal by default.'
-            },
-            // Tier 2 — Administration
-            {
-                slug: 'school_admin', name: 'School Administrator', tier: 2,
-                description: 'Office staff. Enrolment, timetables, user management. No grades or health data.'
-            },
-            {
-                slug: 'accountant', name: 'Accountant / Fee Manager', tier: 2,
-                description: 'Fee collection and financial reports only.'
-            },
-            // Tier 3 — Teaching
-            {
-                slug: 'teacher', name: 'Teacher', tier: 3,
-                description: 'Subject teacher. Grades and attendance for own students only.'
-            },
-            {
-                slug: 'class_teacher', name: 'Class Teacher', tier: 3,
-                description: 'Homeroom teacher. Same as Teacher plus limited pastoral access for own class.'
-            },
-            // Tier 4 — External Portal
-            {
-                slug: 'student', name: 'Student', tier: 4,
-                description: 'Enrolled student. Own grades, attendance, timetable, fee status.'
-            },
-            {
-                slug: 'parent', name: 'Parent / Guardian', tier: 4,
-                description: 'Parent portal. Linked child records only.'
-            },
-        ];
+        // Fetch all system roles from the template catalogue
+        const templatesRes = await this.db.query(
+            `SELECT slug, name, description, tier, is_system, data_scope 
+             FROM auth.role_template 
+             WHERE is_system = TRUE`
+        );
+        const templates = templatesRes.rows;
 
         const roleMap: Record<string, number> = {};
-        for (const role of roles) {
+        for (const template of templates) {
+            // Use an UPSERT that targets the slug unique index
             const res = await this.db.query(
                 `INSERT INTO auth.role
-                    (tenant_id, slug, name, description, tier, is_system, is_deleted, created_at, updated_at)
-                 VALUES ($1, $2, $3, $4, $5, TRUE, FALSE, NOW(), NOW())
-                 ON CONFLICT (tenant_id, name) WHERE (is_deleted = false) DO NOTHING
+                    (tenant_id, slug, name, description, tier, is_system, data_scope, is_deleted, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, FALSE, NOW(), NOW())
+                 ON CONFLICT (tenant_id, slug) WHERE (is_deleted = false) 
+                 DO UPDATE SET 
+                    name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    tier = EXCLUDED.tier,
+                    is_system = EXCLUDED.is_system,
+                    data_scope = EXCLUDED.data_scope,
+                    updated_at = NOW()
                  RETURNING id`,
-                [tenantId, role.slug, role.name, role.description, role.tier]
+                [tenantId, template.slug, template.name, template.description, template.tier, template.is_system, 
+                 typeof template.data_scope === 'string' ? template.data_scope : JSON.stringify(template.data_scope || [])]
             );
+            
             if (res.rows[0]) {
-                roleMap[role.slug] = res.rows[0].id;
+                roleMap[template.slug] = res.rows[0].id;
             }
         }
         return roleMap;
@@ -209,6 +183,24 @@ class TenantHelper {
             map[row.slug] = row.id;
         }
         return map;
+    }
+
+    /**
+     * Seeds a default current academic year for a new tenant.
+     * This avoids "No current academic year found" errors.
+     */
+    public async provisionAcademicYear(tenantId: number, data?: { name: string; start_date: string; end_date: string }): Promise<void> {
+        const yearName = data?.name || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
+        const startDate = data?.start_date || `${new Date().getFullYear()}-01-01`;
+        const endDate = data?.end_date || `${new Date().getFullYear()}-12-31`;
+
+        await this.db.query(
+            `INSERT INTO school.academic_year 
+                (tenant_id, name, start_date, end_date, is_current, status)
+             VALUES ($1, $2, $3, $4, TRUE, 'active')
+             ON CONFLICT (tenant_id, name) WHERE (is_deleted = false) DO NOTHING`,
+            [tenantId, yearName, startDate, endDate]
+        );
     }
 }
 

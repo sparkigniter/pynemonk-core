@@ -72,8 +72,8 @@ export default function Teachers() {
         }
     };
 
-    const handleAddStaff = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleAddStaff = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         setIsSaving(true);
         try {
             await staffApi.createStaff(formData);
@@ -155,10 +155,10 @@ export default function Teachers() {
             {/* Stats Overview */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: 'Total Staff', value: staff.length, icon: UserPlus, color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { label: 'Total Staff', value: staff.length, icon: UserPlus, color: 'text-primary', bg: 'bg-primary/10' },
                     { label: 'Teaching', value: staff.filter(s => s.designation.toLowerCase().includes('teacher')).length, icon: BookOpen, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                     { label: 'On Leave', value: staff.filter(s => s.status === 'on_leave').length, icon: Calendar, color: 'text-amber-600', bg: 'bg-amber-50' },
-                    { label: 'Departments', value: 4, icon: ShieldCheck, color: 'text-purple-600', bg: 'bg-purple-50' },
+                    { label: 'Departments', value: 4, icon: ShieldCheck, color: 'text-accent', bg: 'bg-accent/10' },
                 ].map((stat, i) => (
                     <div key={i} className="card p-5 flex items-center gap-4 hover-lift">
                         <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center shadow-sm`}>
@@ -306,12 +306,12 @@ export default function Teachers() {
 
                     {/* Modal Content Area */}
                     <div className="flex-1 flex flex-col overflow-hidden">
-                        <form onSubmit={handleAddStaff} className="flex-1 flex flex-col">
+                        <div className="flex-1 flex flex-col">
                             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                                 {activeSection === 'identity' && (
                                     <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-400">
                                         <div className="flex items-center gap-4 pb-4 border-b border-slate-50">
-                                            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><UserPlus size={24} /></div>
+                                            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><UserPlus size={24} /></div>
                                             <div>
                                                 <h4 className="text-lg font-bold text-slate-800">Basic Information</h4>
                                                 <p className="text-xs text-slate-400 font-medium">Primary details to identify the staff member.</p>
@@ -524,16 +524,36 @@ export default function Teachers() {
                                 >
                                     Cancel
                                 </button>
+                                {activeSection !== 'identity' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const currentIndex = sections.findIndex(s => s.id === activeSection);
+                                            setActiveSection(sections[currentIndex - 1].id);
+                                        }}
+                                        className="px-6 py-3.5 rounded-2xl border border-slate-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all active:scale-95"
+                                    >
+                                        Previous
+                                    </button>
+                                )}
                                 <button
-                                    type="submit"
+                                    type="button"
+                                    onClick={() => {
+                                        if (activeSection !== 'finance') {
+                                            const currentIndex = sections.findIndex(s => s.id === activeSection);
+                                            setActiveSection(sections[currentIndex + 1].id);
+                                        } else {
+                                            handleAddStaff();
+                                        }
+                                    }}
                                     disabled={isSaving}
                                     className="flex-1 px-8 py-3.5 rounded-2xl bg-theme-primary text-white text-sm font-bold hover:bg-theme-primary/90 transition-all shadow-xl shadow-theme-primary/20 disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
                                 >
                                     {isSaving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                                    {activeSection === 'finance' ? 'Complete Profile Registration' : 'Next: Academic Details'}
+                                    {activeSection === 'finance' ? 'Complete Profile Registration' : 'Next Step'}
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </Modal>

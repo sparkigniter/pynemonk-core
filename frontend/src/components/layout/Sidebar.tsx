@@ -3,7 +3,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, GraduationCap, CalendarCheck,
     Settings, School, BookOpen, DollarSign, BarChart2,
-    ChevronRight, LogOut, ChevronDown, Building2, Layers
+    ChevronRight, LogOut, ChevronDown, Building2, Layers,
+    Calendar, RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -12,10 +13,13 @@ const navItems = [
     { name: 'Students', path: '/students', icon: GraduationCap, badge: '1,248' },
     { name: 'Teachers', path: '/teachers', icon: Users, badge: '84' },
     { name: 'Grades', path: '/grades', icon: Layers, badge: null },
+    { name: 'Classrooms', path: '/classrooms', icon: Building2, badge: null },
+    { name: 'Timetable', path: '/timetable', icon: Calendar, badge: 'New' },
     { name: 'Attendance', path: '/attendance', icon: CalendarCheck, badge: null },
-    { name: 'Courses', path: '/courses', icon: BookOpen, badge: '32' },
+    { name: 'Subjects', path: '/subjects', icon: BookOpen, badge: null },
     { name: 'Finance', path: '/finance', icon: DollarSign, badge: null },
     { name: 'Reports', path: '/reports', icon: BarChart2, badge: null },
+    { name: 'Rollover', path: '/rollover', icon: RefreshCw, badge: null },
 ];
 
 const Sidebar = () => {
@@ -87,7 +91,7 @@ const Sidebar = () => {
                                 <p className="text-xs text-slate-500 leading-relaxed">{tenantFetchError}</p>
                                 <button 
                                     onClick={() => window.location.reload()}
-                                    className="mt-2 text-[10px] font-bold text-indigo-600 hover:text-indigo-700 underline"
+                                    className="mt-2 text-[10px] font-bold text-primary hover:opacity-80 underline"
                                 >
                                     Retry Now
                                 </button>
@@ -100,10 +104,10 @@ const Sidebar = () => {
                                         key={t.id}
                                         onClick={() => handleSwitch(t.slug)}
                                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors
-                                            ${t.id === user?.tenant_id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                                            ${t.id === user?.tenant_id ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-50'}`}
                                     >
                                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center 
-                                            ${t.id === user?.tenant_id ? 'bg-indigo-100' : 'bg-slate-100'}`}>
+                                            ${t.id === user?.tenant_id ? 'bg-primary/20' : 'bg-slate-100'}`}>
                                             <Building2 size={14} />
                                         </div>
                                         <div className="flex-1 min-w-0">

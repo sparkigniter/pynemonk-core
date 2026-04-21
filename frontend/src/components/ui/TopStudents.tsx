@@ -27,7 +27,7 @@ const TopStudents: React.FC = () => {
                     <h3 className="text-base font-semibold text-slate-800 font-heading">Top Students</h3>
                     <p className="text-xs text-slate-400 mt-0.5">By overall score this term</p>
                 </div>
-                <button className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
+                <button className="text-xs font-medium text-primary hover:opacity-80 transition-colors">
                     View all →
                 </button>
             </div>
@@ -54,7 +54,7 @@ const TopStudents: React.FC = () => {
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-indigo-700 transition-colors">
+                            <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-primary transition-colors">
                                 {student.name}
                             </p>
                             <p className="text-xs text-slate-400">{student.grade}</p>

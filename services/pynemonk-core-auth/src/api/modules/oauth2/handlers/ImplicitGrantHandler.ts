@@ -16,10 +16,10 @@ class ImplicitGrantHandler implements GrantHandler {
     public async handle(tokenPayload: TokenPayload): Promise<TokenResponse> {
         const accessToken = this.tokenService.generateToken(tokenPayload);
         return {
-            accessToken,
-            refreshToken: "",
-            tokenType: "Bearer",
-            expiresIn: 3600,
+            access_token: accessToken,
+            refresh_token: "",
+            token_type: "Bearer",
+            expires_in: 3600,
         };
     }
 }

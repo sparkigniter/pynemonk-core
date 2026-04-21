@@ -75,20 +75,25 @@ const Login: React.FC = () => {
                                 <button
                                     key={t.id}
                                     onClick={() => handleSelectTenant(t.slug)}
-                                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group"
+                                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-primary/20 transition-all group"
                                 >
-                                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
-                                        <School size={20} className="text-slate-400 group-hover:text-indigo-500" />
+                                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                        <School size={20} className="text-slate-400 group-hover:text-primary" />
                                     </div>
                                     <div className="flex-1 text-left">
                                         <p className="font-bold text-slate-800">{t.name}</p>
                                         <p className="text-xs text-slate-400">ID: {t.slug}</p>
                                     </div>
-                                    <ArrowRight size={18} className="text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                                    <ArrowRight size={18} className="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                                 </button>
                             ))}
                         </div>
-
+                        <button 
+                            onClick={() => window.location.reload()}
+                            className="mt-2 text-[10px] font-bold text-primary hover:opacity-80 underline"
+                        >
+                            Retry Now
+                        </button>
                         <button
                             onClick={() => setStep('LOGIN')}
                             className="w-full mt-6 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors"
@@ -170,9 +175,8 @@ const Login: React.FC = () => {
 
                     {/* Mobile logo */}
                     <div className="flex lg:hidden items-center gap-2.5 mb-8">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                            style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}>
-                            <School size={18} className="text-white" />
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-primary/20`}>
+                            <School size={18} className="text-primary" />
                         </div>
                         <span className="text-lg font-bold text-slate-800 font-heading">EduERP</span>
                     </div>
@@ -209,9 +213,7 @@ const Login: React.FC = () => {
                                     value={email}
                                     onChange={e => setEmail(e.target.value)}
                                     placeholder="admin@eduerp.com"
-                                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all"
-                                    onFocus={e => { e.currentTarget.style.boxShadow = `0 0 0 3px var(--ring)`; e.currentTarget.style.borderColor = 'var(--primary)'; }}
-                                    onBlur={e =>  { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = ''; }}
+                                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                         </div>
@@ -224,8 +226,7 @@ const Login: React.FC = () => {
                                 </label>
                                 <button
                                     type="button"
-                                    className="text-xs font-semibold transition-colors"
-                                    style={{ color: 'var(--primary)' }}
+                                    className="text-xs font-semibold transition-colors text-primary"
                                 >
                                     Forgot password?
                                 </button>
@@ -239,15 +240,13 @@ const Login: React.FC = () => {
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all"
-                                    onFocus={e => { e.currentTarget.style.boxShadow = `0 0 0 3px var(--ring)`; e.currentTarget.style.borderColor = 'var(--primary)'; }}
-                                    onBlur={e =>  { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = ''; }}
+                                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                                 <button
                                     type="button"
                                     id="toggle-password"
                                     onClick={() => setShowPass(p => !p)}
-                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors"
                                     tabIndex={-1}
                                 >
                                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -282,7 +281,6 @@ const Login: React.FC = () => {
 
                     {/* ── Register CTA ─────────────────────── */}
                     <div className="mt-6 relative group">
-                        {/* Glow border via pseudo-element trick using a wrapper */}
                         <div
                             className="absolute inset-0 rounded-2xl opacity-60 group-hover:opacity-100 transition-opacity duration-300"
                             style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))', padding: '1px' }}
@@ -293,7 +291,6 @@ const Login: React.FC = () => {
                             className="relative flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group-hover:scale-[1.01]"
                             style={{ background: 'linear-gradient(135deg, #f8f5ff 0%, #eef2ff 100%)', border: '1.5px solid transparent', backgroundClip: 'padding-box' }}
                         >
-                            {/* Icon */}
                             <div
                                 className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md"
                                 style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
@@ -301,7 +298,6 @@ const Login: React.FC = () => {
                                 <Building2 size={20} className="text-white" />
                             </div>
 
-                            {/* Text */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 mb-0.5">
                                     <p className="text-sm font-bold text-slate-800">Register Your School</p>
@@ -313,8 +309,7 @@ const Login: React.FC = () => {
                                 <p className="text-xs text-slate-500 truncate">Set up your school in minutes. No credit card required.</p>
                             </div>
 
-                            {/* Arrow */}
-                            <ArrowRight size={18} className="text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0" />
+                            <ArrowRight size={18} className="text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0" />
                         </Link>
                     </div>
 

@@ -3,7 +3,7 @@
  * Shared helper for authenticated requests to the school service.
  */
 
-const BASE_URL = (import.meta as any).env?.VITE_SCHOOL_API_URL ?? 'http://localhost:3001';
+const BASE_URL = (import.meta as any).env?.VITE_SCHOOL_API_URL ?? 'http://localhost:3000/api/v1';
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const sessionRaw = localStorage.getItem('eduerp_session');
@@ -31,4 +31,19 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     }
 
     return json.data ?? json;
+}
+
+export async function get<T>(path: string): Promise<T> {
+    return request<T>(path, { method: 'GET' });
+}
+
+export async function post<T>(path: string, body: any): Promise<T> {
+    return request<T>(path, {
+        method: 'POST',
+        body: JSON.stringify(body),
+    });
+}
+
+export async function del<T>(path: string): Promise<T> {
+    return request<T>(path, { method: 'DELETE' });
 }
