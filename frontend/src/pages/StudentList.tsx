@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Filter, MoreVertical, GraduationCap, Download, CheckCircle2, Loader2, UserCheck } from 'lucide-react';
+import { Search, Plus, Filter, MoreVertical, GraduationCap, Download, CheckCircle2, Loader2, UserCheck, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import * as studentApi from '../api/student.api';
 import Modal from '../components/ui/Modal';
@@ -101,16 +101,17 @@ const StudentList = () => {
                     <div className="relative w-full sm:w-80">
                         <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
                         <input
+                            id="student-search"
                             type="text"
-                            placeholder="Search students by name or ID..."
-                            className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50"
+                            placeholder="Search students..."
+                            className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 bg-slate-50/50 transition-all"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors w-full sm:w-auto justify-center">
+                    <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors w-full sm:w-auto justify-center active:scale-95">
                         <Filter size={16} />
-                        Advanced Filters
+                        Filters
                     </button>
                 </div>
 
@@ -118,7 +119,7 @@ const StudentList = () => {
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-4">
                             <Loader2 size={40} className="text-theme-primary animate-spin" />
-                            <p className="text-slate-500 font-medium">Loading student directory...</p>
+                            <p className="text-slate-500 font-medium">Loading students...</p>
                         </div>
                     ) : students.length === 0 ? (
                         <div className="p-20 flex flex-col items-center justify-center text-center">
@@ -126,62 +127,96 @@ const StudentList = () => {
                                 <GraduationCap size={32} />
                             </div>
                             <h3 className="text-lg font-bold text-slate-800 mb-1">No students found</h3>
-                            <p className="text-slate-500 max-w-sm mb-6">Start by admitting your first student to the school.</p>
+                            <p className="text-slate-500 max-w-sm mb-6">Start by admitting your first student.</p>
                             <button
                                 onClick={() => setIsModalOpen(true)}
                                 className="btn-primary"
                             >
-                                Process First Admission
+                                Process Admission
                             </button>
                         </div>
                     ) : (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/80 border-b border-slate-100">
-                                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Student Profile</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Admission No</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Gender</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-4 text-right"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {students.map((student) => (
-                                    <tr key={student.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-400">
-                                                    {student.first_name[0]}{student.last_name[0]}
-                                                </div>
-                                                <div>
-                                                    <Link to={`/students/${student.id}`} className="text-sm font-bold text-slate-800 hover:text-theme-primary transition-colors cursor-pointer">
-                                                        {student.first_name} {student.last_name}
-                                                    </Link>
-                                                    <p className="text-xs text-slate-400 font-medium">Class: {(student as any).classroom_name || 'Unassigned'}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-medium text-slate-600 font-mono">{student.admission_no}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-                                                {student.gender}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
-                                                <CheckCircle2 size={14} />
-                                                Enrolled
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100">
-                                                <MoreVertical size={18} />
-                                            </button>
-                                        </td>
+                        <>
+                            {/* Desktop View */}
+                            <table className="w-full text-left border-collapse hidden md:table">
+                                <thead>
+                                    <tr className="bg-slate-50/80 border-b border-slate-100">
+                                        <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Student Profile</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Admission No</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Gender</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-4 text-right"></th>
                                     </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {students.map((student) => (
+                                        <tr key={student.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-400">
+                                                        {student.first_name[0]}{student.last_name[0]}
+                                                    </div>
+                                                    <div>
+                                                        <Link to={`/students/${student.id}`} className="text-sm font-bold text-slate-800 hover:text-theme-primary transition-colors">
+                                                            {student.first_name} {student.last_name}
+                                                        </Link>
+                                                        <p className="text-xs text-slate-400 font-medium">Class: {(student as any).classroom_name || 'Unassigned'}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm font-medium text-slate-600 font-mono">{student.admission_no}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                                                    {student.gender}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
+                                                    <CheckCircle2 size={14} />
+                                                    Enrolled
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100">
+                                                    <MoreVertical size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            {/* Mobile View - Card List */}
+                            <div className="md:hidden divide-y divide-slate-100">
+                                {students.map((student) => (
+                                    <Link 
+                                        key={student.id} 
+                                        to={`/students/${student.id}`}
+                                        className="flex items-center justify-between p-4 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center font-bold text-slate-500 shadow-sm border border-white">
+                                                {student.first_name[0]}{student.last_name[0]}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-800 leading-tight">{student.first_name} {student.last_name}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{(student as any).classroom_name || 'Unassigned'}</span>
+                                                    <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                                    <span className="text-[10px] font-mono text-slate-400">{student.admission_no}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                ACTIVE
+                                            </span>
+                                            <ChevronRight size={14} className="text-slate-300" />
+                                        </div>
+                                    </Link>
                                 ))}
-                            </tbody>
-                        </table>
+                            </div>
+                        </>
                     )}
                 </div>
             </div>

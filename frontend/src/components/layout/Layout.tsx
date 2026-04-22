@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Menu, Bell, Search, Sun, ChevronDown, X, LogOut } from 'lucide-react';
 import Sidebar from './Sidebar';
+import BottomNav from './BottomNav';
 import { useAuth } from '../../contexts/AuthContext';
 
 const notifications = [
-    { id: 1, title: 'New student enrolled',     desc: 'Grade 10 · Section A',        time: '2m ago',  dot: '🎓' },
-    { id: 2, title: 'Attendance alert',          desc: 'Grade 8-B below 80%',          time: '15m ago', dot: '⚠️' },
-    { id: 3, title: 'Fee payment received',      desc: '$1,200 from John Doe',          time: '1h ago',  dot: '💰' },
-    { id: 4, title: 'Exam schedule published',   desc: 'Final exams for Grade 12',      time: '3h ago',  dot: '📅' },
+    { id: 1, title: 'New student enrolled', desc: 'Grade 10 · Section A', time: '2m ago', dot: '🎓' },
+    { id: 2, title: 'Attendance alert', desc: 'Grade 8-B below 80%', time: '15m ago', dot: '⚠️' },
+    { id: 3, title: 'Fee payment received', desc: '$1,200 from John Doe', time: '1h ago', dot: '💰' },
+    { id: 4, title: 'Exam schedule published', desc: 'Final exams for Grade 12', time: '3h ago', dot: '📅' },
 ];
 
 const Layout = () => {
@@ -29,20 +30,20 @@ const Layout = () => {
     };
 
     return (
-        <div className="min-h-screen flex bg-gradient-page" style={{ transition: 'background 0.4s ease' }}>
-            <Sidebar />
+        <div className="min-h-screen flex bg-gradient-page overflow-x-hidden" style={{ transition: 'background 0.4s ease' }}>
+            <Sidebar mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} />
 
             {mobileMenuOpen && (
                 <div
-                    className="fixed inset-0 bg-slate-900/50 z-40 md:hidden backdrop-blur-sm"
+                    className="fixed inset-0 bg-slate-900/60 z-50 md:hidden backdrop-blur-sm animate-fade-in"
                     onClick={() => setMobileMenuOpen(false)}
                 />
             )}
 
-            <div className="flex-1 flex flex-col md:ml-64 transition-all duration-300">
+            <div className="flex-1 flex flex-col md:ml-64 transition-all duration-300 pb-20 md:pb-0">
                 {/* Header */}
                 <header
-                    className="h-16 flex items-center justify-between px-4 sm:px-6 z-20 sticky top-0"
+                    className="h-16 flex items-center justify-between px-4 sm:px-6 z-40 sticky top-0"
                     style={{
                         background: 'rgba(255,255,255,0.85)',
                         backdropFilter: 'blur(16px)',
@@ -53,7 +54,7 @@ const Layout = () => {
                 >
                     <div className="flex items-center gap-3">
                         <button
-                            className="md:hidden text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg"
+                            className="md:hidden text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg active:scale-95"
                             style={{ '--tw-ring-color': 'var(--ring)' } as React.CSSProperties}
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                         >
@@ -192,6 +193,7 @@ const Layout = () => {
                 <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
                     <Outlet />
                 </main>
+                <BottomNav onMenuClick={() => setMobileMenuOpen(true)} />
             </div>
         </div>
     );
