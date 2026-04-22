@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Users, GraduationCap, CalendarCheck,
     Settings, School, BookOpen, DollarSign, BarChart2,
     ChevronRight, LogOut, ChevronDown, Building2, Layers,
-    Calendar, RefreshCw
+    Calendar, RefreshCw, X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -22,7 +22,7 @@ const navItems = [
     { name: 'Rollover', path: '/rollover', icon: RefreshCw, badge: null },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobileOpen?: (open: boolean) => void }) => {
     const [collapsed, setCollapsed] = useState(false);
     const [showSwitcher, setShowSwitcher] = useState(false);
     const { user, tenants, tenantFetchError, logout } = useAuth();
@@ -42,18 +42,18 @@ const Sidebar = () => {
     }, []);
 
     const handleSwitch = (slug: string) => {
-        // Since we don't have a dedicated switchTenant API yet that works with just the token,
-        // we'll redirect to login with the school slug (or we could implement it).
-        // For now, the user said "user can switch to any school".
-        // A simple way is to logout and go to login with that slug.
-        // But better is to just go to login.
         logout();
         navigate('/login', { state: { schoolSlug: slug } });
     };
 
     return (
         <aside
-            className={`${collapsed ? 'w-20' : 'w-64'} flex flex-col h-screen hidden md:flex fixed top-0 left-0 z-30 transition-all duration-300 ease-in-out`}
+            className={`
+                ${collapsed ? 'w-20' : 'w-64'} 
+                flex flex-col h-screen fixed top-0 left-0 z-[60] transition-all duration-300 ease-in-out
+                ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                md:flex
+            `}
             style={{ background: 'linear-gradient(160deg, var(--sidebar-from) 0%, var(--sidebar-via) 40%, var(--sidebar-to) 100%)' }}
         >
             {/* Logo & Switcher */}
@@ -121,10 +121,20 @@ const Sidebar = () => {
                     </div>
                 )}
 
+                {/* Mobile Close Button */}
+                {setMobileOpen && (
+                    <button 
+                        onClick={() => setMobileOpen(false)}
+                        className="md:hidden text-white/50 hover:text-white p-2"
+                    >
+                        <X size={20} />
+                    </button>
+                )}
+
                 {!collapsed && (
                     <button
                         onClick={() => setCollapsed(true)}
-                        className="text-white/40 hover:text-white transition-colors p-1"
+                        className="text-white/40 hover:text-white transition-colors p-1 hidden md:block"
                         title="Collapse"
                     >
                         <ChevronRight size={16} />

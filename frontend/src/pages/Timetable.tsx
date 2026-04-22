@@ -394,7 +394,7 @@ const Timetable: React.FC = () => {
 
         if (resourceType === 'teacher') {
             try {
-                const fullSchedule = await Promise.all([1,2,3,4,5,6].map(day => 
+                const fullSchedule = await Promise.all([1, 2, 3, 4, 5, 6].map(day =>
                     TimetableApi.getTeacherSchedule(Number(resourceId), day)
                 ));
                 setActiveResourceSchedule(fullSchedule.flat());
@@ -403,7 +403,7 @@ const Timetable: React.FC = () => {
             const assignment = assignments.find(a => a.subject_id === Number(resourceId));
             if (assignment) {
                 try {
-                    const fullSchedule = await Promise.all([1,2,3,4,5,6].map(day => 
+                    const fullSchedule = await Promise.all([1, 2, 3, 4, 5, 6].map(day =>
                         TimetableApi.getTeacherSchedule(assignment.staff_id, day)
                     ));
                     setActiveResourceSchedule(fullSchedule.flat());
@@ -425,7 +425,7 @@ const Timetable: React.FC = () => {
         if (active.data.current?.type === 'subject' || active.data.current?.type === 'teacher') {
             const resourceId = parseInt(active.data.current.resourceId);
             const endTime = `${(parseInt(timeStr.split(':')[0]) + 1).toString().padStart(2, '0')}:00`;
-            
+
             const payload: Partial<TimetableEntry> = {
                 day_of_week: day,
                 start_time: startTime,
@@ -433,10 +433,10 @@ const Timetable: React.FC = () => {
             };
 
             // Check for GLOBAL conflicts (external)
-            const globalConflict = activeResourceSchedule.find(s => 
-                s.day_of_week === day && 
-                ((s.start_time <= startTime && s.end_time > startTime) || 
-                 (s.start_time < endTime && s.end_time >= endTime))
+            const globalConflict = activeResourceSchedule.find(s =>
+                s.day_of_week === day &&
+                ((s.start_time <= startTime && s.end_time > startTime) ||
+                    (s.start_time < endTime && s.end_time >= endTime))
             );
 
             if (globalConflict) {
@@ -744,57 +744,62 @@ const Timetable: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-2xl shadow-primary/10 overflow-hidden">
-                                    {/* Days Header */}
-                                    <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
-                                        <div className="p-6 border-r border-slate-100 font-bold text-slate-400 text-[10px] uppercase tracking-[0.25em] flex items-center justify-center">
-                                            <Clock className="w-4 h-4" />
-                                        </div>
-                                        {DAYS.map(day => (
-                                            <div key={day.id} className="p-6 border-r border-slate-100 text-center">
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{day.name}</p>
-                                                <p className="font-black text-slate-900 text-sm tracking-tight">{day.fullName}</p>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <div className="overflow-x-auto no-scrollbar">
+                                        <div className="min-w-[1000px]">
 
-                                    {/* Grid Body */}
-                                    <div className="relative">
-                                        {TIME_SLOTS.map((time) => (
-                                            <div key={time} className="grid grid-cols-7 border-b border-slate-50 group min-h-[110px]">
-                                                <div className="p-4 border-r border-slate-100 text-slate-400 text-xs font-black flex flex-col items-center justify-center bg-slate-50/30 group-hover:bg-primary/5 transition-colors">
-                                                    <span>{time}</span>
-                                                    <div className="w-4 h-0.5 bg-slate-200 mt-2 rounded-full" />
+                                            {/* Days Header */}
+                                            <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
+                                                <div className="p-6 border-r border-slate-100 font-bold text-slate-400 text-[10px] uppercase tracking-[0.25em] flex items-center justify-center">
+                                                    <Clock className="w-4 h-4" />
                                                 </div>
                                                 {DAYS.map(day => (
-                                                    <DroppableSlot key={`${day.id}-${time}`} id={`${day.id}-${time}`}>
-                                                        {activeDragItem && (activeDragItem.type === 'teacher' || activeDragItem.type === 'subject') && (
-                                                            (() => {
-                                                                const conflict = activeResourceSchedule.find(s => 
-                                                                    s.day_of_week === day.id && 
-                                                                    s.start_time.startsWith(time.split(':')[0])
-                                                                );
-                                                                return conflict ? (
-                                                                    <div className="absolute inset-0 bg-rose-500/10 flex flex-col items-center justify-center p-2 text-center pointer-events-none border-2 border-rose-200/50 border-dashed rounded-xl m-1">
-                                                                        <AlertCircle className="w-4 h-4 text-rose-500 mb-1" />
-                                                                        <p className="text-[8px] font-black text-rose-600 uppercase leading-none">Occupied in</p>
-                                                                        <p className="text-[9px] font-black text-rose-800 truncate w-full">{conflict.classroom_name}</p>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="absolute inset-0 bg-emerald-500/5 flex items-center justify-center pointer-events-none border-2 border-emerald-200/30 border-dashed rounded-xl m-1">
-                                                                        <Check className="w-4 h-4 text-emerald-400 opacity-40" />
-                                                                    </div>
-                                                                );
-                                                            })()
-                                                        )}
-                                                        {entries
-                                                            .filter(e => e.day_of_week === day.id && e.start_time.startsWith(time.split(':')[0]))
-                                                            .map(entry => (
-                                                                <DraggableEntry key={entry.id} entry={entry} onDelete={handleDeleteEntry} />
-                                                            ))}
-                                                    </DroppableSlot>
+                                                    <div key={day.id} className="p-6 border-r border-slate-100 text-center">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{day.name}</p>
+                                                        <p className="font-black text-slate-900 text-sm tracking-tight">{day.fullName}</p>
+                                                    </div>
                                                 ))}
                                             </div>
-                                        ))}
+
+                                            {/* Grid Body */}
+                                            <div className="relative">
+                                                {TIME_SLOTS.map((time) => (
+                                                    <div key={time} className="grid grid-cols-7 border-b border-slate-50 group min-h-[110px]">
+                                                        <div className="p-4 border-r border-slate-100 text-slate-400 text-xs font-black flex flex-col items-center justify-center bg-slate-50/30 group-hover:bg-primary/5 transition-colors">
+                                                            <span>{time}</span>
+                                                            <div className="w-4 h-0.5 bg-slate-200 mt-2 rounded-full" />
+                                                        </div>
+                                                        {DAYS.map(day => (
+                                                            <DroppableSlot key={`${day.id}-${time}`} id={`${day.id}-${time}`}>
+                                                                {activeDragItem && (activeDragItem.type === 'teacher' || activeDragItem.type === 'subject') && (
+                                                                    (() => {
+                                                                        const conflict = activeResourceSchedule.find(s =>
+                                                                            s.day_of_week === day.id &&
+                                                                            s.start_time.startsWith(time.split(':')[0])
+                                                                        );
+                                                                        return conflict ? (
+                                                                            <div className="absolute inset-0 bg-rose-500/10 flex flex-col items-center justify-center p-2 text-center pointer-events-none border-2 border-rose-200/50 border-dashed rounded-xl m-1">
+                                                                                <AlertCircle className="w-4 h-4 text-rose-500 mb-1" />
+                                                                                <p className="text-[8px] font-black text-rose-600 uppercase leading-none">Occupied in</p>
+                                                                                <p className="text-[9px] font-black text-rose-800 truncate w-full">{conflict.classroom_name}</p>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="absolute inset-0 bg-emerald-500/5 flex items-center justify-center pointer-events-none border-2 border-emerald-200/30 border-dashed rounded-xl m-1">
+                                                                                <Check className="w-4 h-4 text-emerald-400 opacity-40" />
+                                                                            </div>
+                                                                        );
+                                                                    })()
+                                                                )}
+                                                                {entries
+                                                                    .filter(e => e.day_of_week === day.id && e.start_time.startsWith(time.split(':')[0]))
+                                                                    .map(entry => (
+                                                                        <DraggableEntry key={entry.id} entry={entry} onDelete={handleDeleteEntry} />
+                                                                    ))}
+                                                            </DroppableSlot>
+                                                        ))}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <DragOverlay dropAnimation={null}>
