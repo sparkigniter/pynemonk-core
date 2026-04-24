@@ -197,7 +197,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                 >
                     <School className="w-5 h-5 text-white" />
                 </div>
-                
+
                 {!collapsed && (
                     <div className="flex-1 min-w-0 cursor-pointer group" onClick={() => setShowSwitcher(!showSwitcher)}>
                         <div className="flex items-center gap-1">
@@ -214,7 +214,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
 
                 {/* Switcher Dropdown */}
                 {showSwitcher && !collapsed && (
-                    <div 
+                    <div
                         ref={switcherRef}
                         className="absolute top-full left-4 right-4 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 animate-scale-in origin-top"
                     >
@@ -222,7 +222,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                             <div className="px-4 py-3">
                                 <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-1">Error Loading Schools</p>
                                 <p className="text-xs text-slate-500 leading-relaxed">{tenantFetchError}</p>
-                                <button 
+                                <button
                                     onClick={() => window.location.reload()}
                                     className="mt-2 text-[10px] font-bold text-primary hover:opacity-80 underline"
                                 >
@@ -256,7 +256,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
 
                 {/* Mobile Close Button */}
                 {setMobileOpen && (
-                    <button 
+                    <button
                         onClick={() => setMobileOpen(false)}
                         className="md:hidden text-white/50 hover:text-white p-2"
                     >
@@ -377,7 +377,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                         {user?.email?.substring(0, 2).toUpperCase() || 'AD'}
                     </div>
                 ) : (
-                    <div 
+                    <div
                         className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/8 transition-colors cursor-pointer group"
                         onClick={logout}
                     >
