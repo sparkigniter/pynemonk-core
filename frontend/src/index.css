@@ -39,7 +39,7 @@
     margin: 0;
     background: var(--page-bg-from);
     min-height: 100vh;
-    min-height: -webkit-fill-available;
+    min-height: -webkit-fill-available; /* Fixed height for mobile Safari */
     transition: background 0.4s ease;
   }
 
