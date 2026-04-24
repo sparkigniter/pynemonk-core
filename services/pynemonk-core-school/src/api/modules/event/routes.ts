@@ -17,24 +17,24 @@ eventRouter.get("/", requireAuth, eventRateLimiter, (req, res) => container.reso
 eventRouter.post(
     "/",
     requireAuth,
-    requireRole(["owner", "principal", "school_admin"]),
     eventRateLimiter,
+    requireRole(["owner", "principal", "school_admin"]),
     (req, res) => container.resolve(EventController).create(req, res)
 );
 
 eventRouter.put(
     "/:id",
     requireAuth,
-    requireRole(["owner", "principal", "school_admin"]),
     eventRateLimiter,
+    requireRole(["owner", "principal", "school_admin"]),
     (req, res) => container.resolve(EventController).update(req, res)
 );
 
 eventRouter.delete(
     "/:id",
     requireAuth,
-    requireRole(["owner", "principal", "school_admin"]),
     eventRateLimiter,
+    requireRole(["owner", "principal", "school_admin"]),
     (req, res) => container.resolve(EventController).delete(req, res)
 );
 
