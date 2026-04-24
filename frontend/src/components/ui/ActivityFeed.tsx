@@ -21,43 +21,37 @@ const activities: ActivityItem[] = [
 
 const ActivityFeed: React.FC = () => {
     return (
-        <div className="card p-6 animate-fade-in-up delay-200">
-            <div className="flex items-center justify-between mb-5">
-                <div>
-                    <h3 className="text-base font-semibold text-slate-800 font-heading">Recent Activity</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Latest updates from your school</p>
-                </div>
-                <button className="text-xs font-medium text-primary hover:opacity-80 transition-colors">
-                    View all →
-                </button>
-            </div>
-
+        <div className="flex-1 space-y-2">
             <div className="space-y-1">
                 {activities.map((item, idx) => (
                     <div
                         key={item.id}
-                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group animate-fade-in-up"
+                        className="flex items-start gap-4 p-4 rounded-[1.5rem] hover:bg-slate-50 transition-all duration-300 cursor-pointer group animate-fade-in-up"
                         style={{ animationDelay: `${idx * 60}ms` }}
                     >
                         <div
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0 mt-0.5"
-                            style={{ background: `${item.color}18` }}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
+                            style={{ background: `${item.color}10` }}
                         >
                             {item.emoji}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-800 group-hover:text-primary transition-colors truncate">
+                            <p className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors truncate tracking-tight">
                                 {item.title}
                             </p>
-                            <p className="text-xs text-slate-500 truncate">{item.subtitle}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">{item.subtitle}</p>
                         </div>
-                        <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
-                            <Clock size={11} className="text-slate-300" />
-                            <span className="text-xs text-slate-400 whitespace-nowrap">{item.time}</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0 mt-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                            <Clock size={12} className="text-slate-400" />
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{item.time}</span>
                         </div>
                     </div>
                 ))}
             </div>
+            
+            <button className="w-full mt-4 py-4 rounded-2xl border border-dashed border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:border-primary/20 hover:text-primary hover:bg-primary/5 transition-all duration-300">
+                View Full Audit Logs
+            </button>
         </div>
     );
 };

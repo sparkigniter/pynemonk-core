@@ -9,12 +9,12 @@ export default class ClassroomService {
         @inject(AcademicYearHelper) private academicYearHelper: AcademicYearHelper
     ) {}
 
-    public async getClassrooms(tenantId: number, academicYearId?: number) {
-        if (!academicYearId) {
+    public async getClassrooms(tenantId: number, filters: any = {}) {
+        if (!filters.academic_year_id) {
             const currentYear = await this.academicYearHelper.findCurrent(tenantId);
-            academicYearId = currentYear?.id;
+            filters.academic_year_id = currentYear?.id;
         }
-        return this.classroomHelper.findAll(tenantId, academicYearId);
+        return this.classroomHelper.findAll(tenantId, filters);
     }
 
     public async getClassroomById(tenantId: number, id: number) {

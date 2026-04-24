@@ -19,31 +19,20 @@ const subjects: SubjectData[] = [
 
 const SubjectPerformance: React.FC = () => {
     return (
-        <div className="card p-6 animate-fade-in-up delay-400">
-            <div className="flex items-center justify-between mb-5">
-                <div>
-                    <h3 className="text-base font-semibold text-slate-800 font-heading">Subject Performance</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Average scores this semester</p>
-                </div>
-                <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary/10 text-primary">
-                    This Semester
-                </span>
-            </div>
-
-            <div className="space-y-4">
-                {subjects.map((item, idx) => (
-                    <div key={item.subject} className="animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
-                        <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-sm font-medium text-slate-700">{item.subject}</span>
-                            <span className="text-sm font-bold text-slate-800">{item.score}%</span>
+        <div className="space-y-6">
+            <div className="space-y-5">
+                {subjects.slice(0, 5).map((item, idx) => (
+                    <div key={idx} className="animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
+                        <div className="flex items-center justify-between mb-2 px-1">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.subject}</span>
+                            <span className="text-xs font-black text-slate-900 tracking-tighter">{item.score}%</span>
                         </div>
-                        <div className="progress-bar" style={{ height: '8px' }}>
+                        <div className="h-1.5 w-full bg-slate-50 border border-slate-100 rounded-full overflow-hidden">
                             <div
-                                className="progress-fill h-full rounded-full"
+                                className="h-full rounded-full transition-all duration-1000 ease-out"
                                 style={{
                                     width: `${item.score}%`,
-                                    background: item.gradient,
-                                    boxShadow: `0 2px 8px ${item.color}40`
+                                    backgroundColor: item.color.startsWith('#') ? item.color : 'var(--primary)'
                                 }}
                             />
                         </div>
@@ -51,18 +40,23 @@ const SubjectPerformance: React.FC = () => {
                 ))}
             </div>
 
-            {/* Overall */}
-            <div className="mt-5 p-3 rounded-xl flex items-center justify-between"
-                style={{ background: 'linear-gradient(135deg, var(--primary-50), var(--primary-100))' }}>
+            {/* Overall Metric Section */}
+            <div className="mt-8 p-6 rounded-[2rem] bg-primary/5 border border-primary/10 flex items-center justify-between">
                 <div>
-                    <p className="text-xs font-medium text-slate-500">Overall Average</p>
-                    <p className="text-xl font-bold text-slate-800">
-                        {Math.round(subjects.reduce((a, b) => a + b.score, 0) / subjects.length)}%
-                    </p>
+                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Global Average</p>
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-slate-900 tracking-tighter">
+                            {Math.round(subjects.reduce((a, b) => a + b.score, 0) / subjects.length)}
+                        </span>
+                        <span className="text-sm font-black text-primary/40">%</span>
+                    </div>
                 </div>
                 <div className="text-right">
-                    <p className="text-xs text-slate-400">Rank</p>
-                    <p className="text-lg font-bold" style={{ color: 'var(--primary)' }}>#3 of 12</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Institutional Rank</p>
+                    <div className="flex items-center justify-end gap-2">
+                        <span className="text-xl font-black text-slate-900 tracking-tight">#3</span>
+                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">of 12 Schools</span>
+                    </div>
                 </div>
             </div>
         </div>

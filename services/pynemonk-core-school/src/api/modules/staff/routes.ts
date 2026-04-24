@@ -13,6 +13,9 @@ staffRouter.get("/", requireAuth, (req, res) => container.resolve(StaffControlle
 staffRouter.get("/:id", requireAuth, (req, res) =>
     container.resolve(StaffController).get(req, res),
 );
+staffRouter.get("/profile/me", requireAuth, (req, res) =>
+    container.resolve(StaffController).getMe(req, res),
+);
 staffRouter.post(
     "/",
     requireAuth,

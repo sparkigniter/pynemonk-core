@@ -8,7 +8,13 @@ export default class ClassroomHelper extends BaseModel {
         super();
     }
 
-    public async findAll(tenantId: number, academicYearId?: number) {
+    public async findAll(tenantId: number, filters: {
+        academic_year_id?: number;
+        grade_id?: number;
+        search?: string;
+        page?: number;
+        limit?: number;
+    } = {}) {
         let query = `
             SELECT c.*, g.name as grade_name, s.first_name as teacher_first_name, s.last_name as teacher_last_name
             FROM school.classroom c
@@ -17,13 +23,70 @@ export default class ClassroomHelper extends BaseModel {
             WHERE c.tenant_id = $1 AND c.is_deleted = FALSE
         `;
         const params: any[] = [tenantId];
-        if (academicYearId) {
-            query += ` AND c.academic_year_id = $2`;
-            params.push(academicYearId);
+        let paramIndex = 2;
+
+        if (filters.academic_year_id) {
+            query += ` AND c.academic_year_id = $${paramIndex}`;
+            params.push(filters.academic_year_id);
+            paramIndex++;
         }
+
+        if (filters.grade_id) {
+            query += ` AND c.grade_id = $${paramIndex}`;
+            params.push(filters.grade_id);
+            paramIndex++;
+        }
+
+        if (filters.search) {
+            query += ` AND (c.name ILIKE $${paramIndex} OR c.section ILIKE $${paramIndex})`;
+            params.push(`%${filters.search}%`);
+            paramIndex++;
+        }
+
         query += ` ORDER BY g.sequence_order, c.section`;
+
+        if (filters.limit) {
+            query += ` LIMIT $${paramIndex}`;
+            params.push(filters.limit);
+            paramIndex++;
+
+            if (filters.page) {
+                const offset = (filters.page - 1) * filters.limit;
+                query += ` OFFSET $${paramIndex}`;
+                params.push(offset);
+                paramIndex++;
+            }
+        }
+
         const result = await this.db.query(query, params);
-        return result.rows;
+
+        // Count query
+        let countQuery = `SELECT COUNT(*) FROM school.classroom c WHERE c.tenant_id = $1 AND c.is_deleted = FALSE`;
+        const countParams: any[] = [tenantId];
+        if (filters.academic_year_id) {
+            countQuery += ` AND c.academic_year_id = $2`;
+            countParams.push(filters.academic_year_id);
+        }
+        if (filters.grade_id) {
+            countQuery += ` AND c.grade_id = $${countParams.length + 1}`;
+            countParams.push(filters.grade_id);
+        }
+        if (filters.search) {
+            countQuery += ` AND (c.name ILIKE $${countParams.length + 1} OR c.section ILIKE $${countParams.length + 1})`;
+            countParams.push(`%${filters.search}%`);
+        }
+
+        const countRes = await this.db.query(countQuery, countParams);
+
+        return {
+            data: result.rows,
+            pagination: {
+                total: parseInt(countRes.rows[0].count),
+                page: filters.page || 1,
+                limit: filters.limit || result.rows.length,
+                pages: Math.ceil(parseInt(countRes.rows[0].count) / (filters.limit || result.rows.length || 1))
+            }
+        };
     }
 
     public async findById(tenantId: number, id: number) {

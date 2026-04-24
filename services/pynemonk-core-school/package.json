@@ -14,7 +14,8 @@
     "build:watch": "tsc --watch",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' --fix",
-    "test": "echo \"Error: no test specified\""
+    "test": "echo \"Error: no test specified\"",
+    "seed": "tsx src/scripts/seed-demo-data.ts"
   },
   "author": "Vikas Biradargoudar",
   "license": "ISC",
@@ -27,7 +28,8 @@
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.3",
     "reflect-metadata": "^0.2.2",
-    "tsyringe": "^4.10.0"
+    "tsyringe": "^4.10.0",
+    "express-rate-limit": "^8.4.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Clock, ChevronRight } from 'lucide-react';
+import { MapPin, Clock } from 'lucide-react';
 
 interface Event {
     id: number;
@@ -52,63 +52,48 @@ const events: Event[] = [
 
 const UpcomingEvents: React.FC = () => {
     return (
-        <div className="card p-6 animate-fade-in-up delay-400">
-            <div className="flex items-center justify-between mb-5">
-                <div>
-                    <h3 className="text-base font-semibold text-slate-800 font-heading">Upcoming Events</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Next 2 weeks</p>
-                </div>
-                <button className="text-xs font-medium text-primary hover:opacity-80 transition-colors">
-                    View calendar →
-                </button>
-            </div>
-
-            <div className="space-y-3">
+        <div className="space-y-4">
+            <div className="space-y-1">
                 {events.map((event, idx) => (
                     <div
                         key={event.id}
-                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all cursor-pointer group animate-fade-in-up"
+                        className="flex items-center gap-4 p-4 rounded-[1.5rem] hover:bg-slate-50 transition-all duration-300 cursor-pointer group animate-fade-in-up"
                         style={{ animationDelay: `${idx * 80}ms` }}
                     >
-                        {/* Date badge */}
-                        <div
-                            className="w-12 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0"
-                            style={{ background: `${event.color}15`, borderLeft: `3px solid ${event.color}` }}
-                        >
-                            <span className="text-xs font-bold" style={{ color: event.color }}>{event.date.split(' ')[1]}</span>
-                            <span className="text-xs font-medium text-slate-400">{event.date.split(' ')[0]}</span>
+                        {/* Refined Date badge */}
+                        <div className="w-14 h-14 rounded-2xl bg-white border border-slate-100 shadow-sm flex flex-col items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{event.date.split(' ')[0]}</span>
+                            <span className="text-xl font-black text-slate-900 leading-none mt-1">{event.date.split(' ')[1]}</span>
                         </div>
 
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                                <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-primary transition-colors">
-                                    {event.title}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-slate-400">
-                                <span className="flex items-center gap-1">
-                                    <Clock size={10} />
+                            <h4 className="text-sm font-black text-slate-900 truncate group-hover:text-primary transition-colors tracking-tight">
+                                {event.title}
+                            </h4>
+                            <div className="flex items-center gap-4 mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                <span className="flex items-center gap-1.5">
+                                    <Clock size={12} className="text-slate-300" />
                                     {event.time}
                                 </span>
-                                <span className="flex items-center gap-1">
-                                    <MapPin size={10} />
+                                <span className="flex items-center gap-1.5">
+                                    <MapPin size={12} className="text-slate-300" />
                                     {event.location}
                                 </span>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <span
-                                className="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0"
-                                style={{ background: `${event.color}15`, color: event.color }}
-                            >
+                        <div className="hidden sm:flex items-center gap-2">
+                            <span className="text-[9px] font-black px-3 py-1 bg-slate-50 border border-slate-100 text-slate-400 uppercase tracking-widest rounded-full group-hover:bg-primary/10 group-hover:text-primary group-hover:border-primary/20 transition-all">
                                 {event.tag}
                             </span>
-                            <ChevronRight size={14} className="text-slate-300 group-hover:text-primary transition-colors" />
                         </div>
                     </div>
                 ))}
             </div>
+
+            <button className="w-full mt-4 py-4 rounded-2xl border border-dashed border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:border-primary/20 hover:text-primary hover:bg-primary/5 transition-all duration-300">
+                Open Full Calendar
+            </button>
         </div>
     );
 };

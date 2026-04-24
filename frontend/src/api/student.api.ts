@@ -12,12 +12,24 @@ export interface Student {
     date_of_birth: string;
     phone: string;
     address: string;
+    created_at?: string;
+    blood_group?: string;
+    religion?: string;
+    mother_tongue?: string;
+    id_number?: string;
+    previous_school?: string;
+    medical_notes?: string;
+    admission_date?: string;
+    logs?: any[];
+    documents?: any[];
 }
 
 export async function getStudentList(params?: {
     page?: number;
     limit?: number;
     search?: string;
+    classroom_id?: number;
+    academic_year_id?: number;
 }): Promise<PaginatedResponse<Student>> {
     const query = new URLSearchParams();
     if (params) {
@@ -28,12 +40,23 @@ export async function getStudentList(params?: {
     return request<PaginatedResponse<Student>>(`/school/students?${query.toString()}`);
 }
 
-export async function getStudentProfile(id: number): Promise<any> {
-    return request<any>(`/school/students/${id}`);
+export async function getStudentProfile(id: number): Promise<Student> {
+    return request<Student>(`/school/students/${id}`);
+}
+
+export async function getMyStudentProfile(): Promise<Student> {
+    return request<Student>(`/school/students/profile/me`);
 }
 
 export async function admitStudent(data: any): Promise<any> {
     return request<any>('/school/admissions', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function uploadDocument(studentId: number, data: { document_type: string; file_name: string; file_url: string }): Promise<any> {
+    return request<any>(`/school/students/${studentId}/documents`, {
         method: 'POST',
         body: JSON.stringify(data),
     });

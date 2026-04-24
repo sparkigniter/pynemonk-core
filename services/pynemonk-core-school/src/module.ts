@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import "reflect-metadata";
 import { Router } from "express";
 import setupDI from "./di.js";
@@ -10,6 +11,10 @@ import subjectRouter from "./api/modules/subject/routes.js";
 import gradeRouter from "./api/modules/grade/routes.js";
 import timetableRouter from "./api/modules/timetable/routes.js";
 import academicsRouter from "./api/modules/academics/routes.js";
+import examRouter from "./api/modules/exam/routes.js";
+import eventRouter from "./api/modules/event/routes.js";
+import workflowRouter from "./api/modules/workflow/routes.js";
+import { AcademicYearMiddleware } from "./api/core/middleware/AcademicYearMiddleware.js";
 
 import { runMigrations } from "./db/MigrationRunner.js";
 import pool from "./db/pg-pool.js";
@@ -21,6 +26,10 @@ export async function init(): Promise<void> {
 }
 
 export const router = Router();
+const academicYearMiddleware = container.resolve(AcademicYearMiddleware);
+
+// Protect closed academic years from modifications
+router.use(academicYearMiddleware.protectClosedYear.bind(academicYearMiddleware));
 
 // Mount all school sub-routers under /school/...
 router.use("/school/students", studentRouter);
@@ -32,5 +41,8 @@ router.use("/school/subjects", subjectRouter);
 router.use("/school/grades", gradeRouter);
 router.use("/school/timetable", timetableRouter);
 router.use("/school/academics", academicsRouter);
+router.use("/school/exams", examRouter);
+router.use("/school/events", eventRouter);
+router.use("/school/workflows", workflowRouter);
 
 // router.use("/school/classrooms", classroomRouter);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, TrendingUp } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 interface Student {
     id: number;
@@ -21,59 +21,51 @@ const students: Student[] = [
 
 const TopStudents: React.FC = () => {
     return (
-        <div className="card p-6 animate-fade-in-up delay-300">
-            <div className="flex items-center justify-between mb-5">
-                <div>
-                    <h3 className="text-base font-semibold text-slate-800 font-heading">Top Students</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">By overall score this term</p>
-                </div>
-                <button className="text-xs font-medium text-primary hover:opacity-80 transition-colors">
-                    View all →
-                </button>
-            </div>
-
-            <div className="space-y-3">
+        <div className="space-y-4">
+            <div className="space-y-1">
                 {students.map((student, idx) => (
                     <div
                         key={student.id}
-                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-all cursor-pointer group animate-fade-in-up"
+                        className="flex items-center gap-4 p-4 rounded-[1.5rem] hover:bg-slate-50 transition-all duration-300 cursor-pointer group animate-fade-in-up"
                         style={{ animationDelay: `${idx * 80}ms` }}
                     >
-                        {/* Rank */}
-                        <span className="text-sm font-bold text-slate-300 w-5 text-center flex-shrink-0">
-                            {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`}
-                        </span>
+                        {/* Rank Icon */}
+                        <div className="w-10 h-10 flex items-center justify-center flex-shrink-0 text-xl">
+                            {idx === 0 ? '🏆' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">#{idx + 1}</span>}
+                        </div>
 
                         {/* Avatar */}
-                        <div
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                            style={{ background: student.gradient }}
-                        >
+                        <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center text-primary font-black text-xs flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-all duration-300">
                             {student.initials}
                         </div>
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-primary transition-colors">
+                            <h4 className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors tracking-tight">
                                 {student.name}
-                            </p>
-                            <p className="text-xs text-slate-400">{student.grade}</p>
+                            </h4>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{student.grade}</p>
                         </div>
 
-                        {/* Score */}
+                        {/* Score & Growth */}
                         <div className="text-right flex-shrink-0">
-                            <div className="flex items-center gap-1 justify-end">
-                                <Star size={11} className="text-amber-400 fill-amber-400" />
-                                <span className="text-sm font-bold text-slate-800">{student.score}</span>
+                            <div className="flex items-center gap-2 justify-end">
+                                <Star size={14} className="text-amber-400 fill-amber-400" />
+                                <span className="text-sm font-black text-slate-900 tracking-tight">{student.score}</span>
                             </div>
-                            <div className="flex items-center gap-0.5 justify-end">
-                                <TrendingUp size={10} className="text-emerald-500" />
-                                <span className="text-xs text-emerald-600 font-medium">+{student.change}%</span>
+                            <div className="flex items-center gap-1.5 justify-end mt-1">
+                                <div className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-tighter">
+                                    +{student.change}%
+                                </div>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
+
+            <button className="w-full mt-4 py-4 rounded-2xl border border-dashed border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:border-primary/20 hover:text-primary hover:bg-primary/5 transition-all duration-300">
+                View Full Leaderboard
+            </button>
         </div>
     );
 };

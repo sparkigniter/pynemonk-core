@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { Menu, Bell, Search, Sun, ChevronDown, X, LogOut } from 'lucide-react';
+import { Menu, Bell, Search, Sun, ChevronDown, X, LogOut, Calendar } from 'lucide-react';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAcademics } from '../../contexts/AcademicsContext';
 
 const notifications = [
     { id: 1, title: 'New student enrolled', desc: 'Grade 10 · Section A', time: '2m ago', dot: '🎓' },
@@ -18,6 +19,7 @@ const Layout = () => {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const { currentYear } = useAcademics();
 
     const initials = user?.email
         ? user.email.slice(0, 2).toUpperCase()
@@ -85,6 +87,16 @@ const Layout = () => {
                             <Sun size={13} className="text-amber-500" />
                             {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                         </div>
+
+                        {/* Academic Year chip */}
+                        {currentYear && (
+                            <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-sm transition-all ${currentYear.status === 'closed' ? 'bg-slate-500 grayscale' : ''}`}
+                                style={{ background: currentYear.status === 'closed' ? undefined : 'linear-gradient(135deg, var(--primary), var(--accent))' }}>
+                                <Calendar size={13} />
+                                {currentYear.name}
+                                {currentYear.status === 'closed' && <span className="ml-1 px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] uppercase tracking-tighter">Closed</span>}
+                            </div>
+                        )}
 
                         {/* Notifications */}
                         <div className="relative">

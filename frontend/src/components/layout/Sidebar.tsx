@@ -4,27 +4,49 @@ import {
     LayoutDashboard, Users, GraduationCap, CalendarCheck,
     Settings, School, BookOpen, DollarSign, BarChart2,
     ChevronRight, LogOut, ChevronDown, Building2, Layers,
-    Calendar, RefreshCw, X
+    Calendar, RefreshCw, X, ClipboardList, Clock, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, badge: null },
-    { name: 'Students', path: '/students', icon: GraduationCap, badge: '1,248' },
-    { name: 'Teachers', path: '/teachers', icon: Users, badge: '84' },
-    { name: 'Grades', path: '/grades', icon: Layers, badge: null },
-    { name: 'Classrooms', path: '/classrooms', icon: Building2, badge: null },
-    { name: 'Timetable', path: '/timetable', icon: Calendar, badge: 'New' },
-    { name: 'Attendance', path: '/attendance', icon: CalendarCheck, badge: null },
-    { name: 'Subjects', path: '/subjects', icon: BookOpen, badge: null },
-    { name: 'Finance', path: '/finance', icon: DollarSign, badge: null },
-    { name: 'Reports', path: '/reports', icon: BarChart2, badge: null },
-    { name: 'Rollover', path: '/rollover', icon: RefreshCw, badge: null },
-];
+const navigation = {
+    main: [
+        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, permissions: [] },
+    ],
+    academic: [
+        { name: 'Grades', path: '/grades', icon: Layers, permissions: ['student.academic:read'] },
+        { name: 'Subjects', path: '/subjects', icon: BookOpen, permissions: ['class:read'] },
+        { name: 'Courses', path: '/courses', icon: BookOpen, permissions: ['class:read'] },
+        { name: 'Classrooms', path: '/classrooms', icon: Building2, permissions: ['class:read'] },
+        { name: 'Timetable', path: '/timetable', icon: Clock, permissions: ['timetable:read'] },
+        { name: 'Exams', path: '/exams', icon: ClipboardList, permissions: ['class:read'] },
+        { name: 'Calendar', path: '/calendar', icon: Calendar, badge: 'New', permissions: ['class:read'] },
+    ],
+    people: [
+        { name: 'Students', path: '/students', icon: GraduationCap, badge: '1,248', permissions: ['student:read'] },
+        { name: 'Teachers', path: '/teachers', icon: Users, badge: '84', permissions: ['staff:read'] },
+        { name: 'Attendance', path: '/attendance', icon: CalendarCheck, permissions: ['student.attendance:read'] },
+    ],
+    operations: [
+        { 
+            name: 'Onboard', 
+            icon: Sparkles, 
+            permissions: ['user:invite', 'student:write', 'staff:write'],
+            children: [
+                { name: 'Teachers', path: '/onboarding/teachers', permissions: ['staff:write'] },
+                { name: 'Students', path: '/onboarding/students', permissions: ['student:write'] },
+                { name: 'Workflow', path: '/workflow-builder', permissions: ['settings:write'] },
+            ]
+        },
+        { name: 'Finance', path: '/finance', icon: DollarSign, permissions: ['fee:read'] },
+        { name: 'Reports', path: '/reports', icon: BarChart2, permissions: ['report:read'] },
+        { name: 'Rollover', path: '/rollover', icon: RefreshCw, permissions: ['settings:write'] },
+    ]
+};
 
 const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobileOpen?: (open: boolean) => void }) => {
     const [collapsed, setCollapsed] = useState(false);
     const [showSwitcher, setShowSwitcher] = useState(false);
+    const [openMenus, setOpenMenus] = useState<string[]>([]);
     const { user, tenants, tenantFetchError, logout } = useAuth();
     const navigate = useNavigate();
     const switcherRef = useRef<HTMLDivElement>(null);
@@ -41,9 +63,120 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const toggleMenu = (name: string) => {
+        if (collapsed) setCollapsed(false);
+        setOpenMenus(prev => 
+            prev.includes(name) ? prev.filter(m => m !== name) : [...prev, name]
+        );
+    };
+
+    const hasPermission = (requiredPermissions?: string[]) => {
+        if (!requiredPermissions || requiredPermissions.length === 0) return true;
+        if (!user) return false;
+        // Check if user has ANY of the required permissions
+        return user.permissions?.some(p => requiredPermissions.includes(p)) ?? false;
+    };
+
     const handleSwitch = (slug: string) => {
         logout();
         navigate('/login', { state: { schoolSlug: slug } });
+    };
+
+    const renderNavItem = (item: any, idx: number, isChild = false) => {
+        if (!hasPermission(item.permissions)) return null;
+
+        const Icon = item.icon;
+        const isExpanded = openMenus.includes(item.name);
+        const hasChildren = item.children && item.children.length > 0;
+
+        if (hasChildren) {
+            return (
+                <div key={item.name} className="space-y-1">
+                    <button
+                        onClick={() => toggleMenu(item.name)}
+                        className={`
+                            w-full group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
+                            ${collapsed ? 'justify-center' : ''}
+                            text-white/55 hover:text-white hover:bg-white/8
+                        `}
+                    >
+                        <div
+                            className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
+                                text-white/50 group-hover:text-white group-hover:bg-white/10`}
+                        >
+                            <Icon size={17} />
+                        </div>
+                        {!collapsed && (
+                            <>
+                                <span className="text-sm font-medium flex-1 text-left">{item.name}</span>
+                                <ChevronDown 
+                                    size={14} 
+                                    className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} 
+                                />
+                            </>
+                        )}
+                    </button>
+                    
+                    {!collapsed && isExpanded && (
+                        <div className="ml-4 pl-4 border-l border-white/10 space-y-1 animate-slide-down">
+                            {item.children.map((child: any, cIdx: number) => renderNavItem(child, cIdx, true))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        return (
+            <NavLink
+                key={item.name}
+                to={item.path}
+                title={collapsed && !isChild ? item.name : undefined}
+                className={({ isActive }) =>
+                    `group flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 relative
+                    ${collapsed && !isChild ? 'justify-center' : ''}
+                    ${isActive ? 'text-white' : 'text-white/55 hover:text-white hover:bg-white/8'}`
+                }
+                style={({ isActive }) => ({
+                    animationDelay: `${idx * 50}ms`,
+                    ...(isActive ? { background: 'var(--sidebar-active)' } : {}),
+                })}
+            >
+                {({ isActive }) => (
+                    <>
+                        {isActive && !isChild && (
+                            <span
+                                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
+                                style={{ background: 'var(--sidebar-dot)' }}
+                            />
+                        )}
+                        {!isChild && (
+                            <div
+                                className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
+                                    ${isActive ? 'text-white' : 'text-white/50 group-hover:text-white group-hover:bg-white/10'}`}
+                                style={isActive ? { background: 'rgba(255,255,255,0.18)' } : {}}
+                            >
+                                <Icon size={17} />
+                            </div>
+                        )}
+                        {(!collapsed || isChild) && (
+                            <>
+                                <span className={`text-sm font-medium flex-1 ${isChild ? 'text-xs opacity-80' : ''}`}>
+                                    {item.name}
+                                </span>
+                                {item.badge && (
+                                    <span className="text-xs rounded-full px-2 py-0.5 bg-white/10 text-white/60">
+                                        {item.badge}
+                                    </span>
+                                )}
+                            </>
+                        )}
+                        {isChild && isActive && (
+                             <div className="w-1 h-1 rounded-full bg-white/40" />
+                        )}
+                    </>
+                )}
+            </NavLink>
+        );
     };
 
     return (
@@ -158,90 +291,79 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
             )}
 
             {/* Nav */}
-            <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-                {navItems.map((item, idx) => {
-                    const Icon = item.icon;
-                    return (
-                        <NavLink
-                            key={item.name}
-                            to={item.path}
-                            title={collapsed ? item.name : undefined}
-                            className={({ isActive }) =>
-                                `group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
-                                ${collapsed ? 'justify-center' : ''}
-                                ${isActive ? 'text-white' : 'text-white/55 hover:text-white hover:bg-white/8'}`
-                            }
-                            style={({ isActive }) => ({
-                                animationDelay: `${idx * 50}ms`,
-                                ...(isActive ? { background: 'var(--sidebar-active)' } : {}),
-                            })}
-                        >
-                            {({ isActive }) => (
-                                <>
-                                    {isActive && (
-                                        <span
-                                            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
-                                            style={{ background: 'var(--sidebar-dot)' }}
-                                        />
-                                    )}
-                                    <div
-                                        className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
-                                            ${isActive ? 'text-white' : 'text-white/50 group-hover:text-white group-hover:bg-white/10'}`}
-                                        style={isActive ? { background: 'rgba(255,255,255,0.18)' } : {}}
-                                    >
-                                        <Icon size={17} />
-                                    </div>
-                                    {!collapsed && (
-                                        <>
-                                            <span className="text-sm font-medium flex-1">{item.name}</span>
-                                            {item.badge && (
-                                                <span className="text-xs rounded-full px-2 py-0.5 bg-white/10 text-white/60">
-                                                    {item.badge}
-                                                </span>
-                                            )}
-                                        </>
-                                    )}
-                                </>
-                            )}
-                        </NavLink>
-                    );
-                })}
+            <nav className="flex-1 py-3 px-2 space-y-6 overflow-y-auto custom-scrollbar">
+                {/* Main */}
+                <div className="space-y-0.5">
+                    {navigation.main.map((item, idx) => renderNavItem(item, idx))}
+                </div>
 
-                {!collapsed && (
-                    <p className="px-3 pt-4 pb-1 text-xs font-semibold text-white/30 uppercase tracking-widest">
-                        System
-                    </p>
-                )}
-
-                <NavLink
-                    to="/settings"
-                    title={collapsed ? 'Settings' : undefined}
-                    className={({ isActive }) =>
-                        `group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
-                        ${collapsed ? 'justify-center' : ''}
-                        ${isActive ? 'text-white' : 'text-white/55 hover:text-white hover:bg-white/8'}`
-                    }
-                    style={({ isActive }) => isActive ? { background: 'var(--sidebar-active)' } : {}}
-                >
-                    {({ isActive }) => (
-                        <>
-                            {isActive && (
-                                <span
-                                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
-                                    style={{ background: 'var(--sidebar-dot)' }}
-                                />
-                            )}
-                            <div
-                                className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
-                                    ${isActive ? 'text-white' : 'text-white/50 group-hover:text-white group-hover:bg-white/10'}`}
-                                style={isActive ? { background: 'rgba(255,255,255,0.18)' } : {}}
-                            >
-                                <Settings size={17} />
-                            </div>
-                            {!collapsed && <span className="text-sm font-medium">Settings</span>}
-                        </>
+                {/* Academic */}
+                <div className="space-y-0.5">
+                    {!collapsed && (
+                        <p className="px-3 pb-2 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
+                            Academic
+                        </p>
                     )}
-                </NavLink>
+                    {navigation.academic.map((item, idx) => renderNavItem(item, idx))}
+                </div>
+
+                {/* People */}
+                <div className="space-y-0.5">
+                    {!collapsed && (
+                        <p className="px-3 pb-2 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
+                            People
+                        </p>
+                    )}
+                    {navigation.people.map((item, idx) => renderNavItem(item, idx))}
+                </div>
+
+                {/* Operations */}
+                <div className="space-y-0.5">
+                    {!collapsed && (
+                        <p className="px-3 pb-2 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
+                            Operations
+                        </p>
+                    )}
+                    {navigation.operations.map((item, idx) => renderNavItem(item, idx))}
+                </div>
+
+                {/* System */}
+                <div className="space-y-0.5 pt-4 border-t border-white/5">
+                    {!collapsed && (
+                        <p className="px-3 pb-2 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
+                            System
+                        </p>
+                    )}
+                    <NavLink
+                        to="/settings"
+                        title={collapsed ? 'Settings' : undefined}
+                        className={({ isActive }) =>
+                            `group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
+                            ${collapsed ? 'justify-center' : ''}
+                            ${isActive ? 'text-white' : 'text-white/55 hover:text-white hover:bg-white/8'}`
+                        }
+                        style={({ isActive }) => isActive ? { background: 'var(--sidebar-active)' } : {}}
+                    >
+                        {({ isActive }) => (
+                            <>
+                                {isActive && (
+                                    <span
+                                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
+                                        style={{ background: 'var(--sidebar-dot)' }}
+                                    />
+                                )}
+                                <div
+                                    className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
+                                        ${isActive ? 'text-white' : 'text-white/50 group-hover:text-white group-hover:bg-white/10'}`}
+                                    style={isActive ? { background: 'rgba(255,255,255,0.18)' } : {}}
+                                >
+                                    <Settings size={17} />
+                                </div>
+                                {!collapsed && <span className="text-sm font-medium">Settings</span>}
+                            </>
+                        )}
+                    </NavLink>
+                </div>
             </nav>
 
             {/* User profile */}

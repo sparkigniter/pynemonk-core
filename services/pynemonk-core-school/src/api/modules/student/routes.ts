@@ -29,6 +29,15 @@ studentRouter.get(
     },
 );
 
+studentRouter.get(
+    "/profile/me",
+    requireAuth,
+    (req, res) => {
+        const ctrl = container.resolve(StudentController);
+        return ctrl.getMe(req, res);
+    }
+);
+
 /**
  * GET /api/v1/school/students/:id
  * Get single student details
@@ -40,6 +49,20 @@ studentRouter.get(
     (req, res) => {
         const ctrl = container.resolve(StudentController);
         return ctrl.get(req, res);
+    },
+);
+
+/**
+ * POST /api/v1/school/students/:id/documents
+ * Upload a document for a student
+ */
+studentRouter.post(
+    "/:id/documents",
+    requireAuth,
+    requireRole(["school_admin", "principal"]),
+    (req, res) => {
+        const ctrl = container.resolve(StudentController);
+        return ctrl.uploadDocument(req, res);
     },
 );
 

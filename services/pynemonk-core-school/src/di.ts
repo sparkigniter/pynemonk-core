@@ -30,8 +30,16 @@ import RolloverController from "./api/modules/academics/controllers/RolloverCont
 
 import { TimetableService } from "./api/modules/timetable/services/TimetableService.js";
 import { TimetableController } from "./api/modules/timetable/controllers/TimetableController.js";
+import { ExamHelper } from "./api/modules/exam/helpers/ExamHelper.js";
+import { ExamService } from "./api/modules/exam/services/ExamService.js";
+import { ExamController } from "./api/modules/exam/controllers/ExamController.js";
+import { WorkflowHelper } from "./api/modules/workflow/helpers/WorkflowHelper.js";
+import { WorkflowService } from "./api/modules/workflow/services/WorkflowService.js";
+import { WorkflowController } from "./api/modules/workflow/controllers/WorkflowController.js";
 
 import { InternalAuthClient } from "./api/core/clients/InternalAuthClient.js";
+import { EventService } from "./api/modules/event/services/EventService.js";
+import EventController from "./api/modules/event/controllers/EventController.js";
 
 import { EventEmitter } from "events";
 
@@ -86,6 +94,20 @@ function setupDI(): void {
     container.register(RolloverService, { useClass: RolloverService });
     container.register(RolloverController, { useClass: RolloverController });
     container.register("AcademicYearHelper", { useClass: AcademicYearHelper }); // Alias for legacy usage
+
+    // ── Exam Module ──────────────────────────────────────────────────────────
+    container.register(ExamHelper, { useClass: ExamHelper });
+    container.register(ExamService, { useClass: ExamService });
+    container.register(ExamController, { useClass: ExamController });
+
+    // ── Workflow Module ──────────────────────────────────────────────────────
+    container.register(WorkflowHelper, { useClass: WorkflowHelper });
+    container.register(WorkflowService, { useClass: WorkflowService });
+    container.register(WorkflowController, { useClass: WorkflowController });
+
+    // ── Event Module ─────────────────────────────────────────────────────────
+    container.register(EventService, { useClass: EventService });
+    container.register(EventController, { useClass: EventController });
 }
 
 export default setupDI;

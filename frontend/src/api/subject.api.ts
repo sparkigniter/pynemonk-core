@@ -1,4 +1,5 @@
 import { request } from './base.api';
+import type { PaginatedResponse } from './staff.api';
 
 export interface Subject {
     id: number;
@@ -24,14 +25,16 @@ export interface Assignment {
 export async function getSubjectList(params?: { 
     grade_id?: number; 
     search?: string; 
-}): Promise<Subject[]> {
+    page?: number;
+    limit?: number;
+}): Promise<PaginatedResponse<Subject>> {
     const query = new URLSearchParams();
     if (params) {
         Object.entries(params).forEach(([key, value]) => {
             if (value) query.append(key, value.toString());
         });
     }
-    return request<Subject[]>(`/school/subjects?${query.toString()}`);
+    return request<PaginatedResponse<Subject>>(`/school/subjects?${query.toString()}`);
 }
 
 export async function createSubject(data: Partial<Subject>): Promise<Subject> {

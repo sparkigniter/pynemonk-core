@@ -12,10 +12,14 @@ export default class ClassroomController extends BaseController {
     public async list(req: Request, res: Response) {
         try {
             const tenantId = (req as any).user.tenant_id;
-            const academicYearId = req.query.academic_year_id
-                ? parseInt(req.query.academic_year_id as string)
-                : undefined;
-            const classrooms = await this.classroomService.getClassrooms(tenantId, academicYearId);
+            const filters = {
+                academic_year_id: req.query.academic_year_id ? parseInt(req.query.academic_year_id as string) : undefined,
+                grade_id: req.query.grade_id ? parseInt(req.query.grade_id as string) : undefined,
+                search: req.query.search as string,
+                page: req.query.page ? parseInt(req.query.page as string) : undefined,
+                limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+            };
+            const classrooms = await this.classroomService.getClassrooms(tenantId, filters);
             return this.ok(res, "Classrooms retrieved", classrooms);
         } catch (error: any) {
             return this.internalservererror(res, error.message);
