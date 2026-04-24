@@ -12,28 +12,28 @@ const eventRateLimiter = rateLimit({
     max: 100,
 });
 
-eventRouter.get("/", requireAuth, eventRateLimiter, (req, res) => container.resolve(EventController).list(req, res));
+eventRouter.get("/", eventRateLimiter, requireAuth, (req, res) => container.resolve(EventController).list(req, res));
 
 eventRouter.post(
     "/",
-    requireAuth,
     requireRole(["owner", "principal", "school_admin"]),
+    requireAuth,
     requireRole(["owner", "principal", "school_admin"]),
     (req, res) => container.resolve(EventController).create(req, res)
 );
 
 eventRouter.put(
     "/:id",
-    requireAuth,
     requireRole(["owner", "principal", "school_admin"]),
+    requireAuth,
     requireRole(["owner", "principal", "school_admin"]),
     (req, res) => container.resolve(EventController).update(req, res)
 );
 
 eventRouter.delete(
     "/:id",
-    requireAuth,
     requireRole(["owner", "principal", "school_admin"]),
+    requireAuth,
     requireRole(["owner", "principal", "school_admin"]),
     (req, res) => container.resolve(EventController).delete(req, res)
 );
