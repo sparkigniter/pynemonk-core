@@ -62,7 +62,7 @@ const OnboardingPipeline = ({ type }: { type?: 'Student' | 'Teacher' }) => {
                             {/* Column Header */}
                             <div className="flex items-center justify-between px-2">
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-2.5 h-2.5 rounded-full ${col.color.replace('bg-', 'bg-').replace('-50', '-500')}`} />
+                                    <div className={`w-2.5 h-2.5 rounded-full ${col.color.replace('-50', '-500')}`} />
                                     <h3 className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">
                                         {col.title}
                                     </h3>
@@ -84,7 +84,7 @@ const OnboardingPipeline = ({ type }: { type?: 'Student' | 'Teacher' }) => {
                                                 <div className="relative">
                                                     <img src={candidate.avatar} className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100" alt="" />
                                                     <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100">
-                                                        <div className={`w-2.5 h-2.5 rounded-full ${col.color.replace('bg-', 'bg-').replace('-50', '-500')}`} />
+                                                        <div className={`w-2.5 h-2.5 rounded-full ${col.color.replace('-50', '-500')}`} />
                                                     </div>
                                                 </div>
                                                 <div className="min-w-0">
