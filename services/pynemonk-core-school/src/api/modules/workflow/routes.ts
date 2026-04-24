@@ -13,6 +13,6 @@ const onboardRateLimiter = rateLimit({
 router.post("/templates", requireAuth, (req, res) => container.resolve(WorkflowController).createTemplate(req, res));
 router.get("/templates", requireAuth, (req, res) => container.resolve(WorkflowController).listTemplates(req, res));
 router.post("/onboard", onboardRateLimiter, requireAuth, (req, res) => container.resolve(WorkflowController).startProcess(req, res));
-router.get("/instance/:id", requireAuth, (req, res) => container.resolve(WorkflowController).getInstance(req, res));
+router.get("/instance/:id", onboardRateLimiter, requireAuth, (req, res) => container.resolve(WorkflowController).getInstance(req, res));
 
 export default router;
