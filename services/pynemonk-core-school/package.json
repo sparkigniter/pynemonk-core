@@ -30,6 +30,7 @@
     "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.10.0",
     "express-rate-limit": "^8.4.0"
+    "express-rate-limit": "^8.4.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
