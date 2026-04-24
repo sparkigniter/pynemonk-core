@@ -35,5 +35,11 @@ export const TimetableApi = {
         }),
 
     delete: (id: number) =>
-        del(`${BASE_PATH}/${id}`)
+        del(`${BASE_PATH}/${id}`),
+
+    getPeriods: () =>
+        get<{ period_number: number, start_time: string, end_time: string }[]>(`${BASE_PATH}/periods`),
+
+    getGlobalSchedule: () =>
+        get<(TimetableEntry & { type: 'timetable' })[]>(`${BASE_PATH}/global-schedule`)
 };

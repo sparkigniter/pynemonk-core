@@ -1,12 +1,14 @@
 import { injectable, inject } from "tsyringe";
 import StaffHelper from "../helpers/StaffHelper.js";
 import { IAuthClient } from "../../../core/interfaces/IAuthClient.js";
+import { WorkflowService } from "../../workflow/services/WorkflowService.js";
 
 @injectable()
 export default class StaffService {
     constructor(
         @inject(StaffHelper) private staffHelper: StaffHelper,
         @inject("IAuthClient") private authClient: IAuthClient,
+        @inject(WorkflowService) private workflowService: WorkflowService,
     ) {}
 
     public async getStaffList(tenantId: number, filters: any = {}) {
@@ -34,6 +36,18 @@ export default class StaffService {
                 client
             );
 
+            // 3. Trigger Onboarding Workflow if template exists
+            const templates = await this.workflowService.getTemplates(tenantId);
+            const staffTemplate = templates.find((t: any) => t.entity_type === 'staff' || t.entity_type === 'teacher');
+            
+            if (staffTemplate) {
+                await this.workflowService.startOnboarding(tenantId, {
+                    template_id: staffTemplate.id,
+                    target_name: `${staff.first_name} ${staff.last_name}`,
+                    target_email: staff.email
+                });
+            }
+
             await client.query('COMMIT');
             return staff;
         } catch (error) {
@@ -54,5 +68,9 @@ export default class StaffService {
 
     public async getStaffById(tenantId: number, id: number) {
         return this.staffHelper.getStaffById(tenantId, id);
+    }
+
+    public async getStaffByUserId(tenantId: number, userId: number) {
+        return this.staffHelper.findByUserId(tenantId, userId);
     }
 }

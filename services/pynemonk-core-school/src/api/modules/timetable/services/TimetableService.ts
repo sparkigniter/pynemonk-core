@@ -19,7 +19,7 @@ export class TimetableService {
     constructor(
         @inject("DB") private pool: Pool,
         @inject(AcademicYearHelper) private academicYearHelper: AcademicYearHelper
-    ) {}
+    ) { }
 
     async getByClassroom(tenantId: number, classroomId: number, academicYearId?: number) {
         if (!academicYearId) {
@@ -79,7 +79,7 @@ export class TimetableService {
 
     private async checkConflicts(entry: TimetableEntry, excludeId?: number) {
         const excludeClause = excludeId ? `AND t.id != ${excludeId}` : '';
-        
+
         // Teacher conflict
         const teacherQuery = `
             SELECT t.*, c.name as classroom_name
@@ -153,6 +153,38 @@ export class TimetableService {
             ORDER BY t.start_time
         `;
         const result = await this.pool.query(query, [tenantId, teacherId, day, academicYearId]);
+        return result.rows;
+    }
+
+    async getUniquePeriods(tenantId: number, academicYearId?: number) {
+        if (!academicYearId) {
+            const currentYear = await this.academicYearHelper.findCurrent(tenantId);
+            academicYearId = currentYear?.id;
+        }
+        const query = `
+            SELECT DISTINCT start_time, end_time
+            FROM school.timetable
+            WHERE tenant_id = $1 AND academic_year_id = $2 AND is_deleted = FALSE
+            ORDER BY start_time
+        `;
+        const result = await this.pool.query(query, [tenantId, academicYearId]);
+        return result.rows;
+    }
+
+    async getGlobalSchedule(tenantId: number, academicYearId?: number) {
+        if (!academicYearId) {
+            const currentYear = await this.academicYearHelper.findCurrent(tenantId);
+            academicYearId = currentYear?.id;
+        }
+        const query = `
+            SELECT t.*, c.name as classroom_name, s.name as subject_name, st.user_id as teacher_user_id, 'timetable' as type
+            FROM school.timetable t
+            JOIN school.classroom c ON t.classroom_id = c.id
+            JOIN school.subject s ON t.subject_id = s.id
+            JOIN school.staff st ON t.teacher_id = st.id
+            WHERE t.tenant_id = $1 AND t.academic_year_id = $2 AND t.is_deleted = FALSE
+        `;
+        const result = await this.pool.query(query, [tenantId, academicYearId]);
         return result.rows;
     }
 }

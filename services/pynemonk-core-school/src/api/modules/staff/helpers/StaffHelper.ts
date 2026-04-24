@@ -200,12 +200,22 @@ export default class StaffHelper extends BaseModel {
 
     public async getStaffById(tenantId: number, id: number) {
         const query = `
-            SELECT s.*, u.username, u.email
+            SELECT s.*, u.email
             FROM school.staff s
             JOIN auth.user u ON s.user_id = u.id
             WHERE s.tenant_id = $1 AND s.id = $2 AND s.is_deleted = FALSE
         `;
         const result = await this.db.query(query, [tenantId, id]);
+        return result.rows[0];
+    }
+
+    public async findByUserId(tenantId: number, userId: number) {
+        const query = `
+            SELECT s.*
+            FROM school.staff s
+            WHERE s.tenant_id = $1 AND s.user_id = $2 AND s.is_deleted = FALSE
+        `;
+        const result = await this.db.query(query, [tenantId, userId]);
         return result.rows[0];
     }
 }

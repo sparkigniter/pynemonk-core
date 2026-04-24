@@ -62,3 +62,11 @@ export async function createStaff(data: Partial<Staff>): Promise<Staff> {
         body: JSON.stringify(data),
     });
 }
+
+export async function getStaffDetails(id: number): Promise<Staff> {
+    return request<Staff>(`/school/staff/${id}`);
+}
+
+export async function getMyStaffProfile(): Promise<Staff> {
+    return request<Staff>(`/school/staff/profile/me`);
+}

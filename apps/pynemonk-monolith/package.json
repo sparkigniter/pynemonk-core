@@ -18,6 +18,7 @@
     "pynemonk-core-accounting": "*",
     "pynemonk-core-auth": "*",
     "pynemonk-core-school": "*",
+    "pynemonk-core-system": "*",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {

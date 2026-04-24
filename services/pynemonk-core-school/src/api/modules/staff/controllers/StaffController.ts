@@ -73,4 +73,16 @@ export default class StaffController extends ResourceController {
             return this.internalservererror(res, error.message);
         }
     }
+
+    public async getMe(req: Request, res: Response) {
+        try {
+            const tenantId = this.getTenantId(req);
+            const userId = (req as any).user.userId;
+            const staff = await this.staffService.getStaffByUserId(tenantId, parseInt(userId));
+            if (!staff) return this.notfound(res, "Staff profile not found");
+            return this.ok(res, "Profile retrieved", staff);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
 }

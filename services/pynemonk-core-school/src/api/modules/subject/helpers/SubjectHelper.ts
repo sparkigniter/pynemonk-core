@@ -24,6 +24,8 @@ export default class SubjectHelper extends BaseModel {
         filters: {
             grade_id?: number;
             search?: string;
+            page?: number;
+            limit?: number;
         } = {},
     ) {
         let query = `
@@ -49,8 +51,43 @@ export default class SubjectHelper extends BaseModel {
 
         query += ` ORDER BY g.sequence_order ASC, s.name ASC`;
 
+        if (filters.limit) {
+            query += ` LIMIT $${paramIndex}`;
+            values.push(filters.limit);
+            paramIndex++;
+
+            if (filters.page) {
+                const offset = (filters.page - 1) * filters.limit;
+                query += ` OFFSET $${paramIndex}`;
+                values.push(offset);
+                paramIndex++;
+            }
+        }
+
         const result = await this.db.query(query, values);
-        return result.rows;
+        
+        // Count query for pagination meta
+        let countQuery = `SELECT COUNT(*) FROM school.subject s WHERE s.tenant_id = $1 AND s.is_deleted = FALSE`;
+        const countValues: any[] = [tenantId];
+        if (filters.grade_id) {
+            countQuery += ` AND s.grade_id = $2`;
+            countValues.push(filters.grade_id);
+        }
+        if (filters.search) {
+            countQuery += ` AND (s.name ILIKE $${countValues.length + 1} OR s.code ILIKE $${countValues.length + 1})`;
+            countValues.push(`%${filters.search}%`);
+        }
+        const countRes = await this.db.query(countQuery, countValues);
+
+        return {
+            data: result.rows,
+            pagination: {
+                total: parseInt(countRes.rows[0].count),
+                page: filters.page || 1,
+                limit: filters.limit || result.rows.length,
+                pages: Math.ceil(parseInt(countRes.rows[0].count) / (filters.limit || result.rows.length || 1))
+            }
+        };
     }
 
     public async findById(tenantId: number, id: number) {

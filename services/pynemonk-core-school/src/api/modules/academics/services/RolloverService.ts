@@ -19,11 +19,11 @@ export default class RolloverService {
      * Fetches current classrooms and assignments to show the user what will be cloned.
      */
     public async getRolloverPreview(tenantId: number, sourceYearId: number) {
-        const classrooms = await this.classroomHelper.findAll(tenantId, sourceYearId);
+        const response = await this.classroomHelper.findAll(tenantId, { academic_year_id: sourceYearId });
         const assignments = await this.subjectHelper.getAssignments(tenantId, { academic_year_id: sourceYearId });
         
         return {
-            classrooms,
+            classrooms: response.data,
             assignments
         };
     }
@@ -49,8 +49,8 @@ export default class RolloverService {
 
             // 1. Clone Classrooms
             if (data.options.clone_classrooms) {
-                const sourceClassrooms = await this.classroomHelper.findAll(tenantId, data.source_year_id);
-                for (const cls of sourceClassrooms) {
+                const response = await this.classroomHelper.findAll(tenantId, { academic_year_id: data.source_year_id });
+                for (const cls of response.data) {
                     const newCls = await client.query(`
                         INSERT INTO school.classroom 
                             (tenant_id, academic_year_id, grade_id, section, name, room, capacity, class_teacher_id)
@@ -82,12 +82,17 @@ export default class RolloverService {
                 }
             }
 
-            // 3. Mark target year as current and planning -> active
+            // 3. Mark target year as current and active, old ones as closed
             await client.query(`
-                UPDATE school.academic_year SET is_current = FALSE WHERE tenant_id = $1
+                UPDATE school.academic_year 
+                SET is_current = FALSE, status = 'closed' 
+                WHERE tenant_id = $1 AND is_current = TRUE
             `, [tenantId]);
+            
             await client.query(`
-                UPDATE school.academic_year SET is_current = TRUE, status = 'active' WHERE id = $1
+                UPDATE school.academic_year 
+                SET is_current = TRUE, status = 'active' 
+                WHERE id = $1
             `, [data.target_year_id]);
 
             await client.query("COMMIT");

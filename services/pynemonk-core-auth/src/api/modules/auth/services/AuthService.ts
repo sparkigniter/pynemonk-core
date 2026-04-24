@@ -143,14 +143,19 @@ class AuthService {
         const roleSlugs = roles.map(r => r.slug);
         const primaryRole = roles.find(r => r.is_primary) || roles[0];
 
-        console.log(`[AuthService] Login successful. User: ${user.email}, Selected Tenant: ${selectedTenantId}`);
+        // 7. Aggregate all permissions (scopes) using the high-architecture method
+        const permissions = await this.userHelper.getEffectivePermissions(user.id, selectedTenantId);
+        const scopeString = permissions.join(' ');
 
-        // 7. Build token payload
+        console.log(`[AuthService] Login successful. User: ${user.email}, Selected Tenant: ${selectedTenantId}`);
+        console.log(`[AuthService] Scopes/Permissions: ${scopeString}`);
+
+        // 8. Build token payload
         const payload: TokenPayload = {
             grant_type: data.grant_type,
             client_id: data.client_id,
             client_secret: data.client_secret,
-            scope: data.scope,
+            scope: scopeString, // Permissions are now the scope
             username: data.email,
             password: data.password,
             sub: String(user.id),
@@ -219,10 +224,15 @@ class AuthService {
         const tenants = await this.userHelper.getUserTenants(user.id);
         const tenantId = stored.tenant_id || (tenants.length === 1 ? tenants[0].id : user.tenant_id);
 
+        // 7. Aggregate all permissions (scopes) using the high-architecture method
+        const permissions = await this.userHelper.getEffectivePermissions(user.id, tenantId);
+        const scopeString = permissions.join(' ');
+
         const payload: TokenPayload = {
             grant_type: 'refresh_token',
             client_id: data.client_id,
             client_secret: data.client_secret,
+            scope: scopeString,
             exp: Math.floor(Date.now() / 1000) + 3600,
             sub: String(user.id),
             email: user.email,

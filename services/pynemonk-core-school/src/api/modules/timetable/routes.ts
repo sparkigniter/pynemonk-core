@@ -29,4 +29,12 @@ router.delete("/:id", requireAuth, (req, res) => {
     container.resolve(TimetableController).delete(req, res);
 });
 
+router.get("/periods", requireAuth, (req, res) => {
+    container.resolve(TimetableController).getUniquePeriods(req, res);
+});
+
+router.get("/global-schedule", requireAuth, (req, res) => {
+    container.resolve(TimetableController).getGlobalSchedule(req, res);
+});
+
 export default router;

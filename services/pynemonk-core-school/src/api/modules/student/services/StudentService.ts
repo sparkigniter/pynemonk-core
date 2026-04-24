@@ -2,13 +2,9 @@ import { injectable, inject } from "tsyringe";
 import StudentHelper from "../helpers/StudentHelper.js";
 import StudentValidator from "../validator/StudentValidator.js";
 import AcademicYearHelper from "../../academics/helpers/AcademicYearHelper.js";
-
-// Note: To register a student, we also need to create their auth.user record.
-// In a monolith this is easy (import UserHelper), in microservices we might do an HTTP call.
-// Assuming monolith shared DB pattern for now:
 import { Pool } from "pg";
-
 import { IAuthClient } from "../../../core/interfaces/IAuthClient.js";
+import { WorkflowService } from "../../workflow/services/WorkflowService.js";
 
 @injectable()
 export default class StudentService {
@@ -17,44 +13,45 @@ export default class StudentService {
         private studentValidator: StudentValidator,
         private academicYearHelper: AcademicYearHelper,
         @inject("IAuthClient") private authClient: IAuthClient,
+        @inject(WorkflowService) private workflowService: WorkflowService,
         @inject("DB") private db: Pool,
     ) {}
 
     public async registerStudent(tenantId: number, data: any): Promise<any> {
+        // Validation could be expanded for new fields
         await this.studentValidator.validate("CREATE_STUDENT", data);
 
-        // Start transaction for the school-specific parts
         const client = await this.db.connect();
         try {
             await client.query("BEGIN");
 
-            // 1. Create auth.user via the client (Abstracted)
             const authUser = await this.authClient.createUser({
                 email: data.email,
-                password: data.password,
+                password: data.password || 'Student@123',
                 role_slug: "student",
                 tenant_id: tenantId,
             });
 
-            // 2. Create school.student
             const student = await this.studentHelper.createStudent(
                 {
+                    ...data,
                     tenant_id: tenantId,
                     user_id: authUser.id,
-                    admission_no: data.admission_no,
-                    first_name: data.first_name,
-                    last_name: data.last_name,
-                    gender: data.gender,
-                    date_of_birth: data.date_of_birth,
-                    blood_group: data.blood_group,
-                    nationality: data.nationality,
-                    religion: data.religion,
-                    phone: data.phone,
-                    address: data.address,
-                    avatar_url: data.avatar_url,
                 },
                 client,
             );
+
+            // 3. Trigger Onboarding Workflow if template exists
+            const templates = await this.workflowService.getTemplates(tenantId);
+            const studentTemplate = templates.find((t: any) => t.entity_type === 'student');
+            
+            if (studentTemplate) {
+                await this.workflowService.startOnboarding(tenantId, {
+                    template_id: studentTemplate.id,
+                    target_name: `${student.first_name} ${student.last_name}`,
+                    target_email: student.email
+                });
+            }
 
             await client.query("COMMIT");
             return student;
@@ -66,8 +63,20 @@ export default class StudentService {
         }
     }
 
-    public async getStudent(tenantId: number, studentId: number): Promise<any> {
-        return this.studentHelper.getStudentById(tenantId, studentId);
+    public async getStudentProfile(tenantId: number, studentId: number): Promise<any> {
+        const student = await this.studentHelper.getStudentById(tenantId, studentId);
+        if (!student) return null;
+
+        const [logs, documents] = await Promise.all([
+            this.studentHelper.getLogs(tenantId, studentId),
+            this.studentHelper.getDocuments(tenantId, studentId)
+        ]);
+
+        return { ...student, logs, documents };
+    }
+
+    public async getStudentByUserId(tenantId: number, userId: number): Promise<any> {
+        return this.studentHelper.findByUserId(tenantId, userId);
     }
 
     public async listStudents(tenantId: number, filters: any, scope: any): Promise<any> {
@@ -76,5 +85,23 @@ export default class StudentService {
             filters.academic_year_id = currentYear?.id;
         }
         return this.studentHelper.listStudents(tenantId, filters, scope);
+    }
+
+    public async addDocument(tenantId: number, studentId: number, data: any): Promise<any> {
+        const doc = await this.studentHelper.addDocument({
+            ...data,
+            tenant_id: tenantId,
+            student_id: studentId
+        });
+
+        await this.studentHelper.createLog({
+            tenant_id: tenantId,
+            student_id: studentId,
+            event_type: 'document_upload',
+            description: `New document uploaded: ${data.document_type}`,
+            metadata: { file_name: data.file_name }
+        });
+
+        return doc;
     }
 }

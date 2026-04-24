@@ -75,4 +75,24 @@ export class TimetableController {
             res.status(500).json({ success: false, message: error.message });
         }
     }
+
+    async getUniquePeriods(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenant_id;
+            const data = await this.timetableService.getUniquePeriods(tenantId);
+            res.json({ success: true, data });
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    async getGlobalSchedule(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenant_id;
+            const data = await this.timetableService.getGlobalSchedule(tenantId);
+            res.json({ success: true, data });
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
 }

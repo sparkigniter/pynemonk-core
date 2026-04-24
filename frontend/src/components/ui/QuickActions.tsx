@@ -17,26 +17,24 @@ const actions = [
 
 const QuickActions: React.FC = () => {
     return (
-        <div className="card p-6 animate-fade-in-up delay-300">
-            <h3 className="text-base font-semibold text-slate-800 font-heading mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-4 gap-3">
+        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm animate-fade-in-up delay-300">
+            <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-slate-800 tracking-tight">Quick Action Hub</h3>
+                <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-full">8 Shortcuts</span>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {actions.map((action) => {
                     const Icon = action.icon;
                     return (
                         <button
                             key={action.label}
-                            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-slate-50 transition-all group"
+                            className="flex flex-col items-center gap-3 p-5 rounded-[2rem] bg-slate-50/50 border border-transparent hover:border-slate-100 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 group"
                         >
-                            <div
-                                className="w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 group-hover:-translate-y-0.5"
-                                style={{
-                                    background: action.gradient,
-                                    boxShadow: `0 4px 14px ${action.shadow}`
-                                }}
-                            >
-                                <Icon size={18} className="text-white" />
+                            <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center transition-all duration-300 group-hover:bg-primary group-hover:text-white group-hover:scale-110 group-hover:-rotate-3">
+                                <Icon size={20} className="transition-colors duration-300" />
                             </div>
-                            <span className="text-xs font-medium text-slate-600 text-center leading-tight">{action.label}</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-slate-900 transition-colors">{action.label}</span>
                         </button>
                     );
                 })}

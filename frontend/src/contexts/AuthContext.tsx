@@ -13,6 +13,8 @@ export interface AuthUser {
     sub: string;        // user id
     email: string;
     role_id: number;
+    roles: string[];    // role slugs
+    permissions: string[]; // specific permission keys (scopes)
     tenant_id?: number;
 }
 
@@ -49,6 +51,12 @@ function loadSession(): AuthSession | null {
         const s = JSON.parse(raw) as AuthSession;
         // Discard if access token is expired
         if (Date.now() >= s.expiresAt) return null;
+        
+        // Safety: Ensure user object has permissions array for backward compatibility
+        if (s.user && !s.user.permissions) {
+            s.user.permissions = [];
+        }
+        
         return s;
     } catch {
         return null;
@@ -67,6 +75,8 @@ function parseUser(accessToken: string): AuthUser | null {
             sub: payload.sub, 
             email: payload.email, 
             role_id: payload.role_id,
+            roles: payload.roles || [],
+            permissions: typeof payload.scope === 'string' ? payload.scope.split(' ') : [],
             tenant_id: payload.tenant_id
         };
     } catch {

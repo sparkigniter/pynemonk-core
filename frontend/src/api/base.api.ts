@@ -44,6 +44,20 @@ export async function post<T>(path: string, body: any): Promise<T> {
     });
 }
 
+export async function put<T>(path: string, body: any): Promise<T> {
+    return request<T>(path, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+    });
+}
+
+export async function patch<T>(path: string, body: any): Promise<T> {
+    return request<T>(path, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+    });
+}
+
 export async function del<T>(path: string): Promise<T> {
     return request<T>(path, { method: 'DELETE' });
 }

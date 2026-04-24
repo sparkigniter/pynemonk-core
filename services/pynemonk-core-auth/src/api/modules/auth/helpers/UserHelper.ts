@@ -41,14 +41,14 @@ class UserHelper {
 
     public async getUserRoles(userId: number): Promise<any[]> {
         const res = await this.db.query(
-            `SELECT r.id, r.slug, r.name, r.tier, r.tenant_id, ur.is_primary
+            `SELECT r.id, r.slug, r.name, r.tier, r.tenant_id, r.data_scope, ur.is_primary
              FROM auth.role r
              JOIN auth.user_role ur ON r.id = ur.role_id
              WHERE ur.user_id = $1 AND ur.is_deleted = FALSE
              
              UNION
              
-             SELECT r.id, r.slug, r.name, r.tier, r.tenant_id, TRUE as is_primary
+             SELECT r.id, r.slug, r.name, r.tier, r.tenant_id, r.data_scope, TRUE as is_primary
              FROM auth.role r
              JOIN auth.user u ON r.id = u.role_id
              WHERE u.id = $1 AND u.is_deleted = FALSE
@@ -184,6 +184,41 @@ class UserHelper {
             [slug]
         );
         return res.rows[0];
+    }
+
+    /**
+     * Highly Architectured Permission Retrieval:
+     * Fetches all 'Effective Permissions' for a user by aggregating:
+     * 1. Permissions assigned via Roles (relational join)
+     * 2. Permissions assigned via Roles (legacy JSONB data_scope)
+     * 3. (Optional future) Permissions assigned directly to User
+     */
+    public async getEffectivePermissions(userId: number, tenantId?: number): Promise<string[]> {
+        const query = `
+            -- 1. Relational Permissions from Join Table
+            SELECT DISTINCT p.key
+            FROM auth.permission p
+            JOIN auth.role_permission rp ON p.id = rp.permission_id
+            JOIN auth.user_role ur ON rp.role_id = ur.role_id
+            WHERE ur.user_id = $1 
+              AND ur.is_deleted = FALSE 
+              AND rp.granted = TRUE
+              AND (rp.tenant_id = $2 OR rp.tenant_id IS NULL)
+
+            UNION
+
+            -- 2. Legacy/Cache Permissions from JSONB (data_scope)
+            -- This ensures we don't break existing setups while migrating
+            SELECT DISTINCT jsonb_array_elements_text(r.data_scope) as key
+            FROM auth.role r
+            JOIN auth.user_role ur ON r.id = ur.role_id
+            WHERE ur.user_id = $1
+              AND ur.is_deleted = FALSE
+              AND (r.tenant_id = $2 OR r.tenant_id IS NULL)
+        `;
+
+        const res = await this.db.query(query, [userId, tenantId ?? null]);
+        return res.rows.map((r: { key: string }) => r.key);
     }
 }
 

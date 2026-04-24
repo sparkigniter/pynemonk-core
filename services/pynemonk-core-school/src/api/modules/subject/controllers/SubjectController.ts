@@ -16,6 +16,8 @@ export default class SubjectController extends BaseController {
             const filters = {
                 grade_id: req.query.grade_id ? parseInt(req.query.grade_id as string) : undefined,
                 search: req.query.search as string,
+                page: req.query.page ? parseInt(req.query.page as string) : undefined,
+                limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
             };
             const subjects = await this.subjectService.getSubjects(tenantId, filters);
             return this.ok(res, "Subjects retrieved", subjects);

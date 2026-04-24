@@ -6,24 +6,14 @@ export default class GuardianHelper {
     constructor(@inject("DB") private db: Pool) {}
 
     public async createGuardian(
-        data: {
-            tenant_id: number;
-            user_id: number;
-            first_name: string;
-            last_name?: string;
-            gender?: string;
-            phone?: string;
-            email: string;
-            address?: string;
-            occupation?: string;
-            avatar_url?: string;
-        },
+        data: any,
         db: Pool | any = this.db,
     ): Promise<any> {
         const res = await db.query(
             `INSERT INTO school.guardian
-                (tenant_id, user_id, first_name, last_name, gender, phone, email, address, occupation, avatar_url)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                (tenant_id, user_id, first_name, last_name, gender, phone, alternate_phone, 
+                 email, address, occupation, income_range, id_number, avatar_url)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
              RETURNING id, first_name, last_name`,
             [
                 data.tenant_id,
@@ -32,9 +22,12 @@ export default class GuardianHelper {
                 data.last_name ?? null,
                 data.gender ?? null,
                 data.phone ?? null,
+                data.alternate_phone ?? null,
                 data.email,
                 data.address ?? null,
                 data.occupation ?? null,
+                data.income_range ?? null,
+                data.id_number ?? null,
                 data.avatar_url ?? null,
             ],
         );
