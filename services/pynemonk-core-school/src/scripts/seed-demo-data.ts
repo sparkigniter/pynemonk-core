@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import fs from 'fs';
+
 // Setup __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,9 +13,13 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, '../../../../apps/pynemonk-monolith/.env') });
 
+// Detect if running inside Docker
+const isDocker = fs.existsSync('/.dockerenv');
+
 const pool = new Pool({
     user: process.env.PGUSER || 'postgres',
-    host: process.env.PGHOST === 'postgres' ? 'localhost' : (process.env.PGHOST || 'localhost'),
+    // Inside Docker, force 'postgres' hostname to avoid localhost/127.0.0.1 conflicts from .env
+    host: isDocker ? 'postgres' : (process.env.PGHOST || 'localhost'),
     database: process.env.PGDATABASE || 'pynemonk_core',
     password: process.env.PGPASSWORD || 'password',
     port: parseInt(process.env.PGPORT || '5432'),

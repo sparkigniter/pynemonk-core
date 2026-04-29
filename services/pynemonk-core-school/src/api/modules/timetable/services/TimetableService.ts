@@ -207,7 +207,7 @@ export class TimetableService {
             const requirements = await client.query(reqQuery, [academicYearId, classroomId]);
             
             // 3. Get existing occupied slots (Sticky periods + School Breaks)
-            const stickyQuery = `SELECT day_of_week, start_time, end_time FROM school.timetable WHERE classroom_id = $1 AND academic_year_id = $2 AND is_sticky = TRUE AND is_deleted = FALSE`;
+            const stickyQuery = `SELECT subject_id, day_of_week, start_time, end_time FROM school.timetable WHERE classroom_id = $1 AND academic_year_id = $2 AND is_sticky = TRUE AND is_deleted = FALSE`;
             const stickyRes = await client.query(stickyQuery, [classroomId, academicYearId]);
             
             const breakQuery = `SELECT start_time, end_time, name FROM school.period_config WHERE tenant_id = $1 AND is_break = TRUE AND is_deleted = FALSE`;
