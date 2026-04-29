@@ -62,6 +62,7 @@ async function cleanup(client: any, tenantId: number) {
     await client.query('DELETE FROM school.staff WHERE tenant_id = $1', [tenantId]);
     await client.query('DELETE FROM school.subject WHERE tenant_id = $1', [tenantId]);
     await client.query('DELETE FROM school.grade WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM school.settings WHERE tenant_id = $1', [tenantId]);
 }
 
 async function createUser(client: any, tenantId: number, email: string, roleId: number) {

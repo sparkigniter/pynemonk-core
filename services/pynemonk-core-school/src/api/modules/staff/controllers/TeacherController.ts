@@ -10,11 +10,14 @@ export default class TeacherController {
 
     public async getDashboard(req: Request, res: Response): Promise<void> {
         try {
-            const userId = parseInt((req as any).user.sub);
-            console.log(`[TeacherController] Fetching dashboard for UserID: ${userId}`);
+            const user = (req as any).user;
+            const userId = parseInt(user.sub);
+            const tenantId = parseInt(user.tenant_id);
             
-            const stats = await this.teacherHelper.getTeacherDashboardStats(userId);
-            const assignments = await this.teacherHelper.getTeacherAssignments(userId);
+            console.log(`[TeacherController] Fetching dashboard for UserID: ${userId}, TenantID: ${tenantId}`);
+            
+            const stats = await this.teacherHelper.getTeacherDashboardStats(userId, tenantId);
+            const assignments = await this.teacherHelper.getTeacherAssignments(userId, tenantId);
             
             console.log(`[TeacherController] Found ${assignments.length} assignments for UserID: ${userId}`);
             

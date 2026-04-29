@@ -34,7 +34,7 @@ import {
 
 // --- API Config ---
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -68,6 +68,7 @@ interface Assignment {
   classroom_name: string;
   grade_name: string;
   subject_name: string;
+  subject_id: number;
   is_class_teacher: boolean;
   is_scheduled_today: boolean;
   can_take_attendance: boolean;

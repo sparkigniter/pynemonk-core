@@ -8,7 +8,7 @@ export default class TeacherHelper {
     /**
      * Get all classes and subjects assigned to a teacher
      */
-    public async getTeacherAssignments(userId: number): Promise<any[]> {
+    public async getTeacherAssignments(userId: number, tenantId: number): Promise<any[]> {
         const res = await this.db.query(
             `SELECT DISTINCT ON (c.id, s.id)
                 c.id as classroom_id, 
@@ -25,6 +25,7 @@ export default class TeacherHelper {
                     AND (t.subject_id = s.id OR s.id IS NULL)
                     AND t.day_of_week = EXTRACT(ISODOW FROM CURRENT_DATE)
                     AND t.is_deleted = FALSE
+                    AND t.tenant_id = $2
                 ) as is_scheduled_today,
                 CASE 
                     WHEN COALESCE(sett.attendance_mode, 'DAILY') = 'DAILY' THEN (c.class_teacher_id = st.id)
@@ -35,11 +36,12 @@ export default class TeacherHelper {
                         AND (t.subject_id = s.id OR s.id IS NULL)
                         AND t.day_of_week = EXTRACT(ISODOW FROM CURRENT_DATE)
                         AND t.is_deleted = FALSE
+                        AND t.tenant_id = $2
                     )
                 END as can_take_attendance
              FROM school.staff st
-             JOIN school.academic_year ay ON ay.is_current = TRUE AND ay.tenant_id = st.tenant_id
-             LEFT JOIN school.settings sett ON sett.tenant_id = st.tenant_id
+             JOIN school.academic_year ay ON ay.is_current = TRUE AND ay.tenant_id = $2
+             LEFT JOIN school.settings sett ON sett.tenant_id = $2
              JOIN school.classroom c ON (c.class_teacher_id = st.id OR EXISTS (
                  SELECT 1 FROM school.teacher_assignment ta 
                  WHERE ta.staff_id = st.id AND ta.classroom_id = c.id AND ta.is_deleted = FALSE AND ta.academic_year_id = ay.id
@@ -48,10 +50,11 @@ export default class TeacherHelper {
              LEFT JOIN school.teacher_assignment ta ON (ta.staff_id = st.id AND ta.classroom_id = c.id AND ta.is_deleted = FALSE AND ta.academic_year_id = ay.id)
              LEFT JOIN school.subject s ON (ta.subject_id = s.id)
              WHERE st.user_id = $1 
+             AND st.tenant_id = $2
              AND st.is_deleted = FALSE 
              AND c.is_deleted = FALSE
              AND c.academic_year_id = ay.id`,
-            [userId]
+            [userId, tenantId]
         );
         return res.rows;
     }
@@ -59,34 +62,38 @@ export default class TeacherHelper {
     /**
      * Get high-level dashboard stats for a teacher
      */
-    public async getTeacherDashboardStats(userId: number): Promise<any> {
+    public async getTeacherDashboardStats(userId: number, tenantId: number): Promise<any> {
         // This is a complex query to get aggregate insights
         const stats = await this.db.query(
             `WITH teacher_info AS (
-                SELECT id FROM school.staff WHERE user_id = $1
+                SELECT id FROM school.staff WHERE user_id = $1 AND tenant_id = $2 LIMIT 1
             )
             SELECT 
                 (SELECT count(DISTINCT se.student_id) FROM school.attendance a 
                  JOIN school.student_enrollment se ON a.enrollment_id = se.id
                  JOIN school.teacher_assignment ta ON se.classroom_id = ta.classroom_id
                  WHERE ta.staff_id = (SELECT id FROM teacher_info) 
-                 AND a.date = CURRENT_DATE AND a.status = 'absent') as absent_today,
+                 AND a.date = CURRENT_DATE AND a.status = 'absent'
+                 AND a.tenant_id = $2) as absent_today,
                 
                 (SELECT count(*) FROM school.exam_paper ep
                  JOIN school.teacher_assignment ta ON ep.subject_id = ta.subject_id
                  WHERE ta.staff_id = (SELECT id FROM teacher_info)
                  AND ep.exam_date >= CURRENT_DATE 
-                 AND ep.exam_date <= CURRENT_DATE + INTERVAL '7 days') as upcoming_exams,
+                 AND ep.exam_date <= CURRENT_DATE + INTERVAL '7 days'
+                 AND ep.tenant_id = $2) as upcoming_exams,
 
                 (SELECT count(*) FROM school.teacher_note 
                  WHERE staff_id = (SELECT id FROM teacher_info) 
-                 AND created_at >= CURRENT_DATE - INTERVAL '24 hours') as notes_sent_24h,
+                 AND created_at >= CURRENT_DATE - INTERVAL '24 hours'
+                 AND tenant_id = $2) as notes_sent_24h,
                 
                 (SELECT COALESCE(s.attendance_mode, 'DAILY') 
                  FROM school.staff st 
                  LEFT JOIN school.settings s ON s.tenant_id = st.tenant_id 
-                 WHERE st.user_id = $1) as attendance_mode`,
-            [userId]
+                 WHERE st.user_id = $1 AND st.tenant_id = $2
+                 LIMIT 1) as attendance_mode`,
+            [userId, tenantId]
         );
 
         return stats.rows[0];
