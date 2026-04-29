@@ -11,35 +11,35 @@ const timetableRateLimiter = rateLimit({
     max: 100,
 });
 
-router.get("/classroom/:classroomId", requireAuth, timetableRateLimiter, (req, res) => {
+router.get("/classroom/:classroomId", timetableRateLimiter, requireAuth, (req, res) => {
     container.resolve(TimetableController).getByClassroom(req, res);
 });
 
-router.get("/suggestions", requireAuth, timetableRateLimiter, (req, res) => {
+router.get("/suggestions", timetableRateLimiter, requireAuth, (req, res) => {
     container.resolve(TimetableController).getSuggestions(req, res);
 });
 
-router.get("/teacher-schedule", requireAuth, timetableRateLimiter, (req, res) => {
+router.get("/teacher-schedule", timetableRateLimiter, requireAuth, (req, res) => {
     container.resolve(TimetableController).getTeacherSchedule(req, res);
 });
 
-router.post("/", requireAuth, timetableRateLimiter, (req, res) => {
+router.post("/", timetableRateLimiter, requireAuth, (req, res) => {
     container.resolve(TimetableController).create(req, res);
 });
 
-router.put("/:id", requireAuth, timetableRateLimiter, (req, res) => {
+router.put("/:id", timetableRateLimiter, requireAuth, (req, res) => {
     container.resolve(TimetableController).update(req, res);
 });
 
-router.delete("/:id", requireAuth, timetableRateLimiter, (req, res) => {
+router.delete("/:id", timetableRateLimiter, requireAuth, (req, res) => {
     container.resolve(TimetableController).delete(req, res);
 });
 
-router.get("/periods", requireAuth, timetableRateLimiter, (req, res) => {
+router.get("/periods", timetableRateLimiter, requireAuth, (req, res) => {
     container.resolve(TimetableController).getUniquePeriods(req, res);
 });
 
-router.get("/global-schedule", requireAuth, timetableRateLimiter, (req, res) => {
+router.get("/global-schedule", timetableRateLimiter, requireAuth, (req, res) => {
     container.resolve(TimetableController).getGlobalSchedule(req, res);
 });
 
