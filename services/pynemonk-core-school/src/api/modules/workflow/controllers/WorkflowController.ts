@@ -18,6 +18,12 @@ export class WorkflowController {
         res.json({ success: true, data: result });
     }
 
+    async getPipeline(req: e.Request, res: e.Response) {
+        const tenantId = (req as any).user.tenantId;
+        const result = await this.workflowService.getPipeline(tenantId);
+        res.json({ success: true, data: result });
+    }
+
     async startProcess(req: e.Request, res: e.Response) {
         const tenantId = (req as any).user.tenantId;
         const result = await this.workflowService.startOnboarding(tenantId, req.body);
@@ -28,5 +34,12 @@ export class WorkflowController {
         const tenantId = (req as any).user.tenantId;
         const result = await this.workflowService.getInstance(tenantId, parseInt(req.params.id));
         res.json({ success: true, data: result });
+    }
+
+    async updateStep(req: e.Request, res: e.Response) {
+        const tenantId = (req as any).user.tenantId;
+        const { instanceId, taskType, data } = req.body;
+        await this.workflowService.completeStepByType(tenantId, instanceId, taskType, data);
+        res.json({ success: true, message: "Step updated successfully" });
     }
 }

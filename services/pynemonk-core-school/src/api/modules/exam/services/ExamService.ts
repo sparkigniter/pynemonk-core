@@ -77,7 +77,14 @@ export class ExamService {
     // ─── Papers & Invitations ───────────────────────────────────────────────
 
     public async addPaper(tenantId: number, data: any) {
+        if (data.id) {
+            return this.examHelper.updatePaper(tenantId, data.id, data);
+        }
         return this.examHelper.createPaper({ ...data, tenant_id: tenantId });
+    }
+
+    public async deletePaper(tenantId: number, paperId: number) {
+        return this.examHelper.deletePaper(tenantId, paperId);
     }
 
     public async addInvitation(tenantId: number, data: any) {
@@ -94,7 +101,7 @@ export class ExamService {
     }
 
     public async getPaperStudents(tenantId: number, examId: number, paperId: number) {
-        const students = await this.examHelper.getInvitedStudents(tenantId, examId);
+        const students = await this.examHelper.getInvitedStudents(tenantId, examId, paperId);
         const marks = await this.examHelper.getMarksByPaper(tenantId, paperId);
 
         // Map marks to students
@@ -104,12 +111,17 @@ export class ExamService {
         }));
     }
 
-    public async saveMarks(tenantId: number, examId: number, paperId: number, marksData: any[]) {
+    public async getPaginatedStudents(tenantId: number, examId: number, filters: any) {
+        return this.examHelper.getPaginatedInvitedStudents(tenantId, examId, filters);
+    }
+
+    public async saveMarks(tenantId: number, examId: number, paperId: number, marksData: any[], userId: number) {
         for (const item of marksData) {
             await this.examHelper.saveMarks(tenantId, {
                 ...item,
                 exam_id: examId,
-                paper_id: paperId
+                paper_id: paperId,
+                created_by: userId
             });
         }
         return { success: true };
@@ -117,5 +129,9 @@ export class ExamService {
 
     public async updateStatus(tenantId: number, examId: number, status: string) {
         return this.examHelper.updateExamStatus(tenantId, examId, status);
+    }
+
+    public async updateExam(tenantId: number, id: number, data: any) {
+        return this.examHelper.updateExam(tenantId, id, data);
     }
 }

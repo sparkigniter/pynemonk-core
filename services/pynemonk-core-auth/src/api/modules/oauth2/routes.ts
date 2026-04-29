@@ -5,24 +5,25 @@ import TokenController from './controllers/TokenController.js';
 import ScopeController from './controllers/ScopeController.js';
 import ClientScopeController from './controllers/ClientScopeController.js';
 import { container } from 'tsyringe';
+import { requireAuth } from '../../core/middleware/requireAuth.js';
 const oauthRouter = express.Router();
 
-oauthRouter.post("/client", (req, res) => {
+oauthRouter.post("/client", requireAuth, (req, res) => {
     const clientController = container.resolve(ClientController);
     return clientController.create(req, res);
 });
 
-oauthRouter.get("/client", (req, res) => {
+oauthRouter.get("/client", requireAuth, (req, res) => {
     const clientController = container.resolve(ClientController);
     return clientController.getAll(req, res);
 });
 
-oauthRouter.post("/scope", (req, res) => {
+oauthRouter.post("/scope", requireAuth, (req, res) => {
     const scopeController = container.resolve(ScopeController);
     return scopeController.create(req, res);
 });
 
-oauthRouter.get("/scope", (req, res) => {
+oauthRouter.get("/scope", requireAuth, (req, res) => {
     const scopeController = container.resolve(ScopeController);
     return scopeController.getAll(req, res);
 });

@@ -6,27 +6,50 @@ import {
     Calendar, Phone,
     Award, TrendingUp,
     FileText, Activity, Users,
-    Plus, ExternalLink, ShieldAlert
+    Plus, ExternalLink, ShieldAlert,
+    Zap, RefreshCw
 } from 'lucide-react';
 import * as studentApi from '../../api/student.api';
 import * as gradeApi from '../../api/grade.api';
+import * as integrationApi from '../../api/integration.api';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function StudentProfile() {
+    const { user } = useAuth();
     const { id } = useParams<{ id: string }>();
     const [student, setStudent] = useState<any>(null);
     const [grades, setGrades] = useState<gradeApi.Grade[]>([]);
+    const [integrations, setIntegrations] = useState<integrationApi.IntegrationManifest[]>([]);
     const [loading, setLoading] = useState(true);
+    const [syncing, setSyncing] = useState(false);
     const [activeTab, setActiveTab] = useState<'journey' | 'timeline' | 'documents' | 'family'>('journey');
+
+    const handleSATSExport = async () => {
+        if (!student) return;
+        setSyncing(true);
+        try {
+            await integrationApi.downloadIntegrationExport('karnataka-sats', 'export_students', {
+                tenantId: user?.tenant_id,
+                student_id: student.id // The SATSAdapter currently fetches all, but we can pass this for future filtering
+            }, `sats_export_${student.admission_no}.xlsx`);
+        } catch (err) {
+            console.error('SATS Export failed:', err);
+        } finally {
+            setSyncing(false);
+        }
+    };
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [studentData, gradesData] = await Promise.all([
+                const [studentData, gradesData, integrationsData] = await Promise.all([
                     studentApi.getStudentProfile(parseInt(id!)),
-                    gradeApi.getGrades()
+                    gradeApi.getGrades(),
+                    integrationApi.getAvailableIntegrations()
                 ]);
                 setStudent(studentData);
                 setGrades(gradesData.sort((a, b) => a.sequence_order - b.sequence_order));
+                setIntegrations(integrationsData.filter(i => i.isEnabled));
             } catch (err) {
                 console.error('Failed to fetch profile data', err);
             } finally {
@@ -77,6 +100,16 @@ export default function StudentProfile() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    {integrations.find(i => i.slug === 'karnataka-sats') && (
+                        <button 
+                            onClick={handleSATSExport}
+                            disabled={syncing}
+                            className="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl text-xs font-black hover:bg-emerald-100 transition-all border border-emerald-100 active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {syncing ? <RefreshCw size={14} className="animate-spin" /> : <Zap size={14} />}
+                            {syncing ? 'Syncing...' : 'Sync to SATS'}
+                        </button>
+                    )}
                     <button className="bg-white text-slate-600 px-6 py-3 rounded-2xl text-xs font-black hover:bg-slate-50 transition-all shadow-sm border border-slate-100 active:scale-95">Edit Profile</button>
                     <button className="bg-slate-900 text-white px-6 py-3 rounded-2xl text-xs font-black hover:opacity-90 transition-all shadow-xl active:scale-95">Generate ID Card</button>
                 </div>
@@ -118,13 +151,26 @@ export default function StudentProfile() {
                                 <p className="text-sm font-black text-slate-900">{student.religion || 'N/A'}</p>
                             </div>
                             <div className="p-4 bg-slate-50 rounded-2xl">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Nationality</p>
+                                <p className="text-sm font-black text-slate-900">{student.nationality || 'N/A'}</p>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-2xl">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Mother Tongue</p>
+                                <p className="text-sm font-black text-slate-900">{student.mother_tongue || 'N/A'}</p>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-2xl col-span-2">
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Gender</p>
                                 <p className="text-sm font-black text-slate-900 capitalize">{student.gender || 'N/A'}</p>
                             </div>
-                            <div className="p-4 bg-slate-50 rounded-2xl">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Language</p>
-                                <p className="text-sm font-black text-slate-900">{student.mother_tongue || 'N/A'}</p>
-                            </div>
+                            {integrations.find(i => i.slug === 'karnataka-sats') && (
+                                <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 col-span-2">
+                                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">Karnataka SATS ID</p>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm font-black text-indigo-600 font-mono tracking-wider">{student.external_ids?.['karnataka-sats'] || 'NOT MAPPED'}</p>
+                                        <Zap size={12} className="text-indigo-400" />
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="mt-8 space-y-4">

@@ -19,11 +19,34 @@ const activities: ActivityItem[] = [
     { id: 6, title: 'Parent meeting scheduled', subtitle: 'Tomorrow · 10:00 AM', time: '3h ago', emoji: '📅', color: '#f43f5e' },
 ];
 
-const ActivityFeed: React.FC = () => {
+interface ActivityFeedProps {
+    data?: any[];
+}
+
+const ActivityFeed: React.FC<ActivityFeedProps> = ({ data = [] }) => {
+    const formatTimeAgo = (timestamp: string) => {
+        const seconds = Math.floor((new Date().getTime() - new Date(timestamp).getTime()) / 1000);
+        if (seconds < 60) return 'Just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return new Date(timestamp).toLocaleDateString();
+    };
+
+    const displayActivities = data.length > 0 ? data.map((item, idx) => ({
+        id: idx,
+        title: item.title,
+        subtitle: `${item.type} · ${item.subtitle}`,
+        time: formatTimeAgo(item.timestamp),
+        emoji: item.emoji,
+        color: item.color
+    })) : activities;
+
     return (
         <div className="flex-1 space-y-2">
             <div className="space-y-1">
-                {activities.map((item, idx) => (
+                {displayActivities.map((item, idx) => (
                     <div
                         key={item.id}
                         className="flex items-start gap-4 p-4 rounded-[1.5rem] hover:bg-slate-50 transition-all duration-300 cursor-pointer group animate-fade-in-up"

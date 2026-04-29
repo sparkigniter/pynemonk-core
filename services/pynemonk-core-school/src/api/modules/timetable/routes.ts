@@ -43,4 +43,28 @@ router.get("/global-schedule", timetableRateLimiter, requireAuth, (req, res) => 
     container.resolve(TimetableController).getGlobalSchedule(req, res);
 });
 
+router.post("/classroom/:classroomId/auto-generate", requireAuth, timetableRateLimiter, (req, res) => {
+    container.resolve(TimetableController).autoGenerate(req, res);
+});
+
+router.post("/classroom/:classroomId/finalize", requireAuth, timetableRateLimiter, (req, res) => {
+    container.resolve(TimetableController).finalize(req, res);
+});
+
+router.patch("/:id/sticky", requireAuth, timetableRateLimiter, (req, res) => {
+    container.resolve(TimetableController).toggleSticky(req, res);
+});
+
+router.get("/breaks", requireAuth, timetableRateLimiter, (req, res) => {
+    container.resolve(TimetableController).getBreaks(req, res);
+});
+
+router.post("/breaks", requireAuth, timetableRateLimiter, (req, res) => {
+    container.resolve(TimetableController).createBreak(req, res);
+});
+
+router.delete("/breaks/:id", requireAuth, timetableRateLimiter, (req, res) => {
+    container.resolve(TimetableController).deleteBreak(req, res);
+});
+
 export default router;

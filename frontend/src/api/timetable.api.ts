@@ -41,5 +41,26 @@ export const TimetableApi = {
         get<{ period_number: number, start_time: string, end_time: string }[]>(`${BASE_PATH}/periods`),
 
     getGlobalSchedule: () =>
-        get<(TimetableEntry & { type: 'timetable' })[]>(`${BASE_PATH}/global-schedule`)
+        get<(TimetableEntry & { type: 'timetable' })[]>(`${BASE_PATH}/global-schedule`),
+
+    autoGenerate: (classroomId: number) =>
+        post<{ success: boolean, message: string }>(`${BASE_PATH}/classroom/${classroomId}/auto-generate`, {}),
+
+    finalize: (classroomId: number) =>
+        post<{ success: boolean, message: string }>(`${BASE_PATH}/classroom/${classroomId}/finalize`, {}),
+
+    toggleSticky: (id: number, isSticky: boolean) =>
+        request<TimetableEntry>(`${BASE_PATH}/${id}/sticky`, {
+            method: 'PATCH',
+            body: JSON.stringify({ is_sticky: isSticky }),
+        }),
+
+    getBreaks: () =>
+        get<{ id: number, name: string, start_time: string, end_time: string }[]>(`${BASE_PATH}/breaks`),
+
+    createBreak: (data: { name: string, start_time: string, end_time: string }) =>
+        post<any>(`${BASE_PATH}/breaks`, data),
+
+    deleteBreak: (id: number) =>
+        del(`${BASE_PATH}/breaks/${id}`)
 };

@@ -56,6 +56,18 @@ export async function assignTeacher(data: {
     });
 }
 
+export async function bulkAssignTeachers(assignments: {
+    staff_id: number;
+    classroom_id: number;
+    subject_id: number;
+    academic_year_id: number;
+}[]): Promise<Assignment[]> {
+    return request<Assignment[]>('/school/subjects/bulk-assign-teacher', {
+        method: 'POST',
+        body: JSON.stringify({ assignments }),
+    });
+}
+
 export async function getAssignments(params?: {
     classroom_id?: number;
     subject_id?: number;

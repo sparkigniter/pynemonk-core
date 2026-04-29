@@ -50,11 +50,24 @@ const events: Event[] = [
     },
 ];
 
-const UpcomingEvents: React.FC = () => {
+interface UpcomingEventsProps {
+    data?: any[];
+}
+
+const UpcomingEvents: React.FC<UpcomingEventsProps> = ({ data = [] }) => {
+    const displayEvents = data.length > 0 ? data.map((item, idx) => ({
+        id: idx,
+        title: item.subject_name || item.name || 'School Event',
+        date: item.exam_date ? new Date(item.exam_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD',
+        time: item.start_time || 'All Day',
+        location: item.room || 'Main Campus',
+        tag: item.exam_date ? 'Exam' : 'Event'
+    })) : events;
+
     return (
         <div className="space-y-4">
             <div className="space-y-1">
-                {events.map((event, idx) => (
+                {displayEvents.map((event, idx) => (
                     <div
                         key={event.id}
                         className="flex items-center gap-4 p-4 rounded-[1.5rem] hover:bg-slate-50 transition-all duration-300 cursor-pointer group animate-fade-in-up"

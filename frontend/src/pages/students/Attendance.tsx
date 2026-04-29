@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Check, X, Clock } from 'lucide-react';
+import { ComboBox } from '../../components/ui/ComboBox';
 
 const mockAttendance = [
     { id: '1', name: 'Emma Thompson', roll: '01', status: 'present' },
     { id: '2', name: 'Liam Neeson', roll: '02', status: 'absent' },
     { id: '3', name: 'Olivia Davis', roll: '03', status: 'late' },
-    { id: '4', name: 'Noah Wilson', roll: '04', status: null },
-    { id: '5', name: 'Ava Martinez', roll: '05', status: null },
+    { id: '4', name: 'Noah Wilson', roll: '04', status: null as string | null },
+    { id: '5', name: 'Ava Martinez', roll: '05', status: null as string | null },
 ];
 
 const Attendance = () => {
@@ -16,7 +17,7 @@ const Attendance = () => {
         setStudents(students.map(s => s.id === id ? { ...s, status } : s));
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusColor = (status: string | null) => {
         switch (status) {
             case 'present': return 'bg-green-100 border-green-500 text-green-700';
             case 'absent': return 'bg-red-100 border-red-500 text-red-700';
@@ -42,12 +43,16 @@ const Attendance = () => {
                     />
                 </div>
                 <div className="flex-1 w-full">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Class / Grade</label>
-                    <select className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none bg-white">
-                        <option>Grade 10 - Section A</option>
-                        <option>Grade 10 - Section B</option>
-                        <option>Grade 11 - Section A</option>
-                    </select>
+                    <ComboBox
+                        label="Class / Grade"
+                        value="Grade 10 - Section A"
+                        onChange={() => {}}
+                        options={[
+                            { value: 'Grade 10 - Section A', label: 'Grade 10 - Section A' },
+                            { value: 'Grade 10 - Section B', label: 'Grade 10 - Section B' },
+                            { value: 'Grade 11 - Section A', label: 'Grade 11 - Section A' },
+                        ]}
+                    />
                 </div>
                 <button className="w-full sm:w-auto bg-primary hover:opacity-90 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm h-[38px]">
                     Fetch Students
@@ -59,13 +64,13 @@ const Attendance = () => {
                     <h2 className="font-semibold text-slate-800">Student List</h2>
                     <div className="text-sm text-slate-500">
                         Total: {students.length} |
-                        Present: {students.filter(s => s.status === 'present').length} |
-                        Absent: {students.filter(s => s.status === 'absent').length}
+                        Present: {students.filter((s: any) => s.status === 'present').length} |
+                        Absent: {students.filter((s: any) => s.status === 'absent').length}
                     </div>
                 </div>
 
                 <div className="divide-y divide-slate-200">
-                    {students.map((student) => (
+                    {students.map((student: any) => (
                         <div key={student.id} className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold text-sm">

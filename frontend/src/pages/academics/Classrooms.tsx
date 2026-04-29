@@ -10,8 +10,11 @@ import { getClassrooms, createClassroom } from '../../api/classroom.api';
 import { useAcademics } from '../../contexts/AcademicsContext';
 import type { Classroom } from '../../api/classroom.api';
 import Modal from '../../components/ui/Modal';
+import { ComboBox } from '../../components/ui/ComboBox';
+import { useNotification } from '../../contexts/NotificationContext';
 
 export default function Classrooms() {
+    const { notify } = useNotification();
     const { isYearClosed } = useAcademics();
     
     // Data States
@@ -87,9 +90,10 @@ export default function Classrooms() {
             await createClassroom(formData);
             setIsModalOpen(false);
             setFormData({ grade_id: 0, name: '', section: '', capacity: 40 });
+            notify('success', 'Classroom Established', `${formData.name} is now ready for enrollment.`);
             fetchClassrooms();
         } catch (err: any) {
-            setError(err.message || "Failed to save classroom");
+            notify('error', 'Operation Failed', err.message);
         } finally {
             setIsSaving(false);
         }
@@ -348,18 +352,13 @@ export default function Classrooms() {
             >
                 <form onSubmit={handleSave} className="p-8 space-y-6">
                     <div className="space-y-4">
-                        <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Grade Level</label>
-                            <select
-                                required
-                                className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-theme-primary transition-all"
-                                value={formData.grade_id}
-                                onChange={(e) => setFormData({ ...formData, grade_id: Number(e.target.value) })}
-                            >
-                                <option value="">Select Grade Level</option>
-                                {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                            </select>
-                        </div>
+                        <ComboBox
+                            label="Grade Level"
+                            value={formData.grade_id}
+                            onChange={val => setFormData({ ...formData, grade_id: val as number })}
+                            placeholder="Select Grade Level"
+                            options={grades.map(g => ({ value: g.id, label: g.name }))}
+                        />
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>

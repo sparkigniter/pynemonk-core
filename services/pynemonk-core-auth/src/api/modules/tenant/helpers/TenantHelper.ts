@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import "reflect-metadata";
 import { inject, injectable } from "tsyringe";
 import { Pool } from "pg";
@@ -18,35 +19,38 @@ class TenantHelper {
     }
 
     /** Register a new tenant (school) */
-    public async createTenant(data: {
-        name: string;
-        slug: string;
-        email: string;
-        phone?: string;
-        address?: string;
-        city?: string;
-        state?: string;
-        country?: string;
-        package_id: number;
-    }): Promise<any> {
-        const res = await this.db.query(
-            `INSERT INTO auth.tenant
-                (name, slug, email, phone, address, city, state, country, package_id)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-             RETURNING id, uuid, name, slug, email, phone, address, city, state, country, package_id, is_active, created_at`,
-            [
-                data.name,
-                data.slug,
-                data.email,
-                data.phone ?? null,
-                data.address ?? null,
-                data.city ?? null,
-                data.state ?? null,
-                data.country ?? null,
-                data.package_id,
-            ]
-        );
-        return res.rows[0];
+    public async createTenant(data: any): Promise<any> {
+        const tenantQuery = `
+            INSERT INTO auth.tenant (name, email, phone, address, city, state, country, uuid, slug, package_id, status, is_deleted, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, FALSE, NOW(), NOW())
+            RETURNING id, uuid, name, slug;
+        `;
+        const tenantRes = await this.db.query(tenantQuery, [
+            data.name,
+            data.email,
+            data.phone || null,
+            data.address || null,
+            data.city || null,
+            data.state || null,
+            data.country || null,
+            crypto.randomUUID(),
+            data.slug || data.name.toLowerCase().replace(/ /g, '-'),
+            data.package_id,
+            data.status || 'active'
+        ]);
+        const tenant = tenantRes.rows[0];
+
+        // Save settings to separate table
+        if (data.settings) {
+            for (const [key, value] of Object.entries(data.settings)) {
+                await this.db.query(
+                    `INSERT INTO auth.tenant_setting (tenant_id, key, value) VALUES ($1, $2, $3)`,
+                    [tenant.id, key, String(value)]
+                );
+            }
+        }
+        
+        return tenant;
     }
 
     /** Check if a slug or email is already taken */
@@ -75,7 +79,16 @@ class TenantHelper {
              WHERE t.id = $1 AND t.is_deleted = FALSE`,
             [id]
         );
-        return res.rows[0] ?? null;
+        const tenant = res.rows[0];
+        if (tenant) {
+            // Fetch settings
+            const settingsRes = await this.db.query(
+                `SELECT key, value FROM auth.tenant_setting WHERE tenant_id = $1`,
+                [id]
+            );
+            tenant.settings = Object.fromEntries(settingsRes.rows.map(r => [r.key, r.value]));
+        }
+        return tenant ?? null;
     }
 
     /**
@@ -96,7 +109,6 @@ class TenantHelper {
 
         const roleMap: Record<string, number> = {};
         for (const template of templates) {
-            // Use an UPSERT that targets the slug unique index
             const res = await this.db.query(
                 `INSERT INTO auth.role
                     (tenant_id, slug, name, description, tier, is_system, data_scope, is_deleted, created_at, updated_at)
@@ -114,8 +126,23 @@ class TenantHelper {
                  typeof template.data_scope === 'string' ? template.data_scope : JSON.stringify(template.data_scope || [])]
             );
             
-            if (res.rows[0]) {
-                roleMap[template.slug] = res.rows[0].id;
+            const roleId = res.rows[0]?.id;
+            if (roleId) {
+                roleMap[template.slug] = roleId;
+
+                // Provision relational scopes for this role
+                const scopes = typeof template.data_scope === 'string' 
+                    ? JSON.parse(template.data_scope) 
+                    : (template.data_scope || []);
+                
+                for (const scopeValue of scopes) {
+                    await this.db.query(
+                        `INSERT INTO auth.role_scope (tenant_id, role_id, scope_id)
+                         SELECT $1, $2, id FROM auth.scope WHERE value = $3
+                         ON CONFLICT DO NOTHING`,
+                        [tenantId, roleId, scopeValue]
+                    );
+                }
             }
         }
         return roleMap;
@@ -197,10 +224,22 @@ class TenantHelper {
         await this.db.query(
             `INSERT INTO school.academic_year 
                 (tenant_id, name, start_date, end_date, is_current, status)
-             VALUES ($1, $2, $3, $4, TRUE, 'active')
-             ON CONFLICT (tenant_id, name) WHERE (is_deleted = false) DO NOTHING`,
+              VALUES ($1, $2, $3, $4, TRUE, 'active')
+              ON CONFLICT (tenant_id, name) WHERE (is_deleted = false) DO NOTHING`,
             [tenantId, yearName, startDate, endDate]
         );
+    }
+
+    /** List all tenants */
+    public async getAllTenants(): Promise<any[]> {
+        const res = await this.db.query(
+            `SELECT t.*, p.name AS package_name, p.slug AS package_slug
+             FROM auth.tenant t
+             JOIN auth.package p ON p.id = t.package_id
+             WHERE t.is_deleted = FALSE
+             ORDER BY t.created_at DESC`
+        );
+        return res.rows;
     }
 }
 

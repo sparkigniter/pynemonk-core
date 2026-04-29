@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { School, Check, ChevronRight, ChevronLeft, Sparkles, Star, Zap, Building2, ArrowRight } from 'lucide-react';
 import * as tenantApi from '../../api/tenant.api';
+import { ComboBox } from '../../components/ui/ComboBox';
+import { useNotification } from '../../contexts/NotificationContext';
 import type { Package } from '../../api/tenant.api';
 
 // ── Step tracker ──────────────────────────────────────────────────────────────
@@ -50,6 +52,7 @@ const EMPTY_OWNER: OwnerForm = {
 
 export default function Register() {
     const navigate = useNavigate();
+    const { notify } = useNotification();
 
     const [step, setStep] = useState<Step>('plan');
     const [packages, setPackages] = useState<Package[]>([]);
@@ -65,9 +68,9 @@ export default function Register() {
     useEffect(() => {
         tenantApi.getPackages()
             .then(setPackages)
-            .catch(() => setError('Failed to load packages. Please refresh.'))
+            .catch(() => notify('error', 'Connection Error', 'Failed to load packages. Please refresh.'))
             .finally(() => setPkgLoading(false));
-    }, []);
+    }, [notify]);
 
     const handlePlanSelect = (pkg: Package) => {
         setSelectedPkg(pkg);
@@ -121,9 +124,11 @@ export default function Register() {
                 }
             });
             setTenant(result);
+            notify('success', 'School Registered', 'Moving to administrator setup.');
             setStep('owner-setup');
         } catch (err: any) {
             setError(err?.message ?? 'Registration failed. Please try again.');
+            notify('error', 'Registration Failed', err?.message ?? 'Please check your details.');
         } finally {
             setLoading(false);
         }
@@ -144,9 +149,11 @@ export default function Register() {
                 admin_email: ownerForm.admin_email,
                 admin_password: ownerForm.admin_password,
             });
+            notify('success', 'Account Created', 'Your administrator account is ready.');
             setStep('success');
         } catch (err: any) {
             setError(err?.message ?? 'Account setup failed. Please try again.');
+            notify('error', 'Setup Failed', err?.message ?? 'Could not create admin account.');
         } finally {
             setLoading(false);
         }
@@ -462,31 +469,29 @@ export default function Register() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-5">
-                                    <div>
-                                        <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-1.5">System Language</label>
-                                        <select
-                                            value={form.language}
-                                            onChange={(e) => setForm({ ...form, language: e.target.value })}
-                                            className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
-                                        >
-                                            <option value="en" className="bg-slate-900">English</option>
-                                            <option value="es" className="bg-slate-900">Spanish</option>
-                                            <option value="fr" className="bg-slate-900">French</option>
-                                            <option value="hi" className="bg-slate-900">Hindi</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-1.5">Date Format</label>
-                                        <select
-                                            value={form.date_format}
-                                            onChange={(e) => setForm({ ...form, date_format: e.target.value })}
-                                            className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-primary outline-none transition-all appearance-none"
-                                        >
-                                            <option value="DD/MM/YYYY" className="bg-slate-900">DD/MM/YYYY</option>
-                                            <option value="MM/DD/YYYY" className="bg-slate-900">MM/DD/YYYY</option>
-                                            <option value="YYYY-MM-DD" className="bg-slate-900">YYYY-MM-DD</option>
-                                        </select>
-                                    </div>
+                                    <ComboBox
+                                        label="System Language"
+                                        variant="glass"
+                                        value={form.language}
+                                        onChange={(val) => setForm({ ...form, language: val as string })}
+                                        options={[
+                                            { value: 'en', label: 'English' },
+                                            { value: 'es', label: 'Spanish' },
+                                            { value: 'fr', label: 'French' },
+                                            { value: 'hi', label: 'Hindi' },
+                                        ]}
+                                    />
+                                    <ComboBox
+                                        label="Date Format"
+                                        variant="glass"
+                                        value={form.date_format}
+                                        onChange={(val) => setForm({ ...form, date_format: val as string })}
+                                        options={[
+                                            { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' },
+                                            { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
+                                            { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
+                                        ]}
+                                    />
                                 </div>
 
                                 {error && (

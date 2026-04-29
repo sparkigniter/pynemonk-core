@@ -3,17 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
     Plus, Search, Filter, MoreVertical,
-    Mail, Phone, BookOpen, Loader2, UserPlus,
+    Mail, Phone, BookOpen, UserPlus,
     Calendar, ShieldCheck
 } from 'lucide-react';
 import * as staffApi from '../../api/staff.api';
+import { ComboBox } from '../../components/ui/ComboBox';
 
 export default function Teachers() {
     const [staff, setStaff] = useState<staffApi.Staff[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const { user } = useAuth();
-    
+
     // Search & Pagination state
     const [search, setSearch] = useState('');
     const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 });
@@ -30,10 +31,10 @@ export default function Teachers() {
     const fetchStaff = async () => {
         setLoading(true);
         try {
-            const response = await staffApi.getStaffList({ 
-                search, 
-                page: pagination.page, 
-                limit: pagination.limit 
+            const response = await staffApi.getStaffList({
+                search,
+                page: pagination.page,
+                limit: pagination.limit
             });
             setStaff(response.data);
             setPagination(response.pagination);
@@ -106,12 +107,17 @@ export default function Teachers() {
                     />
                 </div>
                 <div className="flex gap-3 w-full lg:w-auto">
-                    <select className="flex-1 lg:w-48 px-4 py-3 bg-white border border-slate-100 rounded-2xl text-sm text-slate-600 focus:outline-none focus:ring-4 focus:ring-theme-primary/10 font-medium">
-                        <option>All Departments</option>
-                        <option>Mathematics</option>
-                        <option>Science</option>
-                        <option>Administration</option>
-                    </select>
+                    <ComboBox
+                        value="All Departments"
+                        onChange={() => { }}
+                        options={[
+                            { value: 'All Departments', label: 'All Departments' },
+                            { value: 'Mathematics', label: 'Mathematics' },
+                            { value: 'Science', label: 'Science' },
+                            { value: 'Administration', label: 'Administration' },
+                        ]}
+                        className="flex-1 lg:w-56"
+                    />
                     <button className="flex items-center gap-2 px-4 py-3 border border-slate-100 rounded-2xl text-sm text-slate-600 hover:bg-slate-50 font-bold transition-colors">
                         <Filter size={18} />
                         Filters
@@ -119,14 +125,15 @@ export default function Teachers() {
                 </div>
             </div>
 
-            {/* Content Area */}
             {loading ? (
-                <div className="flex flex-col items-center justify-center py-32 gap-6">
+                <div className="h-[60vh] flex flex-col items-center justify-center gap-6">
                     <div className="relative">
-                        <Loader2 size={48} className="text-theme-primary animate-spin" />
-                        <div className="absolute inset-0 blur-xl bg-theme-primary/20 rounded-full animate-pulse"></div>
+                        <div className="w-20 h-20 border-4 border-theme-primary/20 border-t-theme-primary rounded-full animate-spin" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <UserPlus className="w-8 h-8 text-theme-primary animate-pulse" />
+                        </div>
                     </div>
-                    <p className="text-slate-500 font-bold tracking-tight">Syncing Staff Records...</p>
+                    <p className="text-slate-500 font-bold tracking-tight">Updating Staff Records...</p>
                 </div>
             ) : staff.length === 0 ? (
                 <div className="card p-20 flex flex-col items-center justify-center text-center border-dashed border-2 border-slate-100 bg-slate-50/30">

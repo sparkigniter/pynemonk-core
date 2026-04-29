@@ -193,31 +193,42 @@ class UserHelper {
      * 2. Permissions assigned via Roles (legacy JSONB data_scope)
      * 3. (Optional future) Permissions assigned directly to User
      */
-    public async getEffectivePermissions(userId: number, tenantId?: number): Promise<string[]> {
+    public async getEffectivePermissions(userId: number, tenant_id?: number): Promise<string[]> {
         const query = `
-            -- 1. Relational Permissions from Join Table
+            -- 1. Relational Scopes from Role-Scope Assignment (Preferred)
+            SELECT DISTINCT s.value as key
+            FROM auth.scope s
+            JOIN auth.role_scope rs ON s.id = rs.scope_id
+            LEFT JOIN auth.user_role ur ON rs.role_id = ur.role_id AND ur.is_deleted = FALSE
+            LEFT JOIN auth.user u ON rs.role_id = u.role_id AND u.is_deleted = FALSE
+            WHERE (ur.user_id = $1 OR u.id = $1)
+              AND rs.granted = TRUE
+              AND (rs.tenant_id = $2 OR rs.tenant_id IS NULL)
+
+            UNION
+
+            -- 2. Legacy Relational Permissions from Join Table
             SELECT DISTINCT p.key
             FROM auth.permission p
             JOIN auth.role_permission rp ON p.id = rp.permission_id
-            JOIN auth.user_role ur ON rp.role_id = ur.role_id
-            WHERE ur.user_id = $1 
-              AND ur.is_deleted = FALSE 
+            LEFT JOIN auth.user_role ur ON rp.role_id = ur.role_id AND ur.is_deleted = FALSE
+            LEFT JOIN auth.user u ON rp.role_id = u.role_id AND u.is_deleted = FALSE
+            WHERE (ur.user_id = $1 OR u.id = $1)
               AND rp.granted = TRUE
               AND (rp.tenant_id = $2 OR rp.tenant_id IS NULL)
 
             UNION
 
-            -- 2. Legacy/Cache Permissions from JSONB (data_scope)
-            -- This ensures we don't break existing setups while migrating
+            -- 3. Legacy/Cache Permissions from JSONB (data_scope)
             SELECT DISTINCT jsonb_array_elements_text(r.data_scope) as key
             FROM auth.role r
-            JOIN auth.user_role ur ON r.id = ur.role_id
-            WHERE ur.user_id = $1
-              AND ur.is_deleted = FALSE
+            LEFT JOIN auth.user_role ur ON r.id = ur.role_id AND ur.is_deleted = FALSE
+            LEFT JOIN auth.user u ON r.id = u.role_id AND u.is_deleted = FALSE
+            WHERE (ur.user_id = $1 OR u.id = $1)
               AND (r.tenant_id = $2 OR r.tenant_id IS NULL)
         `;
 
-        const res = await this.db.query(query, [userId, tenantId ?? null]);
+        const res = await this.db.query(query, [userId, tenant_id ?? null]);
         return res.rows.map((r: { key: string }) => r.key);
     }
 }

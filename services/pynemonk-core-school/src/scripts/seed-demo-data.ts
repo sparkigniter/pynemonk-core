@@ -45,7 +45,7 @@ const SECTIONS = ['A', 'B', 'C', 'D'];
 async function seed() {
     const tenantId = 1; // Default demo tenant
     let client;
-    
+
     try {
         client = await pool.connect();
         await client.query('BEGIN');
@@ -138,7 +138,7 @@ async function seed() {
                 const lName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
                 const email = `student${idx}@demo.edu`;
                 const admNo = `ADM-2026-${idx.toString().padStart(4, '0')}`;
-                
+
                 const userRes = await client.query(
                     'INSERT INTO auth.user (tenant_id, email, role_id) VALUES ($1, $2, $3) ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email RETURNING id',
                     [tenantId, email, studentRoleId]
@@ -154,7 +154,7 @@ async function seed() {
                     'INSERT INTO school.student (tenant_id, user_id, admission_no, first_name, last_name, gender, date_of_birth, blood_group) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (tenant_id, admission_no) DO UPDATE SET first_name = EXCLUDED.first_name RETURNING id',
                     [tenantId, userId, admNo, fName, lName, Math.random() > 0.5 ? 'male' : 'female', '2010-01-01', 'O+']
                 );
-                
+
                 if (studentRes.rows[0]) {
                     const studentId = studentRes.rows[0].id;
                     const classroomId = classroomIds[Math.floor(Math.random() * classroomIds.length)];

@@ -63,6 +63,18 @@ class OauthClientHelper {
     }
     return res.rows[0].client_secret;
   }
+
+  public async getClientScopes(clientId: string): Promise<string[]> {
+    const query = `
+        SELECT s.value
+        FROM auth.scope s
+        JOIN auth.client_scope cs ON s.id = cs.scope_id
+        JOIN auth.client c ON cs.client_id = c.id
+        WHERE c.client_id = $1 AND cs.is_deleted = FALSE;
+    `;
+    const res = await this.db.query(query, [clientId]);
+    return res.rows.map((r: any) => r.value);
+  }
 }
 
 export default OauthClientHelper;

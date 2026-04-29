@@ -12,7 +12,7 @@ export default class SubjectController extends BaseController {
 
     public async list(req: AuthenticatedRequest, res: Response) {
         try {
-            const tenantId = req.user.tenant_id;
+            const tenantId = this.getTenantId(req);
             const filters = {
                 grade_id: req.query.grade_id ? parseInt(req.query.grade_id as string) : undefined,
                 search: req.query.search as string,
@@ -28,7 +28,7 @@ export default class SubjectController extends BaseController {
 
     public async get(req: AuthenticatedRequest, res: Response) {
         try {
-            const tenantId = req.user.tenant_id;
+            const tenantId = this.getTenantId(req);
             const id = parseInt(req.params.id);
             const subject = await this.subjectService.getSubjectById(tenantId, id);
             if (!subject) return this.notfound(res, "Subject not found");
@@ -40,7 +40,7 @@ export default class SubjectController extends BaseController {
 
     public async create(req: AuthenticatedRequest, res: Response) {
         try {
-            const tenantId = req.user.tenant_id;
+            const tenantId = this.getTenantId(req);
             const subject = await this.subjectService.addSubject(tenantId, req.body);
             return this.ok(res, "Subject created successfully", subject);
         } catch (error: any) {
@@ -50,7 +50,7 @@ export default class SubjectController extends BaseController {
 
     public async update(req: AuthenticatedRequest, res: Response) {
         try {
-            const tenantId = req.user.tenant_id;
+            const tenantId = this.getTenantId(req);
             const id = parseInt(req.params.id);
             const subject = await this.subjectService.updateSubject(tenantId, id, req.body);
             return this.ok(res, "Subject updated successfully", subject);
@@ -61,7 +61,7 @@ export default class SubjectController extends BaseController {
 
     public async delete(req: AuthenticatedRequest, res: Response) {
         try {
-            const tenantId = req.user.tenant_id;
+            const tenantId = this.getTenantId(req);
             const id = parseInt(req.params.id);
             await this.subjectService.removeSubject(tenantId, id);
             return this.ok(res, "Subject deleted successfully");
@@ -72,7 +72,7 @@ export default class SubjectController extends BaseController {
 
     public async assignTeacher(req: AuthenticatedRequest, res: Response) {
         try {
-            const tenantId = req.user.tenant_id;
+            const tenantId = this.getTenantId(req);
             const assignment = await this.subjectService.assignTeacher(tenantId, req.body);
             return this.ok(res, "Teacher assigned successfully", assignment);
         } catch (error: any) {
@@ -80,9 +80,23 @@ export default class SubjectController extends BaseController {
         }
     }
 
+    public async bulkAssignTeachers(req: AuthenticatedRequest, res: Response) {
+        try {
+            const tenantId = this.getTenantId(req);
+            const { assignments } = req.body;
+            if (!Array.isArray(assignments)) {
+                return this.badrequest(res, "Assignments must be an array");
+            }
+            const results = await this.subjectService.bulkAssignTeachers(tenantId, assignments);
+            return this.ok(res, `${results.length} Teachers assigned successfully`, results);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
+
     public async listAssignments(req: AuthenticatedRequest, res: Response) {
         try {
-            const tenantId = req.user.tenant_id;
+            const tenantId = this.getTenantId(req);
             const filters = {
                 classroom_id: req.query.classroom_id ? parseInt(req.query.classroom_id as string) : undefined,
                 subject_id: req.query.subject_id ? parseInt(req.query.subject_id as string) : undefined,

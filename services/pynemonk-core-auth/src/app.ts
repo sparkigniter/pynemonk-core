@@ -21,7 +21,7 @@ export function createApp(opts?: { prefix?: string }): express.Application {
     // ── CORS ──────────────────────────────────────────────────────────────────
     const allowedOrigins = (
         process.env.ALLOWED_ORIGINS ??
-        "http://localhost:5173,http://localhost:5174,http://localhost:3001"
+        "http://localhost:5173,http://localhost:5174,http://localhost:3001,http://localhost:8000"
     )
         .split(",")
         .map((o) => o.trim());

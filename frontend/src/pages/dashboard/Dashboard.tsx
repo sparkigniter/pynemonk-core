@@ -1,5 +1,5 @@
 import {
-    GraduationCap, Users, CalendarCheck, DollarSign,
+    GraduationCap, Users, CalendarCheck,
     BookOpen, Award, FileBarChart, ChevronRight, Sparkles,
     BarChart2
 } from 'lucide-react';
@@ -8,52 +8,14 @@ import AttendanceChart from '../../components/ui/AttendanceChart';
 import QuickActions from '../../components/ui/QuickActions';
 import ActivityFeed from '../../components/ui/ActivityFeed';
 import UpcomingEvents from '../../components/ui/UpcomingEvents';
-import TopStudents from '../../components/ui/TopStudents';
 import SubjectPerformance from '../../components/ui/SubjectPerformance';
 import { useAuth } from '../../contexts/AuthContext';
+import { getDashboardData } from '../../api/dashboard.api';
+import { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+import { ComboBox } from '../../components/ui/ComboBox';
 
-const statsData = [
-    {
-        title: 'Total Students',
-        value: '1,248',
-        icon: GraduationCap,
-        trend: '+12 this month',
-        trendUp: true,
-        gradient: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
-        subtitle: 'Enrolled this year',
-        delay: 'delay-100',
-    },
-    {
-        title: 'Total Teachers',
-        value: '84',
-        icon: Users,
-        trend: '+2 this month',
-        trendUp: true,
-        gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-        subtitle: 'Active faculty',
-        delay: 'delay-150',
-    },
-    {
-        title: "Today's Attendance",
-        value: '96.4%',
-        icon: CalendarCheck,
-        trend: '-0.5% from yesterday',
-        trendUp: false,
-        gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-        subtitle: '1,203 of 1,248 present',
-        delay: 'delay-200',
-    },
-    {
-        title: 'Fee Collection',
-        value: '$45.2K',
-        icon: DollarSign,
-        trend: '+8% from last month',
-        trendUp: true,
-        gradient: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
-        subtitle: 'April 2025',
-        delay: 'delay-300',
-    },
-];
+
 
 const miniStats = [
     { label: 'Active Classes', value: '48', icon: BookOpen, color: 'var(--primary)', bg: 'var(--primary-50)' },
@@ -63,6 +25,30 @@ const miniStats = [
 
 const Dashboard = () => {
     const { user } = useAuth();
+    const [data, setData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    
+    useEffect(() => {
+        const fetchDashboard = async () => {
+            try {
+                const res = await getDashboardData();
+                setData(res);
+            } catch (err) {
+                console.error('Failed to fetch dashboard', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDashboard();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="h-[70vh] flex items-center justify-center">
+                <Loader2 className="w-10 h-10 text-primary animate-spin" />
+            </div>
+        );
+    }
     
     const greeting = () => {
         const h = new Date().getHours();
@@ -71,19 +57,126 @@ const Dashboard = () => {
         return 'Good evening';
     };
 
-    const hasPermission = (requiredPermissions: string[]) => {
-        if (!user) return false;
-        return user.permissions?.some((p: string) => requiredPermissions.includes(p)) ?? false;
-    };
-
     const primaryRole = user?.roles[0] || 'User';
     const capitalizedRole = primaryRole.charAt(0).toUpperCase() + primaryRole.slice(1).replace('_', ' ');
 
-    const filteredStats = statsData.filter(stat => {
-        if (stat.title === 'Fee Collection') return hasPermission(['fee:read']);
-        if (stat.title === 'Total Teachers') return hasPermission(['staff:read']);
-        return true;
-    });
+    // Map Backend Stats to UI StatsCards
+    const getDynamicStats = () => {
+        if (!data) return [];
+        
+        if (data.type === 'admin') {
+            return [
+                {
+                    title: 'Total Students',
+                    value: data.stats?.total_students?.toLocaleString() || '0',
+                    icon: GraduationCap,
+                    trend: '+12 this month',
+                    trendUp: true,
+                    gradient: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
+                    subtitle: 'Enrolled this year',
+                    delay: 'delay-100',
+                },
+                {
+                    title: 'Total Staff',
+                    value: data.stats?.total_staff?.toLocaleString() || '0',
+                    icon: Users,
+                    trend: 'Active faculty',
+                    trendUp: true,
+                    gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    subtitle: 'Current payroll',
+                    delay: 'delay-150',
+                },
+                {
+                    title: "Today's Attendance",
+                    value: (data.attendanceTrends?.slice(-1)[0]?.percentage || '0') + '%',
+                    icon: CalendarCheck,
+                    trend: 'Across all levels',
+                    trendUp: true,
+                    gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    subtitle: 'Real-time presence',
+                    delay: 'delay-200',
+                },
+                {
+                    title: 'Total Subjects',
+                    value: data.stats?.total_subjects?.toLocaleString() || '0',
+                    icon: BarChart2,
+                    trend: 'Ongoing curriculum',
+                    trendUp: true,
+                    gradient: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+                    subtitle: 'Active courses',
+                    delay: 'delay-300',
+                },
+            ];
+        }
+
+        if (data.type === 'teacher') {
+            return [
+                {
+                    title: 'My Classes',
+                    value: data.stats?.classCount?.toString() || '0',
+                    icon: BookOpen,
+                    trend: 'Assigned this term',
+                    trendUp: true,
+                    gradient: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
+                    subtitle: 'Total sections',
+                    delay: 'delay-100',
+                },
+                {
+                    title: 'Upcoming Exams',
+                    value: data.upcomingExams?.length?.toString() || '0',
+                    icon: BarChart2,
+                    trend: 'To be invigilated',
+                    trendUp: true,
+                    gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    subtitle: 'Next 7 days',
+                    delay: 'delay-150',
+                },
+            ];
+        }
+
+        if (data.type === 'student') {
+            return [
+                {
+                    title: 'Average Grade',
+                    value: (data.performance?.reduce((acc: any, curr: any) => acc + curr.average, 0) / (data.performance?.length || 1)).toFixed(1) + '%',
+                    icon: Award,
+                    trend: 'Overall performance',
+                    trendUp: true,
+                    gradient: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
+                    subtitle: 'Current academic standing',
+                    delay: 'delay-100',
+                },
+                {
+                    title: 'Scheduled Exams',
+                    value: data.upcomingExams?.length?.toString() || '0',
+                    icon: CalendarCheck,
+                    trend: 'Keep preparing!',
+                    trendUp: true,
+                    gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    subtitle: 'Next assessments',
+                    delay: 'delay-200',
+                },
+            ];
+        }
+
+        return [];
+    };
+
+    const statsCards = getDynamicStats();
+
+    const getMiniStats = () => {
+        if (!data) return [];
+        if (data.type === 'admin') {
+            return [
+                { label: 'Academic Years', value: '1', icon: BookOpen, color: 'var(--primary)', bg: 'var(--primary-50)' },
+                { label: 'Open Inquiries', value: '12', icon: Award, color: '#f59e0b', bg: '#fffbeb' },
+                { label: 'Reports Ready', value: '5', icon: FileBarChart, color: '#10b981', bg: '#ecfdf5' },
+            ];
+        }
+        return miniStats; // fallback
+    };
+
+    const activeMiniStats = getMiniStats();
 
     return (
         <div className="space-y-10 max-w-[1600px] mx-auto pb-10">
@@ -129,7 +222,7 @@ const Dashboard = () => {
                         </div>
                         
                         <div className="space-y-4">
-                            {miniStats.map((stat) => (
+                            {activeMiniStats.map((stat) => (
                                 <div key={stat.label} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-all group">
                                     <div className="flex items-center gap-4">
                                         <div className="p-2.5 rounded-xl bg-white/5 text-white/70 group-hover:text-white transition-colors">
@@ -154,7 +247,7 @@ const Dashboard = () => {
                     </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-                    {filteredStats.map((stat) => (
+                    {statsCards.map((stat) => (
                         <StatsCard key={stat.title} {...stat} />
                     ))}
                 </div>
@@ -169,12 +262,18 @@ const Dashboard = () => {
                                 <h3 className="text-xl font-black text-slate-800 tracking-tight">Attendance Dynamics</h3>
                                 <p className="text-xs font-medium text-slate-400 mt-1">Real-time presence tracking across all levels.</p>
                             </div>
-                            <select className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 outline-none">
-                                <option>Last 30 Days</option>
-                                <option>This Term</option>
-                            </select>
+                            <ComboBox
+                                value="Last 30 Days"
+                                onChange={() => {}}
+                                options={[
+                                    { value: 'Last 30 Days', label: 'Last 30 Days' },
+                                    { value: 'This Term', label: 'This Term' },
+                                    { value: 'Academic Year', label: 'Academic Year' },
+                                ]}
+                                className="w-48"
+                            />
                         </div>
-                        <AttendanceChart />
+                        <AttendanceChart data={data.attendanceTrends || []} />
                     </div>
                     
                     <QuickActions />
@@ -186,7 +285,7 @@ const Dashboard = () => {
                             <h3 className="text-xl font-black text-slate-800 tracking-tight">Recent Activity</h3>
                             <button className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><BarChart2 size={18} className="text-slate-400" /></button>
                         </div>
-                        <ActivityFeed />
+                        <ActivityFeed data={data.activityStream || []} />
                     </div>
                 </div>
             </div>
@@ -195,15 +294,19 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                 <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
                     <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">Academic Events</h3>
-                    <UpcomingEvents />
+                    <UpcomingEvents data={data.upcomingExams || []} />
                 </div>
                 <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-                    <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">Top Scholars</h3>
-                    <TopStudents />
+                    <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">
+                        {data.type === 'student' ? 'My Performance' : 'Academic Health'}
+                    </h3>
+                    <SubjectPerformance data={data.insights?.gradePerformance || data.performance || []} />
                 </div>
                 <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-                    <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">Subject Pulse</h3>
-                    <SubjectPerformance />
+                    <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">
+                        {data.type === 'admin' ? 'Recent Exams' : 'Quick Insights'}
+                    </h3>
+                    <ActivityFeed data={data.insights?.recentExams || []} />
                 </div>
             </div>
         </div>

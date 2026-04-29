@@ -14,6 +14,19 @@ class TenantController extends BaseController {
     }
 
     /**
+     * GET /api/v1/tenant
+     * List all tenants (System Admin only).
+     */
+    public async listTenants(req: e.Request, res: e.Response): Promise<e.Response> {
+        try {
+            const tenants = await this.tenantService.getAllTenants();
+            return this.ok(res, RESPONSE_TYPES.SUCCESS, tenants);
+        } catch (error) {
+            return this.internalservererror(res, "Failed to fetch tenants");
+        }
+    }
+
+    /**
      * GET /api/v1/tenant/packages
      * Returns all available subscription packages.
      */

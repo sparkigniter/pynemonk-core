@@ -2,8 +2,18 @@ import "reflect-metadata";
 import * as express from "express";
 import { container } from "tsyringe";
 import TenantController from "./controllers/TenantController.js";
+import { requireAuth } from "../../core/middleware/requireAuth.js";
 
 const tenantRouter = express.Router();
+
+/**
+ * GET /api/v1/tenant
+ * List all tenants (System Admin only).
+ */
+tenantRouter.get("/", requireAuth, (req, res) => {
+    const ctrl = container.resolve(TenantController);
+    return ctrl.listTenants(req, res);
+});
 
 /**
  * GET /api/v1/tenant/packages

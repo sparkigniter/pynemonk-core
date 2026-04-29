@@ -387,7 +387,7 @@ export default function Rollover() {
                                     </div>
                                     <div className="space-y-4">
                                         <p className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                            <BookOpen className="w-3.5 h-3.5 text-violet-600" /> Staff Roles to Sync
+                                            <BookOpen className="w-3.5 h-3.5 text-violet-600" /> Connect Faculty
                                         </p>
                                         <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                                             {preview?.assignments?.length > 0 ? preview.assignments.map((a: any, i: number) => (

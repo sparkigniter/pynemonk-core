@@ -225,10 +225,10 @@ VALUES
     ('owner', 'Account Owner', 'The person or entity that registered the school. Controls billing, subscription plan, and can invite school-level admins. Has NO access to student or staff academic/personal data by default.', 0, TRUE, '["billing:read","billing:write","settings:read","settings:write","user:invite","user:deactivate","plan:change"]'::jsonb),
     ('principal', 'Principal', 'Head of the school. Full read access to all academic, attendance, disciplinary, and limited financial data. Cannot change billing or technical settings.', 1, TRUE, '["student:read","student.academic:read","student.academic:write","student.attendance:read","student.attendance:write","student.disciplinary:read","student.disciplinary:write","staff:read","staff.academic:read","class:read","class:write","report:read","report:export","fee.summary:read"]'::jsonb),
     ('vice_principal', 'Vice Principal', 'Deputy head. Same data scope as Principal by default.', 1, TRUE, '["student:read","student.academic:read","student.academic:write","student.attendance:read","student.attendance:write","student.disciplinary:read","student.disciplinary:write","staff:read","class:read","class:write","report:read"]'::jsonb),
-    ('school_admin', 'School Administrator', 'Office/operations staff. Manages day-to-day: enrolment, timetables, user accounts, general records.', 2, TRUE, '["student:read","student:write","student.attendance:read","student.attendance:write","staff:read","staff:write","class:read","class:write","timetable:read","timetable:write","user:invite","announcement:write"]'::jsonb),
+    ('school_admin', 'School Administrator', 'Office/operations staff. Manages day-to-day: enrolment, timetables, user accounts, general records.', 2, TRUE, '["student:read","student:write","student.attendance:read","student.attendance:write","staff:read","staff:write","class:read","class:write","timetable:read","timetable:write","user:invite","user:deactivate","announcement:write","settings:read","settings:write","report:read","report:export"]'::jsonb),
     ('accountant', 'Accountant / Fee Manager', 'Manages fee collection, payment records, and financial reports.', 2, TRUE, '["fee:read","fee:write","fee.collection:write","student:read","report.financial:read","report.financial:export"]'::jsonb),
-    ('hr', 'HR / Staff Manager', 'Manages staff records, contracts, leave, and payroll data.', 2, FALSE, '["staff:read","staff:write","staff.leave:read","staff.leave:write","staff.payroll:read","staff.payroll:write"]'::jsonb),
-    ('receptionist', 'Receptionist', 'Front-desk staff. Can look up student and parent contact info.', 2, FALSE, '["student:read","student.contact:read","parent:read","announcement:read","visitor:write"]'::jsonb),
+    ('hr', 'HR / Staff Manager', 'Manages staff records, contracts, leave, and payroll data.', 2, TRUE, '["staff:read","staff:write","staff.leave:read","staff.leave:write","staff.payroll:read","staff.payroll:write"]'::jsonb),
+    ('receptionist', 'Receptionist', 'Front-desk staff. Can look up student and parent contact info.', 2, TRUE, '["student:read","student.contact:read","parent:read","announcement:read","visitor:write"]'::jsonb),
     ('admissions_officer', 'Admissions Officer / Registrar', 'Handles student enrolments, guardian registration, and initial admission fees.', 2, TRUE, '["student:read","student:write","parent:read","parent:write","class:read","fee.collection:write"]'::jsonb),
     ('teacher', 'Teacher', 'Subject teacher. Can view and update grades and attendance ONLY for students in their assigned classes.', 3, TRUE, '["student:read","student.academic:read","student.academic:write","student.attendance:read","student.attendance:write","class:read","assignment:write","report.class:read"]'::jsonb),
     ('class_teacher', 'Class Teacher (Homeroom)', 'Homeroom / form teacher. Same as Teacher plus pastoral access.', 3, TRUE, '["student:read","student.academic:read","student.academic:write","student.attendance:read","student.attendance:write","student.disciplinary:read","class:read","assignment:write","report.class:read","parent:read"]'::jsonb),
@@ -316,7 +316,9 @@ VALUES
     ('child.attendance:read', 'Parent: view linked child attendance', 4, FALSE, FALSE),
     ('child.timetable:read', 'Parent: view linked child timetable', 4, FALSE, FALSE),
     ('child.fee:read', 'Parent: view linked child fees', 4, FALSE, FALSE),
-    ('child.disciplinary:read', 'Parent: view limited disciplinary info', 4, FALSE, FALSE)
+    ('child.disciplinary:read', 'Parent: view limited disciplinary info', 4, FALSE, FALSE),
+    ('system:manage', 'Full system administration access', 0, TRUE, TRUE),
+    ('system:settings', 'View/Update global platform settings', 0, TRUE, TRUE)
 ON CONFLICT (key) DO NOTHING;
 
 -- ─────────────────────────────────────────────────────────────────────────────

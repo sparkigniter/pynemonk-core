@@ -1,7 +1,6 @@
 import BaseController from "../../../core/controllers/BaseController.js";
 import { injectable, inject } from "tsyringe";
 import ClientScopeModel from "../models/ClientScopeModel.js";
-import { connect } from "http2";
 import ValidationError from "../../../errors/ValidationError.js";
 
 @injectable()

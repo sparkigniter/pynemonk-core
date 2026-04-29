@@ -34,10 +34,20 @@ router.get("/:id", (req, res) => {
     return controller.getExam(req, res);
 });
 
+router.put("/:id", (req, res) => {
+    const controller = container.resolve(ExamController);
+    return controller.updateExam(req, res);
+});
+
 // Exam Details
 router.post("/:id/papers", (req, res) => {
     const controller = container.resolve(ExamController);
     return controller.addPaper(req, res);
+});
+
+router.patch("/:id/papers/:paperId/delete", (req, res) => {
+    const controller = container.resolve(ExamController);
+    return controller.deletePaper(req, res);
 });
 
 router.post("/:id/invitations", (req, res) => {
@@ -48,6 +58,11 @@ router.post("/:id/invitations", (req, res) => {
 router.put("/:id/students/:studentId", (req, res) => {
     const controller = container.resolve(ExamController);
     return controller.updateStudentStatus(req, res);
+});
+
+router.get("/:id/students", (req, res) => {
+    const controller = container.resolve(ExamController);
+    return controller.listInvitedStudents(req, res);
 });
 
 router.get("/:id/papers/:paperId/students", (req, res) => {

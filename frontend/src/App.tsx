@@ -7,7 +7,7 @@ import Register from './pages/auth/Register';
 import Dashboard from './pages/dashboard/Dashboard';
 import StudentList from './pages/students/StudentList';
 import StudentProfile from './pages/students/StudentProfile';
-import Attendance from './pages/students/Attendance';
+import Attendance from './pages/attendance/AttendancePage';
 import Teachers from './pages/admin/Teachers';
 import Grades from './pages/academics/Grades';
 import Finance from './pages/finance/Finance';
@@ -18,6 +18,10 @@ import Timetable from './pages/academics/Timetable';
 import Classrooms from './pages/academics/Classrooms';
 import Rollover from './pages/admin/Rollover';
 import Exams from './pages/academics/Exams';
+import ExamScheduler from './pages/academics/ExamScheduler';
+import ExamOverview from './pages/academics/ExamOverview';
+import ExamInvitations from './pages/academics/ExamInvitations';
+import ExamPapers from './pages/academics/ExamPapers';
 import Calendar from './pages/academics/Calendar';
 import Courses from './pages/academics/Courses';
 import OnboardingPipeline from './pages/onboarding/OnboardingPipeline';
@@ -25,6 +29,8 @@ import WorkflowBuilder from './pages/onboarding/WorkflowBuilder';
 import StaffRegistration from './pages/admin/StaffRegistration';
 import StudentAdmission from './pages/students/StudentAdmission';
 import MarksEntry from './pages/academics/MarksEntry';
+import TeacherDiary from './pages/academics/TeacherDiary';
+import Integrations from './pages/admin/Integrations';
 
 export default function App() {
   return (
@@ -63,12 +69,19 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="rollover" element={<Rollover />} />
           <Route path="exams" element={<Exams />} />
+          <Route path="exams/new" element={<ExamScheduler />} />
+          <Route path="exams/:id/overview" element={<ExamOverview />} />
+          <Route path="exams/:id/edit" element={<ExamScheduler />} />
+          <Route path="exams/:id/papers" element={<ExamPapers />} />
+          <Route path="exams/:id/invitations" element={<ExamInvitations />} />
           <Route path="exams/:id/papers/:paperId/marks" element={<MarksEntry />} />
           <Route path="calendar" element={<Calendar />} />
           <Route path="onboarding" element={<OnboardingPipeline />} />
           <Route path="onboarding/students" element={<OnboardingPipeline type="Student" />} />
           <Route path="onboarding/teachers" element={<OnboardingPipeline type="Teacher" />} />
           <Route path="workflow-builder" element={<WorkflowBuilder />} />
+          <Route path="teacher-diary" element={<TeacherDiary />} />
+          <Route path="integrations" element={<Integrations />} />
         </Route>
 
         {/* Catch-all */}
