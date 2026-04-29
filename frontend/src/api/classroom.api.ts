@@ -8,6 +8,7 @@ export interface Classroom {
     grade_id: number;
     grade_name?: string;
     capacity?: number;
+    class_teacher_id?: number | null;
     teacher_first_name?: string;
     teacher_last_name?: string;
 }
@@ -31,6 +32,13 @@ export async function getClassrooms(params?: {
 export async function createClassroom(data: Partial<Classroom>): Promise<Classroom> {
     return request<Classroom>('/school/classrooms', {
         method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function updateClassroom(id: number, data: Partial<Classroom>): Promise<Classroom> {
+    return request<Classroom>(`/school/classrooms/${id}`, {
+        method: 'PUT',
         body: JSON.stringify(data),
     });
 }

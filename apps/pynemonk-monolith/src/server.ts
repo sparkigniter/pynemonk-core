@@ -41,7 +41,7 @@ const PORT = parseInt(process.env.PORT ?? "3000", 10);
 
 const allowedOrigins = (
     process.env.ALLOWED_ORIGINS ??
-    "http://localhost:5173,http://localhost:5174,http://localhost:8000"
+    "http://localhost:5173,http://localhost:5174,http://localhost:8000,http://localhost:3001,http://localhost:3002"
 )
     .split(",")
     .map((o) => o.trim());

@@ -29,6 +29,14 @@ export interface Staff {
     bank_name?: string;
     ifsc_code?: string;
     avatar_url?: string;
+    is_deleted: boolean;
+    assignments: Array<{
+        classroom_id: number;
+        classroom_name: string;
+        subject_id: number;
+        subject_name: string;
+    }>;
+    is_class_teacher: boolean;
 }
 
 export interface PaginatedResponse<T> {

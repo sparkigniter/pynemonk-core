@@ -13,7 +13,7 @@ export class AttendanceController {
             const user = (req as any).user;
 
             const roster = await this.attendanceService.getClassroomRoster(
-                user.tenantId, 
+                user.tenant_id, 
                 parseInt(classroomId), 
                 date
             );
@@ -26,17 +26,15 @@ export class AttendanceController {
 
     public async saveAttendance(req: Request, res: Response) {
         try {
-            const { date, records } = req.body;
+            const { date, classroom_id, subject_id, records } = req.body;
             const user = (req as any).user;
             
-            // In a real scenario, we'd find the staff_id linked to the user.userId
-            // For now, we'll use a placeholder or look it up if needed.
-            // We'll assume the frontend might send staffId or we fetch it here.
-            
             const result = await this.attendanceService.saveBulkAttendance(
-                user.tenantId,
-                user.userId, // Using userId as staffId for now, ideally should be mapped
+                user.tenant_id,
+                parseInt(user.sub),
                 date,
+                classroom_id,
+                subject_id,
                 records
             );
 

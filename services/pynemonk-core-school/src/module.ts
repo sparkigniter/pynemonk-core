@@ -18,6 +18,8 @@ import dashboardRouter from "./api/modules/dashboard/routes.js";
 import attendanceRouter from "./api/modules/attendance/routes.js";
 import teacherNoteRouter from "./api/modules/teacher-note/routes.js";
 import integrationRouter from "./api/modules/integration/routes.js";
+import guardianRouter from "./api/modules/guardian/routes.js";
+import settingsRouter from "./api/modules/settings/routes.js";
 import { AcademicYearMiddleware } from "./api/core/middleware/AcademicYearMiddleware.js";
 import { requireAuth } from "./api/core/middleware/requireAuth.js";
 
@@ -54,8 +56,10 @@ router.use("/school/exams", examRouter);
 router.use("/school/events", eventRouter);
 router.use("/school/workflows", workflowRouter);
 router.use("/school/dashboard", dashboardRouter);
-router.use("/school/attendance", attendanceRouter);
 router.use("/school/teacher-notes", teacherNoteRouter);
 router.use("/school/integrations", integrationRouter);
+router.use("/school/guardian", guardianRouter);
+router.use("/school/settings", settingsRouter);
+router.use("/school/attendance", attendanceRouter);
 
 // router.use("/school/classrooms", classroomRouter);

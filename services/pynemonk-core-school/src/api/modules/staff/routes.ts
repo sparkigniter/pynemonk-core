@@ -2,11 +2,18 @@ import { Router } from "express";
 import { container } from "tsyringe";
 import StaffController from "./controllers/StaffController.js";
 import RoleController from "./controllers/RoleController.js";
+import TeacherController from "./controllers/TeacherController.js";
 import { requireAuth } from "../../core/middleware/requireAuth.js";
 import { requireRole } from "../../core/middleware/requireRole.js";
 import { AuthMiddleware, AuthenticatedRequest } from "../../core/middleware/AuthMiddleware.js";
 
 const staffRouter = Router();
+// ── Teacher Specific Routes ───────────────────────────────────────────────
+// ── Teacher Specific Routes ───────────────────────────────────────────────
+staffRouter.get("/teacher/dashboard", requireAuth, requireRole(["teacher"]), (req, res) => container.resolve(TeacherController).getDashboard(req, res));
+staffRouter.get("/teacher/timetable", requireAuth, requireRole(["teacher"]), (req, res) => container.resolve(TeacherController).getTimetable(req, res));
+staffRouter.get("/teacher/exams", requireAuth, requireRole(["teacher"]), (req, res) => container.resolve(TeacherController).getExams(req, res));
+staffRouter.get("/teacher/class/:classroomId/students", requireAuth, requireRole(["teacher"]), (req, res) => container.resolve(TeacherController).getClassroomStudents(req, res));
 
 // ── Staff Profiles ────────────────────────────────────────────────────────
 staffRouter.get("/", requireAuth, (req, res) => container.resolve(StaffController).list(req, res));

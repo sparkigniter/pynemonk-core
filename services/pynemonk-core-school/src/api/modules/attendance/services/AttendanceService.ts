@@ -34,23 +34,62 @@ export class AttendanceService {
     /**
      * Bulk upsert attendance records.
      */
-    public async saveBulkAttendance(tenantId: number, userId: number, date: string, records: any[]) {
-        // Find staff_id for the user
+    public async saveBulkAttendance(tenantId: number, userId: number, date: string, classroomId: number, subjectId: number, records: any[]) {
+        // 1. Find staff_id for the user
         const staffRes = await this.db.query(
             'SELECT id FROM school.staff WHERE user_id = $1 AND tenant_id = $2',
             [userId, tenantId]
         );
         
         if (staffRes.rows.length === 0) {
-            throw new Error('User is not a registered staff member and cannot mark attendance.');
+            throw new Error('User is not a registered staff member.');
         }
-        
         const staffId = staffRes.rows[0].id;
+
+        // 2. Attendance Mode & Validation
+        const settingsRes = await this.db.query(
+            'SELECT attendance_mode FROM school.settings WHERE tenant_id = $1',
+            [tenantId]
+        );
+        const mode = settingsRes.rows[0]?.attendance_mode || 'DAILY';
+
+        if (mode === 'DAILY') {
+            const classRes = await this.db.query(
+                'SELECT class_teacher_id FROM school.classroom WHERE id = $1',
+                [classroomId]
+            );
+            if (classRes.rows[0]?.class_teacher_id !== staffId) {
+                throw new Error('Only the designated Class Teacher can mark daily attendance for this classroom.');
+            }
+        } else {
+            // PERIOD_WISE: Timetable Validation
+            const dayOfWeek = new Date(date).getDay() || 7;
+            const ttRes = await this.db.query(
+                `SELECT 1 FROM school.timetable 
+                 WHERE teacher_id = $1 AND classroom_id = $2 AND subject_id = $3 AND day_of_week = $4 AND is_deleted = FALSE`,
+                [staffId, classroomId, subjectId, dayOfWeek]
+            );
+
+            if (ttRes.rows.length === 0) {
+                throw new Error('No scheduled timetable slot found for this teacher in this class/subject today.');
+            }
+        }
+
+        // 3. Map students to enrollments
+        const enrollmentRes = await this.db.query(
+            'SELECT id, student_id FROM school.student_enrollment WHERE classroom_id = $1 AND is_deleted = FALSE',
+            [classroomId]
+        );
+        const enrollmentMap = Object.fromEntries(enrollmentRes.rows.map((r: any) => [r.student_id, r.id]));
+
         const client = await this.db.connect();
         try {
             await client.query('BEGIN');
 
             for (const record of records) {
+                const enrollmentId = enrollmentMap[record.student_id];
+                if (!enrollmentId) continue;
+
                 const upsertQuery = `
                     INSERT INTO school.attendance (
                         tenant_id, enrollment_id, date, status, remarks, marked_by
@@ -64,7 +103,7 @@ export class AttendanceService {
                 `;
                 await client.query(upsertQuery, [
                     tenantId, 
-                    record.enrollment_id, 
+                    enrollmentId, 
                     date, 
                     record.status || 'present', 
                     record.remarks || '', 

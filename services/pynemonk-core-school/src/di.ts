@@ -10,6 +10,8 @@ import StaffHelper from "./api/modules/staff/helpers/StaffHelper.js";
 import StaffValidator from "./api/modules/staff/validator/StaffValidator.js";
 import StaffService from "./api/modules/staff/services/StaffService.js";
 import StaffController from "./api/modules/staff/controllers/StaffController.js";
+import TeacherHelper from "./api/modules/staff/helpers/TeacherHelper.js";
+import TeacherController from "./api/modules/staff/controllers/TeacherController.js";
 import ClassroomHelper from "./api/modules/classroom/helpers/ClassroomHelper.js";
 import ClassroomService from "./api/modules/classroom/services/ClassroomService.js";
 import ClassroomController from "./api/modules/classroom/controllers/ClassroomController.js";
@@ -22,6 +24,7 @@ import CourseService from "./api/modules/course/services/CourseService.js";
 import CourseController from "./api/modules/course/controllers/CourseController.js";
 import EnrollmentHelper from "./api/modules/student/helpers/EnrollmentHelper.js";
 import GuardianHelper from "./api/modules/guardian/helpers/GuardianHelper.js";
+import GuardianController from "./api/modules/guardian/controllers/GuardianController.js";
 import { GradeService } from "./api/modules/grade/services/GradeService.js";
 import { GradeController } from "./api/modules/grade/controllers/GradeController.js";
 import AcademicYearHelper from "./api/modules/academics/helpers/AcademicYearHelper.js";
@@ -72,6 +75,8 @@ function setupDI(): void {
     container.register(StaffValidator, { useClass: StaffValidator });
     container.register(StaffService, { useClass: StaffService });
     container.register(StaffController, { useClass: StaffController });
+    container.register(TeacherHelper, { useClass: TeacherHelper });
+    container.register(TeacherController, { useClass: TeacherController });
 
     // ── Classroom Module ────────────────────────────────────────────────────
     container.register(ClassroomHelper, { useClass: ClassroomHelper });
@@ -81,6 +86,7 @@ function setupDI(): void {
     // ── Admission Module ────────────────────────────────────────────────────
     container.register(EnrollmentHelper, { useClass: EnrollmentHelper });
     container.register(GuardianHelper, { useClass: GuardianHelper });
+    container.register(GuardianController, { useClass: GuardianController });
     container.register(AdmissionService, { useClass: AdmissionService });
     container.register(AdmissionController, { useClass: AdmissionController });
 
