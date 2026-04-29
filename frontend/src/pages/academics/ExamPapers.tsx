@@ -404,19 +404,44 @@ export default function ExamPapers() {
                                             <p className="text-[9px] text-slate-400 ml-2 italic">Scheduled: {exam?.start_date.split('T')[0]} to {exam?.end_date.split('T')[0]}</p>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Slot Selection</label>
-                                            <ComboBox
-                                                placeholder="Select Slot"
-                                                value={periods.find(p => p.start_time === newPaper.start_time)?.period_number?.toString() || ''}
-                                                onChange={val => {
-                                                    const p = periods.find(per => per.period_number?.toString() === val);
-                                                    if (p) setNewPaper({ ...newPaper, start_time: p.start_time, end_time: p.end_time });
-                                                }}
-                                                options={periods.map(p => ({
-                                                    value: p.period_number?.toString() || '',
-                                                    label: `Period ${p.period_number} (${(p.start_time || '').slice(0, 5)} - ${(p.end_time || '').slice(0, 5)})`
-                                                }))}
-                                            />
+                                            <div className="flex justify-between items-center ml-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Timing Mode</label>
+                                                <button
+                                                    onClick={() => setNewPaper({ ...newPaper, user_period: !newPaper.user_period })}
+                                                    className="text-[10px] font-black text-theme-primary uppercase tracking-widest hover:opacity-70 transition-all"
+                                                >
+                                                    {newPaper.user_period ? 'Switch to Manual' : 'Switch to Slots'}
+                                                </button>
+                                            </div>
+                                            {newPaper.user_period ? (
+                                                <ComboBox
+                                                    placeholder="Select Slot"
+                                                    value={periods.find(p => (p.start_time || '').slice(0, 5) === (newPaper.start_time || '').slice(0, 5))?.period_number?.toString() || ''}
+                                                    onChange={val => {
+                                                        const p = periods.find(per => per.period_number?.toString() === val);
+                                                        if (p) setNewPaper({ ...newPaper, start_time: p.start_time, end_time: p.end_time });
+                                                    }}
+                                                    options={periods.map(p => ({
+                                                        value: p.period_number?.toString() || '',
+                                                        label: `Period ${p.period_number} (${(p.start_time || '').slice(0, 5)} - ${(p.end_time || '').slice(0, 5)})`
+                                                    }))}
+                                                />
+                                            ) : (
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <input
+                                                        type="time"
+                                                        className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:bg-white transition-all shadow-inner text-sm"
+                                                        value={newPaper.start_time ? newPaper.start_time.slice(0, 5) : ''}
+                                                        onChange={e => setNewPaper({ ...newPaper, start_time: e.target.value })}
+                                                    />
+                                                    <input
+                                                        type="time"
+                                                        className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:bg-white transition-all shadow-inner text-sm"
+                                                        value={newPaper.end_time ? newPaper.end_time.slice(0, 5) : ''}
+                                                        onChange={e => setNewPaper({ ...newPaper, end_time: e.target.value })}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

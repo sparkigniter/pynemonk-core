@@ -5,21 +5,16 @@ import { fileURLToPath } from "url";
 
 // Import directly from the DB utilities to avoid loading the entire service (routers/controllers)
 // This bypasses the decorator issues in the API layer during migrations.
-import authPool from "../../../services/pynemonk-core-auth/src/db/pg-pool.js";
-import { runMigrations as runAuthMigrations } from "../../../services/pynemonk-core-auth/src/db/MigrationRunner.js";
-
-import schoolPool from "../../../services/pynemonk-core-school/src/db/pg-pool.js";
-import { runMigrations as runSchoolMigrations } from "../../../services/pynemonk-core-school/src/db/MigrationRunner.js";
-
-import accountingPool from "../../../services/pynemonk-core-accounting/src/db/pg-pool.js";
-import { runMigrations as runAccountingMigrations } from "../../../services/pynemonk-core-accounting/src/db/MigrationRunner.js";
+import { pool as authPool, runMigrations as runAuthMigrations } from "pynemonk-core-auth/module";
+import { pool as schoolPool, runMigrations as runSchoolMigrations } from "pynemonk-core-school/module";
+import { pool as accountingPool, runMigrations as runAccountingMigrations } from "pynemonk-core-accounting/module";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 async function migrate() {
     console.log("🚀 Starting platform-wide migrations...");
-    
+
     try {
         console.log("\n[1/3] Running Auth Migrations...");
         await runAuthMigrations(authPool);

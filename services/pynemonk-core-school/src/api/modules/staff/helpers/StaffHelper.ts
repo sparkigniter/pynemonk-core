@@ -21,8 +21,34 @@ export default class StaffHelper extends BaseModel {
         const offset = (page - 1) * limit;
 
         let query = `
-            SELECT s.*, COUNT(*) OVER() as total_count
+            WITH assignments AS (
+                SELECT 
+                    ta.staff_id,
+                    JSON_AGG(JSON_BUILD_OBJECT(
+                        'classroom_id', ta.classroom_id,
+                        'classroom_name', c.name,
+                        'subject_id', ta.subject_id,
+                        'subject_name', sub.name
+                    )) as subjects
+                FROM school.teacher_assignment ta
+                JOIN school.classroom c ON ta.classroom_id = c.id
+                JOIN school.subject sub ON ta.subject_id = sub.id
+                WHERE ta.tenant_id = $1 AND ta.is_deleted = FALSE
+                GROUP BY ta.staff_id
+            ),
+            class_teachers AS (
+                SELECT DISTINCT class_teacher_id as staff_id
+                FROM school.classroom
+                WHERE tenant_id = $1 AND is_deleted = FALSE AND class_teacher_id IS NOT NULL
+            )
+            SELECT 
+                s.*, 
+                COUNT(*) OVER() as total_count,
+                COALESCE(a.subjects, '[]') as assignments,
+                (ct.staff_id IS NOT NULL) as is_class_teacher
             FROM school.staff s
+            LEFT JOIN assignments a ON s.id = a.staff_id
+            LEFT JOIN class_teachers ct ON s.id = ct.staff_id
             WHERE s.tenant_id = $1 AND s.is_deleted = FALSE
         `;
         const values: any[] = [tenantId];

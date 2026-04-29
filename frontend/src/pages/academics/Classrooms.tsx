@@ -6,7 +6,9 @@ import {
 } from 'lucide-react';
 import { getGrades } from '../../api/grade.api';
 import type { Grade } from '../../api/grade.api';
-import { getClassrooms, createClassroom } from '../../api/classroom.api';
+import { getClassrooms, createClassroom, updateClassroom } from '../../api/classroom.api';
+import { getStaffList } from '../../api/staff.api';
+import type { Staff } from '../../api/staff.api';
 import { useAcademics } from '../../contexts/AcademicsContext';
 import type { Classroom } from '../../api/classroom.api';
 import Modal from '../../components/ui/Modal';
@@ -29,13 +31,16 @@ export default function Classrooms() {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     const [formData, setFormData] = useState({
         grade_id: 0,
         name: '',
         section: '',
-        capacity: 40
+        capacity: 40,
+        class_teacher_id: null as number | null
     });
+    const [staff, setStaff] = useState<Staff[]>([]);
 
     const fetchInitialData = useCallback(async () => {
         try {
@@ -72,6 +77,7 @@ export default function Classrooms() {
 
     useEffect(() => {
         fetchInitialData();
+        getStaffList({ status: 'active' }).then(res => setStaff(res.data));
     }, [fetchInitialData]);
 
     useEffect(() => {
@@ -87,16 +93,34 @@ export default function Classrooms() {
         setIsSaving(true);
         setError(null);
         try {
-            await createClassroom(formData);
+            if (editingId) {
+                await updateClassroom(editingId, formData);
+                notify('success', 'Classroom Updated', `Configurations for ${formData.name} have been synchronized.`);
+            } else {
+                await createClassroom(formData);
+                notify('success', 'Classroom Established', `${formData.name} is now ready for enrollment.`);
+            }
             setIsModalOpen(false);
-            setFormData({ grade_id: 0, name: '', section: '', capacity: 40 });
-            notify('success', 'Classroom Established', `${formData.name} is now ready for enrollment.`);
+            setFormData({ grade_id: 0, name: '', section: '', capacity: 40, class_teacher_id: null });
+            setEditingId(null);
             fetchClassrooms();
         } catch (err: any) {
             notify('error', 'Operation Failed', err.message);
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleEdit = (classroom: Classroom) => {
+        setEditingId(classroom.id);
+        setFormData({
+            grade_id: classroom.grade_id,
+            name: classroom.name,
+            section: classroom.section,
+            capacity: classroom.capacity || 40,
+            class_teacher_id: classroom.class_teacher_id || null
+        });
+        setIsModalOpen(true);
     };
 
     const selectedGrade = grades.find(g => g.id === selectedGradeId);
@@ -261,11 +285,16 @@ export default function Classrooms() {
 
                                         <div className="space-y-6">
                                             <div className="flex items-start justify-between">
-                                                <div className="w-14 h-14 rounded-2xl bg-theme-primary/10 text-theme-primary flex items-center justify-center shadow-sm">
+                                                <div className={`w-14 h-14 rounded-2xl ${!classroom.teacher_first_name ? 'bg-amber-50 text-amber-500' : 'bg-theme-primary/10 text-theme-primary'} flex items-center justify-center shadow-sm`}>
                                                     <School size={28} />
                                                 </div>
                                                 <div className="flex gap-1">
-                                                    <button className="p-2 text-slate-300 hover:text-theme-primary transition-colors"><Edit2 size={16} /></button>
+                                                    <button 
+                                                        onClick={() => handleEdit(classroom)}
+                                                        className="p-2 text-slate-300 hover:text-theme-primary transition-colors"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
                                                     <button className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={16} /></button>
                                                 </div>
                                             </div>
@@ -275,11 +304,21 @@ export default function Classrooms() {
                                                 <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1">Section {classroom.section}</p>
                                             </div>
 
-                                            {classroom.teacher_first_name && (
+                                            {classroom.teacher_first_name ? (
                                                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Class Teacher</p>
                                                     <p className="text-xs font-bold text-slate-700">{classroom.teacher_first_name} {classroom.teacher_last_name}</p>
                                                 </div>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => handleEdit(classroom)}
+                                                    className="w-full p-4 bg-amber-50 rounded-2xl border border-amber-200 text-left hover:bg-amber-100 transition-all group/btn"
+                                                >
+                                                    <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                                        <AlertCircle size={10} /> Needs Assignment
+                                                    </p>
+                                                    <p className="text-xs font-bold text-amber-700 group-hover/btn:underline">Assign Class Teacher</p>
+                                                </button>
                                             )}
 
                                             <div className="pt-6 border-t border-slate-50 flex items-center justify-between">
@@ -347,10 +386,10 @@ export default function Classrooms() {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title="Establish New Classroom"
+                title={editingId ? "Update Classroom Config" : "Establish New Classroom"}
                 size="md"
             >
-                <form onSubmit={handleSave} className="p-8 space-y-6">
+                <form onSubmit={handleSave} className="p-8 space-y-6 pb-32">
                     <div className="space-y-4">
                         <ComboBox
                             label="Grade Level"
@@ -391,6 +430,16 @@ export default function Classrooms() {
                                 className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-theme-primary transition-all"
                                 value={formData.capacity}
                                 onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
+                            />
+                        </div>
+
+                        <div>
+                            <ComboBox
+                                label="Class Teacher (Optional)"
+                                value={formData.class_teacher_id}
+                                onChange={val => setFormData({ ...formData, class_teacher_id: val as number })}
+                                placeholder="Select Class Teacher"
+                                options={staff.map(s => ({ value: s.id, label: `${s.first_name} ${s.last_name}` }))}
                             />
                         </div>
                     </div>

@@ -60,4 +60,109 @@ export default class GuardianHelper {
         );
         return res.rows;
     }
+
+    public async getGuardianStudents(userId: number): Promise<any[]> {
+        const res = await this.db.query(
+            `SELECT s.id, s.admission_no, s.first_name, s.last_name, s.gender, s.date_of_birth,
+                    c.name as classroom_name, c.section, g.name as grade_name,
+                    sg.relation, se.roll_number
+             FROM school.student s
+             JOIN school.student_guardian sg ON s.id = sg.student_id
+             JOIN school.guardian p ON sg.guardian_id = p.id
+             JOIN school.student_enrollment se ON s.id = se.student_id
+             JOIN school.classroom c ON se.classroom_id = c.id
+             JOIN school.grade g ON c.grade_id = g.id
+             WHERE p.user_id = $1 
+               AND sg.is_deleted = FALSE 
+               AND se.status = 'active'`,
+            [userId],
+        );
+        return res.rows;
+    }
+
+    public async getStudentAttendance(studentId: number): Promise<any> {
+        // Attendance Summary
+        const summaryRes = await this.db.query(
+            `SELECT a.status, COUNT(*) as count
+             FROM school.attendance a
+             JOIN school.student_enrollment se ON a.enrollment_id = se.id
+             WHERE se.student_id = $1 AND se.is_deleted = FALSE
+             GROUP BY a.status`,
+            [studentId]
+        );
+
+        // Recent 30 days records
+        const recentRes = await this.db.query(
+            `SELECT a.date, a.status, a.remarks
+             FROM school.attendance a
+             JOIN school.student_enrollment se ON a.enrollment_id = se.id
+             WHERE se.student_id = $1 AND se.is_deleted = FALSE
+             ORDER BY a.date DESC
+             LIMIT 30`,
+            [studentId]
+        );
+
+        return {
+            summary: summaryRes.rows,
+            recent: recentRes.rows
+        };
+    }
+
+    public async getStudentExams(studentId: number): Promise<any> {
+        // Upcoming Exams (Based on paper dates)
+        const upcomingRes = await this.db.query(
+            `SELECT DISTINCT e.id, e.name as exam_name, sub.name as paper_name, p.exam_date as date, p.start_time, sub.name as subject_name
+             FROM school.exam e
+             JOIN school.exam_paper p ON e.id = p.exam_id
+             JOIN school.exam_invitation ei ON e.id = ei.exam_id
+             JOIN school.student_enrollment se ON ei.classroom_id = se.classroom_id
+             JOIN school.subject sub ON p.subject_id = sub.id
+             WHERE se.student_id = $1 AND p.exam_date >= CURRENT_DATE AND e.is_deleted = FALSE
+             ORDER BY p.exam_date ASC`,
+            [studentId]
+        );
+
+        // Past Exam Results (Using school.exam_result table)
+        const resultsRes = await this.db.query(
+            `SELECT e.name as exam_name, sub.name as subject_name, er.marks, er.max_marks, er.grade, 
+                    (SELECT exam_date FROM school.exam_paper WHERE exam_id = e.id AND subject_id = sub.id LIMIT 1) as date
+             FROM school.exam_result er
+             JOIN school.exam e ON er.exam_id = e.id
+             JOIN school.subject sub ON er.subject_id = sub.id
+             WHERE er.student_id = $1 AND er.is_deleted = FALSE
+             ORDER BY date DESC`,
+            [studentId]
+        );
+
+        return {
+            upcoming: upcomingRes.rows,
+            past: resultsRes.rows
+        };
+    }
+
+    public async getStudentClassroomDetails(studentId: number): Promise<any> {
+        const classRes = await this.db.query(
+            `SELECT c.id, c.name, c.section, st.first_name as teacher_first_name, st.last_name as teacher_last_name, st.phone as teacher_phone
+             FROM school.classroom c
+             JOIN school.student_enrollment se ON c.id = se.classroom_id
+             LEFT JOIN school.staff st ON c.class_teacher_id = st.id
+             WHERE se.student_id = $1 AND se.status = 'active'`,
+            [studentId]
+        );
+
+        const subjectsRes = await this.db.query(
+            `SELECT sub.name as subject_name, st.first_name as teacher_first_name, st.last_name as teacher_last_name
+             FROM school.teacher_assignment ta
+             JOIN school.student_enrollment se ON ta.classroom_id = se.classroom_id
+             JOIN school.subject sub ON ta.subject_id = sub.id
+             JOIN school.staff st ON ta.staff_id = st.id
+             WHERE se.student_id = $1 AND se.status = 'active'`,
+            [studentId]
+        );
+
+        return {
+            classroom: classRes.rows[0],
+            subjects: subjectsRes.rows
+        };
+    }
 }

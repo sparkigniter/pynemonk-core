@@ -10,7 +10,7 @@ router.get("/roster/:classroomId", requireAuth, (req, res) => {
     return controller.getRoster(req, res);
 });
 
-router.post("/save", requireAuth, (req, res) => {
+router.post("/", requireAuth, (req, res) => {
     const controller = container.resolve(AttendanceController);
     return controller.saveAttendance(req, res);
 });

@@ -600,12 +600,21 @@ const Timetable: React.FC = () => {
                                     Auto-Optimize
                                 </button>
 
-                                {isDirty && (
-                                    <button onClick={handleSaveChanges} disabled={isSaving} className="bg-emerald-500 text-white px-8 py-3.5 rounded-[1.5rem] text-xs font-black hover:bg-emerald-600 flex items-center gap-3 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 animate-in zoom-in-90">
-                                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                        Commit Changes
-                                    </button>
-                                )}
+                                {(() => {
+                                    const hasUnfinalized = entries.some(e => !(e as any).is_sticky);
+                                    if (!isDirty && !hasUnfinalized) return null;
+                                    
+                                    return (
+                                        <button 
+                                            onClick={handleSaveChanges} 
+                                            disabled={isSaving} 
+                                            className="bg-emerald-500 text-white px-8 py-3.5 rounded-[1.5rem] text-xs font-black hover:bg-emerald-600 flex items-center gap-3 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 animate-in zoom-in-90"
+                                        >
+                                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                            {isDirty ? 'Commit Changes' : 'Finalize Schedule'}
+                                        </button>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </header>

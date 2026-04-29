@@ -19,13 +19,13 @@
     "pynemonk-core-auth": "*",
     "pynemonk-core-school": "*",
     "pynemonk-core-system": "*",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "tsx": "^4.15.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/node": "^20.11.16",
-    "tsx": "^4.15.0",
     "typescript": "^5.3.3"
   },
   "type": "module"

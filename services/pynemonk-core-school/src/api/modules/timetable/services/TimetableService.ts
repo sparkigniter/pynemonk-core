@@ -238,6 +238,12 @@ export class TimetableService {
 
             // 6. Greedy Allocation
             for (const day of days) {
+                const scheduledToday = new Set();
+                // Track subjects already scheduled for this day (including sticky entries)
+                stickyRes.rows
+                    .filter(r => r.day_of_week === day)
+                    .forEach(r => scheduledToday.add(r.subject_id));
+
                 for (const time of times) {
                     const slotKey = `${day}-${time}:00`;
                     if (occupiedSlots.has(slotKey)) continue;
@@ -245,6 +251,9 @@ export class TimetableService {
                     for (let i = 0; i < workload.length; i++) {
                         const item = workload[i];
                         if (item.needed <= 0) continue;
+                        
+                        // IMPORTANT: Avoid repetitive subjects for the same day in auto-gen
+                        if (scheduledToday.has(item.subject_id)) continue;
 
                         const endTime = `${(parseInt(time.split(':')[0]) + 1).toString().padStart(2, '0')}:00`;
                         
@@ -261,6 +270,7 @@ export class TimetableService {
                             `, [tenantId, classroomId, item.subject_id, item.teacher_id, academicYearId, day, time, endTime]);
                             
                             item.needed--;
+                            scheduledToday.add(item.subject_id);
                             break;
                         }
                     }
@@ -313,9 +323,15 @@ export class TimetableService {
             academicYearId = currentYear?.id;
         }
         const query = `
-            SELECT DISTINCT start_time, end_time
-            FROM school.timetable
-            WHERE tenant_id = $1 AND academic_year_id = $2 AND is_deleted = FALSE
+            SELECT 
+                ROW_NUMBER() OVER(ORDER BY start_time) as period_number,
+                start_time, 
+                end_time
+            FROM (
+                SELECT DISTINCT start_time, end_time
+                FROM school.timetable
+                WHERE tenant_id = $1 AND academic_year_id = $2 AND is_deleted = FALSE
+            ) as unique_periods
             ORDER BY start_time
         `;
         const result = await this.pool.query(query, [tenantId, academicYearId]);
