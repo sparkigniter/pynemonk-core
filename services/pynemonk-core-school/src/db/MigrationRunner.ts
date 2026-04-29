@@ -33,6 +33,7 @@ export async function runMigrations(pool: Pool): Promise<void> {
             path.join(process.cwd(), "services/pynemonk-core-school/sql/migrations"),
             // From apps/pynemonk-monolith root
             path.join(process.cwd(), "../../services/pynemonk-core-school/sql/migrations"),
+            "/app/services/pynemonk-core-school/sql/migrations",
             // Relative to this file (works for both src/ and dist/ if sql is copied)
             path.join(__dirname, "../../sql/migrations"),
             path.join(__dirname, "../sql/migrations"),
@@ -40,20 +41,20 @@ export async function runMigrations(pool: Pool): Promise<void> {
 
         let activeDir = "";
         for (const dir of possibleDirs) {
-            if (fs.existsSync(dir)) {
-                activeDir = dir;
+            const absoluteDir = path.resolve(dir);
+            if (fs.existsSync(absoluteDir)) {
+                activeDir = absoluteDir;
                 break;
             }
         }
 
         if (!activeDir) {
-            console.warn("[MigrationRunner:school] No migrations directory found. Checked:", possibleDirs);
-            return;
+            const errorMsg = `[MigrationRunner:school] CRITICAL: No migrations directory found. Checked: ${possibleDirs.join(", ")}`;
+            console.error(errorMsg);
+            throw new Error(errorMsg);
         }
 
-        console.log(`[MigrationRunner:school] CWD: ${process.cwd()}`);
-        console.log(`[MigrationRunner:school] Dirname: ${__dirname}`);
-        console.log(`[MigrationRunner:school] Using migrations from: ${activeDir}`);
+        console.log(`[MigrationRunner:school] Applying migrations from: ${activeDir}`);
 
         const files = fs
             .readdirSync(activeDir)

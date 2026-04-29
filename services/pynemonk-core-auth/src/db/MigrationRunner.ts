@@ -29,6 +29,7 @@ export async function runMigrations(pool: Pool): Promise<void> {
         const possibleDirs = [
             path.join(process.cwd(), "services/pynemonk-core-auth/sql/migrations"),
             path.join(process.cwd(), "../../services/pynemonk-core-auth/sql/migrations"),
+            "/app/services/pynemonk-core-auth/sql/migrations",
             path.join(process.cwd(), "sql/migrations"),
             path.join(__dirname, "../../sql/migrations"),
             path.join(__dirname, "../sql/migrations"),
@@ -36,20 +37,20 @@ export async function runMigrations(pool: Pool): Promise<void> {
 
         let activeDir = "";
         for (const dir of possibleDirs) {
-            if (fs.existsSync(dir)) {
-                activeDir = dir;
+            const absoluteDir = path.resolve(dir);
+            if (fs.existsSync(absoluteDir)) {
+                activeDir = absoluteDir;
                 break;
             }
         }
 
         if (!activeDir) {
-            console.warn("[MigrationRunner:auth] No migrations directory found. Checked:", possibleDirs);
-            return;
+            const errorMsg = `[MigrationRunner:auth] CRITICAL: No migrations directory found. Checked: ${possibleDirs.join(", ")}`;
+            console.error(errorMsg);
+            throw new Error(errorMsg);
         }
 
-        console.log(`[MigrationRunner:auth] CWD: ${process.cwd()}`);
-        console.log(`[MigrationRunner:auth] Dirname: ${__dirname}`);
-        console.log(`[MigrationRunner:auth] Using migrations from: ${activeDir}`);
+        console.log(`[MigrationRunner:auth] Applying migrations from: ${activeDir}`);
 
         const files = fs
             .readdirSync(activeDir)
