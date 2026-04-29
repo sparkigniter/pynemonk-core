@@ -5,3 +5,6 @@ dist/
 .DS_Store
 .gemini/
 brain/
+scratch/
+*.local
+services/pynemonk-core-school/src/scripts/fix-staff-data.ts
