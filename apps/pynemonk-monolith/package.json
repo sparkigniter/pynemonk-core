@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "migrate": "tsx scripts/migrate.ts",
+    "migrate": "tsx src/scripts/migrate.ts || node dist/scripts/migrate.js",
     "test": "echo \"No tests in monolith shell\""
   },
   "dependencies": {

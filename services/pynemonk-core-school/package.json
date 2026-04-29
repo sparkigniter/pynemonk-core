@@ -15,7 +15,7 @@
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' --fix",
     "test": "echo \"Error: no test specified\"",
-    "seed": "tsx src/scripts/seed-demo-data.ts"
+    "seed": "tsx src/scripts/seed-demo-data.ts || node dist/scripts/seed-demo-data.js"
   },
   "author": "Vikas Biradargoudar",
   "license": "ISC",
