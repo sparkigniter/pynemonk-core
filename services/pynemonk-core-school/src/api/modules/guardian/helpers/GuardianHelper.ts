@@ -50,18 +50,18 @@ export default class GuardianHelper {
         );
     }
 
-    public async getStudentGuardians(studentId: number): Promise<any[]> {
+    public async getStudentGuardians(tenantId: number, studentId: number): Promise<any[]> {
         const res = await this.db.query(
             `SELECT g.*, sg.relation, sg.is_emergency
              FROM school.guardian g
              JOIN school.student_guardian sg ON g.id = sg.guardian_id
-             WHERE sg.student_id = $1 AND sg.is_deleted = FALSE`,
-            [studentId],
+             WHERE sg.tenant_id = $1 AND sg.student_id = $2 AND sg.is_deleted = FALSE`,
+            [tenantId, studentId],
         );
         return res.rows;
     }
 
-    public async getGuardianStudents(userId: number): Promise<any[]> {
+    public async getGuardianStudents(tenantId: number, userId: number): Promise<any[]> {
         const res = await this.db.query(
             `SELECT s.id, s.admission_no, s.first_name, s.last_name, s.gender, s.date_of_birth,
                     c.name as classroom_name, c.section, g.name as grade_name,
@@ -72,23 +72,23 @@ export default class GuardianHelper {
              JOIN school.student_enrollment se ON s.id = se.student_id
              JOIN school.classroom c ON se.classroom_id = c.id
              JOIN school.grade g ON c.grade_id = g.id
-             WHERE p.user_id = $1 
+             WHERE sg.tenant_id = $1 AND p.user_id = $2 
                AND sg.is_deleted = FALSE 
                AND se.status = 'active'`,
-            [userId],
+            [tenantId, userId],
         );
         return res.rows;
     }
 
-    public async getStudentAttendance(studentId: number): Promise<any> {
+    public async getStudentAttendance(tenantId: number, studentId: number): Promise<any> {
         // Attendance Summary
         const summaryRes = await this.db.query(
             `SELECT a.status, COUNT(*) as count
              FROM school.attendance a
              JOIN school.student_enrollment se ON a.enrollment_id = se.id
-             WHERE se.student_id = $1 AND se.is_deleted = FALSE
+             WHERE se.tenant_id = $1 AND se.student_id = $2 AND se.is_deleted = FALSE
              GROUP BY a.status`,
-            [studentId]
+            [tenantId, studentId]
         );
 
         // Recent 30 days records
@@ -96,10 +96,10 @@ export default class GuardianHelper {
             `SELECT a.date, a.status, a.remarks
              FROM school.attendance a
              JOIN school.student_enrollment se ON a.enrollment_id = se.id
-             WHERE se.student_id = $1 AND se.is_deleted = FALSE
+             WHERE se.tenant_id = $1 AND se.student_id = $2 AND se.is_deleted = FALSE
              ORDER BY a.date DESC
              LIMIT 30`,
-            [studentId]
+            [tenantId, studentId]
         );
 
         return {
@@ -108,7 +108,7 @@ export default class GuardianHelper {
         };
     }
 
-    public async getStudentExams(studentId: number): Promise<any> {
+    public async getStudentExams(tenantId: number, studentId: number): Promise<any> {
         // Upcoming Exams (Based on paper dates)
         const upcomingRes = await this.db.query(
             `SELECT DISTINCT e.id, e.name as exam_name, sub.name as paper_name, p.exam_date as date, p.start_time, sub.name as subject_name
@@ -117,9 +117,9 @@ export default class GuardianHelper {
              JOIN school.exam_invitation ei ON e.id = ei.exam_id
              JOIN school.student_enrollment se ON ei.classroom_id = se.classroom_id
              JOIN school.subject sub ON p.subject_id = sub.id
-             WHERE se.student_id = $1 AND p.exam_date >= CURRENT_DATE AND e.is_deleted = FALSE
+             WHERE se.tenant_id = $1 AND se.student_id = $2 AND p.exam_date >= CURRENT_DATE AND e.is_deleted = FALSE
              ORDER BY p.exam_date ASC`,
-            [studentId]
+            [tenantId, studentId]
         );
 
         // Past Exam Results (Using school.exam_result table)
@@ -129,9 +129,9 @@ export default class GuardianHelper {
              FROM school.exam_result er
              JOIN school.exam e ON er.exam_id = e.id
              JOIN school.subject sub ON er.subject_id = sub.id
-             WHERE er.student_id = $1 AND er.is_deleted = FALSE
+             WHERE er.tenant_id = $1 AND er.student_id = $2 AND er.is_deleted = FALSE
              ORDER BY date DESC`,
-            [studentId]
+            [tenantId, studentId]
         );
 
         return {
@@ -140,14 +140,14 @@ export default class GuardianHelper {
         };
     }
 
-    public async getStudentClassroomDetails(studentId: number): Promise<any> {
+    public async getStudentClassroomDetails(tenantId: number, studentId: number): Promise<any> {
         const classRes = await this.db.query(
             `SELECT c.id, c.name, c.section, st.first_name as teacher_first_name, st.last_name as teacher_last_name, st.phone as teacher_phone
              FROM school.classroom c
              JOIN school.student_enrollment se ON c.id = se.classroom_id
              LEFT JOIN school.staff st ON c.class_teacher_id = st.id
-             WHERE se.student_id = $1 AND se.status = 'active'`,
-            [studentId]
+             WHERE se.tenant_id = $1 AND se.student_id = $2 AND se.status = 'active'`,
+            [tenantId, studentId]
         );
 
         const subjectsRes = await this.db.query(
@@ -156,8 +156,8 @@ export default class GuardianHelper {
              JOIN school.student_enrollment se ON ta.classroom_id = se.classroom_id
              JOIN school.subject sub ON ta.subject_id = sub.id
              JOIN school.staff st ON ta.staff_id = st.id
-             WHERE se.student_id = $1 AND se.status = 'active'`,
-            [studentId]
+             WHERE se.tenant_id = $1 AND se.student_id = $2 AND se.status = 'active'`,
+            [tenantId, studentId]
         );
 
         return {
