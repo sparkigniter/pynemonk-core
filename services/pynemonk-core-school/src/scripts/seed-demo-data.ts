@@ -36,7 +36,6 @@ const LAST_NAMES = [
     'Malhotra', 'Kapoor', 'Khan', 'Mishra', 'Yadav', 'Choudhury', 'Deshmukh', 'Kulkarni', 'Bose', 'Chatterjee'
 ];
 
-const CASTES = ['General', 'OBC', 'SC', 'ST'];
 const RELIGIONS = ['Hindu', 'Muslim', 'Sikh', 'Christian', 'Jain'];
 const COMMON_SUBJECTS = ['Mathematics', 'English', 'Kannada', 'Hindi', 'PlayTime (PT)', 'Music', 'Craft'];
 
@@ -75,7 +74,7 @@ async function createUser(client: any, tenantId: number, email: string, roleId: 
         userId = userRes.rows[0].id;
     }
 
-    // 2. Ensure credentials exist (Manual Check instead of ON CONFLICT)
+    // 2. Ensure credentials exist
     const existingCred = await client.query('SELECT user_id FROM auth.user_credential WHERE user_id = $1', [userId]);
     if (existingCred.rows.length === 0) {
         await client.query(
@@ -125,13 +124,12 @@ async function seed() {
             `, [tenantId]);
         }
 
-        // 1.5 Ensure Roles exist for this tenant (Clone from templates if missing)
+        // 1.5 Ensure Roles exist
         console.log('🎭 Initializing tenant roles from templates...');
         const templates = await client.query('SELECT * FROM auth.role_template');
         for (const tmpl of templates.rows) {
             const existingRole = await client.query('SELECT id FROM auth.role WHERE tenant_id = $1 AND slug = $2 AND is_deleted = FALSE', [tenantId, tmpl.slug]);
             if (existingRole.rows.length === 0) {
-                // Ensure data_scope is a valid JSON string
                 const dataScope = typeof tmpl.data_scope === 'string' ? tmpl.data_scope : JSON.stringify(tmpl.data_scope);
                 await client.query(`
                     INSERT INTO auth.role (tenant_id, slug, name, description, tier, is_system, data_scope)
@@ -143,16 +141,8 @@ async function seed() {
         // 2. Get Roles
         const roleRes = await client.query('SELECT id, slug FROM auth.role WHERE tenant_id = $1 OR tenant_id IS NULL', [tenantId]);
         const roleMap = Object.fromEntries(roleRes.rows.map(r => [r.slug, r.id]));
-        console.log('🎭 Available Roles:', Object.keys(roleMap).join(', '));
-
-        const getRole = (slug: string) => {
-            const id = roleMap[slug];
-            if (!id) {
-                console.warn(`⚠️ Warning: Role '${slug}' not found. Using first available role.`);
-                return Object.values(roleMap)[0];
-            }
-            return id;
-        };
+        
+        const getRole = (slug: string) => roleMap[slug] || Object.values(roleMap)[0];
 
         console.log('👑 Creating Management Staff...');
         await createUser(client, tenantId, 'admin@pynemonk.com', getRole('system_admin'));
@@ -224,8 +214,8 @@ async function seed() {
                 const parentUserId = await createUser(client, tenantId, parentEmail, getRole('parent'));
 
                 const guardianRes = await client.query(
-                    'INSERT INTO school.guardian (tenant_id, user_id, first_name, last_name, gender, phone, email, relation_type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-                    [tenantId, parentUserId, parentFName, lName, Math.random() > 0.5 ? 'male' : 'female', `900000${studentCount.toString().padStart(4, '0')}`, parentEmail, 'Father']
+                    'INSERT INTO school.guardian (tenant_id, user_id, first_name, last_name, gender, phone, email) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+                    [tenantId, parentUserId, parentFName, lName, Math.random() > 0.5 ? 'male' : 'female', `900000${studentCount.toString().padStart(4, '0')}`, parentEmail]
                 );
 
                 await client.query(

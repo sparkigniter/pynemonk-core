@@ -61,5 +61,3 @@ router.use("/school/integrations", integrationRouter);
 router.use("/school/guardian", guardianRouter);
 router.use("/school/settings", settingsRouter);
 router.use("/school/attendance", attendanceRouter);
-
-// router.use("/school/classrooms", classroomRouter);
