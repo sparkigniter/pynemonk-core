@@ -63,7 +63,7 @@ export const examApi = {
   addPaper: (examId: number, data: Partial<ExamPaper>) =>
     post<ExamPaper>(`/school/exams/${examId}/papers`, data),
 
-  addInvitation: (examId: number, data: { grade_id?: number, classroom_id?: number }) =>
+  addInvitation: (examId: number, data: { grade_id?: number, classroom_id?: number, subject_id?: number }) =>
     post(`/school/exams/${examId}/invitations`, data),
 
   updateStudentStatus: (examId: number, studentId: number, data: { is_excluded: boolean, exclusion_reason?: string }) =>
@@ -72,9 +72,33 @@ export const examApi = {
   getPaperStudents: (examId: number, paperId: number) =>
     get<any[]>(`/school/exams/${examId}/papers/${paperId}/students`),
 
+  getPaginatedStudents: (examId: number, params: { 
+    page: number, 
+    limit: number, 
+    search?: string, 
+    status?: string,
+    grade_id?: number,
+    classroom_id?: number,
+    subject_id?: number
+  }) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        query.append(key, value.toString());
+      }
+    });
+    return get<{ data: ExamStudent[], pagination: any }>(`/school/exams/${examId}/students?${query.toString()}`);
+  },
+
   saveMarks: (examId: number, paperId: number, data: any[]) =>
     post(`/school/exams/${examId}/papers/${paperId}/marks`, data),
 
   updateStatus: (examId: number, status: string) =>
     patch(`/school/exams/${examId}/status`, { status }),
+
+  updateExam: (id: number, data: Partial<Exam>) =>
+    put<Exam>(`/school/exams/${id}`, data),
+
+  deletePaper: (examId: number, paperId: number) =>
+    patch(`/school/exams/${examId}/papers/${paperId}/delete`, {}),
 };

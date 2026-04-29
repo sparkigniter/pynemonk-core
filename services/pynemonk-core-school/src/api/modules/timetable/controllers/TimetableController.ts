@@ -95,4 +95,71 @@ export class TimetableController {
             res.status(500).json({ success: false, message: error.message });
         }
     }
+
+    async autoGenerate(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenant_id;
+            const classroomId = parseInt(req.params.classroomId);
+            const academicYearId = req.query.academic_year_id ? parseInt(req.query.academic_year_id as string) : undefined;
+            const data = await this.timetableService.generateAutomatedTimetable(tenantId, classroomId, academicYearId);
+            res.json(data);
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    async finalize(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenant_id;
+            const classroomId = parseInt(req.params.classroomId);
+            const academicYearId = req.query.academic_year_id ? parseInt(req.query.academic_year_id as string) : undefined;
+            const data = await this.timetableService.finalizeTimetable(tenantId, classroomId, academicYearId);
+            res.json(data);
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    async toggleSticky(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenant_id;
+            const id = parseInt(req.params.id);
+            const { is_sticky } = req.body;
+            const data = await this.timetableService.toggleSticky(tenantId, id, is_sticky);
+            res.json(data);
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    async getBreaks(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenant_id;
+            const data = await this.timetableService.getBreaks(tenantId);
+            res.json(data);
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    async createBreak(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenant_id;
+            const data = await this.timetableService.createBreak(tenantId, req.body);
+            res.json(data);
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    async deleteBreak(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenant_id;
+            const id = parseInt(req.params.id);
+            const data = await this.timetableService.deleteBreak(tenantId, id);
+            res.json(data);
+        } catch (error: any) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
 }

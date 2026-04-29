@@ -109,3 +109,56 @@ export async function getMyTenants(token: string): Promise<TenantInfo[]> {
     const json = await res.json();
     return json.data ?? json;
 }
+
+// ── OAuth2 Management ────────────────────────────────────────────────────────
+
+export interface OauthClient {
+    id: number;
+    name: string;
+    description: string;
+    client_id: string;
+    client_secret?: string;
+    created_at: string;
+}
+
+export interface OauthScope {
+    id: number;
+    value: string;
+    description: string;
+}
+
+export async function getClients(token: string): Promise<OauthClient[]> {
+    const res = await fetch(`${BASE_URL}/api/v1/oauth2/client`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const json = await res.json();
+    return json.data ?? json;
+}
+
+export async function getScopes(token: string): Promise<OauthScope[]> {
+    const res = await fetch(`${BASE_URL}/api/v1/oauth2/scope`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const json = await res.json();
+    return json.data ?? json;
+}
+
+export async function getTenants(token: string): Promise<any[]> {
+    const res = await fetch(`${BASE_URL}/api/v1/tenant`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const json = await res.json();
+    return json.data ?? json;
+}
+
+export async function createClient(token: string, payload: any): Promise<OauthClient> {
+    return post<OauthClient>('/api/v1/oauth2/client', payload, token);
+}
+
+export async function createScope(token: string, payload: any): Promise<OauthScope> {
+    return post<OauthScope>('/api/v1/oauth2/scope', payload, token);
+}
+
+export async function assignClientScope(token: string, clientId: number, scopeId: number): Promise<void> {
+    await post<void>('/api/v1/oauth2/client-scope', { client_id: clientId, scope_id: scopeId }, token);
+}

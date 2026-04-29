@@ -1,13 +1,47 @@
 import { injectable, inject } from "tsyringe";
 import e from "express";
 import StudentService from "../services/StudentService.js";
+import { AdmissionNumberService } from "../services/AdmissionNumberService.js";
 import ApiResponseHandler from "../../../core/ApiResponseHandler.js";
 import ResourceController from "../../../core/controllers/ResourceController.js";
 
 @injectable()
 export default class StudentController extends ResourceController {
-    constructor(@inject(StudentService) private studentService: StudentService) {
+    constructor(
+        @inject(StudentService) private studentService: StudentService,
+        @inject(AdmissionNumberService) private admissionNumberService: AdmissionNumberService
+    ) {
         super();
+    }
+
+    public async getNextAdmissionNumber(req: e.Request, res: e.Response): Promise<void> {
+        try {
+            const tenantId = this.getTenantId(req);
+            const data = await this.admissionNumberService.getNextAdmissionNumber(tenantId);
+            ApiResponseHandler.ok(res, "Success", { admission_no: data });
+        } catch (error: any) {
+            ApiResponseHandler.badrequest(res, "Failed to generate admission number");
+        }
+    }
+
+    public async getSettings(req: e.Request, res: e.Response): Promise<void> {
+        try {
+            const tenantId = this.getTenantId(req);
+            const data = await this.admissionNumberService.getSettings(tenantId);
+            ApiResponseHandler.ok(res, "Success", data);
+        } catch (error: any) {
+            ApiResponseHandler.badrequest(res, "Failed to fetch settings");
+        }
+    }
+
+    public async updateSettings(req: e.Request, res: e.Response): Promise<void> {
+        try {
+            const tenantId = this.getTenantId(req);
+            const data = await this.admissionNumberService.updateSettings(tenantId, req.body);
+            ApiResponseHandler.ok(res, "Settings updated successfully", data);
+        } catch (error: any) {
+            ApiResponseHandler.badrequest(res, "Failed to update settings");
+        }
     }
 
     public async create(req: e.Request, res: e.Response): Promise<void> {
@@ -84,6 +118,18 @@ export default class StudentController extends ResourceController {
         } catch (error: any) {
             console.error(error);
             ApiResponseHandler.badrequest(res, "Failed to fetch profile");
+        }
+    }
+
+    public async update(req: e.Request, res: e.Response): Promise<void> {
+        try {
+            const tenantId = this.getTenantId(req);
+            const studentId = parseInt(req.params.id, 10);
+            const student = await this.studentService.updateStudentProfile(tenantId, studentId, req.body);
+            ApiResponseHandler.ok(res, "Student updated successfully", student);
+        } catch (error: any) {
+            console.error(error);
+            ApiResponseHandler.badrequest(res, "Failed to update student");
         }
     }
 }

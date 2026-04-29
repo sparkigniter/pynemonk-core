@@ -1,21 +1,25 @@
 import { useState, useEffect } from 'react';
 import {
-    GraduationCap, User, Users, 
+    GraduationCap, User, Users,
     ArrowLeft, Sparkles, CheckCircle2, ChevronRight,
     Loader2, UserCheck, CreditCard, ShieldCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAcademics } from '../../contexts/AcademicsContext';
-import * as studentApi from '../../api/student.api';
 import * as gradeApi from '../../api/grade.api';
+import * as studentApi from '../../api/student.api';
+import { ComboBox } from '../../components/ui/ComboBox';
+import { useNotification } from '../../contexts/NotificationContext';
 
 type AdmissionStep = 'student' | 'guardian' | 'enrollment' | 'finance';
 
 export default function StudentAdmission() {
     const navigate = useNavigate();
+    const { notify } = useNotification();
     const { currentYear, years: academicYears, isYearClosed } = useAcademics();
     const [activeStep, setActiveStep] = useState<AdmissionStep>('student');
     const [isSaving, setIsSaving] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [grades, setGrades] = useState<gradeApi.Grade[]>([]);
 
     const [formData, setFormData] = useState({
@@ -27,6 +31,9 @@ export default function StudentAdmission() {
             date_of_birth: '',
             admission_no: '',
             blood_group: '',
+            mother_tongue: '',
+            religion: '',
+            nationality: 'Indian',
             phone: '',
             address: '',
         },
@@ -70,14 +77,63 @@ export default function StudentAdmission() {
                 }
             }));
         }
+
+        // Auto-generate admission number from backend
+        const fetchAdmissionNo = async () => {
+            if (!formData.student.admission_no) {
+                try {
+                    const res = await studentApi.getNextAdmissionNumber();
+                    updateStudent('admission_no', res.admission_no);
+                } catch (err) {
+                    // Fallback to year-based if API fails
+                    const year = new Date().getFullYear();
+                    const random = Math.floor(100 + Math.random() * 900);
+                    updateStudent('admission_no', `ADM/${year}/${random}`);
+                }
+            }
+            setLoading(false);
+        };
+        fetchAdmissionNo();
     }, [academicYears, currentYear]);
+
+    const validateStep = (step: AdmissionStep): boolean => {
+        const { student, guardian, enrollment } = formData;
+        if (step === 'student') {
+            if (!student.first_name || !student.admission_no || !student.gender || !student.date_of_birth) {
+                notify('warning', 'Missing Information', 'Please fill all required student identity fields.');
+                return false;
+            }
+        }
+        if (step === 'guardian') {
+            if (!guardian.first_name || !guardian.phone || !guardian.relation) {
+                notify('warning', 'Missing Information', 'Please fill basic guardian details.');
+                return false;
+            }
+        }
+        if (step === 'enrollment') {
+            if (!enrollment.grade_id) {
+                notify('warning', 'Missing Information', 'Please select a Grade/Class for enrollment.');
+                return false;
+            }
+        }
+        return true;
+    };
 
     const handleAdmission = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
+
+        // Final validation
+        if (!validateStep('student') || !validateStep('guardian') || !validateStep('enrollment')) return;
+
         setIsSaving(true);
         try {
             const payload = {
                 ...formData,
+                student: {
+                    ...formData.student,
+                    email: formData.student.email || undefined,
+                    status: 'pending' // Initialize as lead/pending
+                },
                 enrollment: {
                     ...formData.enrollment,
                     grade_id: parseInt(formData.enrollment.grade_id),
@@ -85,12 +141,19 @@ export default function StudentAdmission() {
                 }
             };
             await studentApi.admitStudent(payload);
+            notify('success', 'Admission Lead Created', `${formData.student.first_name} has been added to the admission pipeline.`);
             navigate('/students');
         } catch (err: any) {
-            alert(err.message);
+            notify('error', 'Admission Failed', err.message);
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const nextStep = () => {
+        if (activeStep === 'student' && validateStep('student')) setActiveStep('guardian');
+        else if (activeStep === 'guardian' && validateStep('guardian')) setActiveStep('enrollment');
+        else if (activeStep === 'enrollment' && validateStep('enrollment')) setActiveStep('finance');
     };
 
     const updateStudent = (field: string, value: any) => setFormData(p => ({ ...p, student: { ...p.student, [field]: value } }));
@@ -101,9 +164,16 @@ export default function StudentAdmission() {
     const steps = [
         { id: 'student', label: 'Student Profile', icon: User, description: 'Personal identity' },
         { id: 'guardian', label: 'Guardians', icon: Users, description: 'Family & contact' },
-        { id: 'enrollment', label: 'Enrollment', icon: GraduationCap, description: 'Academic placement' },
-        { id: 'finance', label: 'Fees & Finance', icon: CreditCard, description: 'Billing & discounts' },
+        { id: 'enrollment', label: 'Enrollment', icon: UserCheck, description: 'Grade & academic' },
+        { id: 'finance', label: 'Finance', icon: CreditCard, description: 'Fees & scholarship' },
     ];
+
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+            <Loader2 className="w-12 h-12 text-primary animate-spin" />
+            <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">Preparing Wizard...</p>
+        </div>
+    );
 
     if (isYearClosed()) {
         return (
@@ -119,25 +189,23 @@ export default function StudentAdmission() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                    <button 
-                        onClick={() => navigate('/students')}
-                        className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm"
-                    >
-                        <ArrowLeft size={20} />
-                    </button>
+        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            {/* Header section */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
+                <div className="flex items-center gap-6">
+                    <div className="w-20 h-20 bg-primary/10 text-primary rounded-[2.5rem] flex items-center justify-center shadow-inner">
+                        <Sparkles size={32} />
+                    </div>
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <Sparkles size={16} className="text-primary" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Intake Process</span>
-                        </div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none">New Student Admission</h1>
+                        <button onClick={() => navigate('/students')} className="flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-all font-black text-[10px] uppercase tracking-widest mb-2 group">
+                            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                            Back to Directory
+                        </button>
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Student Admission</h1>
+                        <p className="text-slate-500 font-medium">Create a new student identity and manage enrollment pipeline.</p>
                     </div>
                 </div>
-                
+
                 <div className="flex items-center gap-6">
                     {steps.map((s, i) => (
                         <div key={s.id} className="flex flex-col items-center gap-2">
@@ -161,7 +229,7 @@ export default function StudentAdmission() {
                             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-6">
                                 <GraduationCap size={24} className="text-white" />
                             </div>
-                            <h3 className="text-xl font-black leading-tight mb-2">Academic Session<br/>{currentYear?.name || 'Loading...'}</h3>
+                            <h3 className="text-xl font-black leading-tight mb-2">Academic Session<br />{currentYear?.name || 'Loading...'}</h3>
                             <p className="text-white/50 text-sm font-medium">You are currently processing an admission for the active term.</p>
                         </div>
                         <div className="mt-10 pt-8 border-t border-white/10 space-y-4 relative z-10">
@@ -171,25 +239,10 @@ export default function StudentAdmission() {
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-xs text-white/40 font-bold uppercase tracking-widest">Status</span>
-                                <span className="text-xs font-black text-emerald-400 flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                                    In Progress
+                                <span className="text-xs font-black text-amber-400 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></div>
+                                    In Pipeline
                                 </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Summary Preview</h4>
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center font-black text-slate-400">
-                                    {formData.student.first_name?.[0] || '?'}{formData.student.last_name?.[0] || ''}
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-black text-slate-800 truncate">{formData.student.first_name || 'Student Name'} {formData.student.last_name}</p>
-                                    <p className="text-[10px] font-bold text-slate-400 truncate">{formData.enrollment.grade_id ? grades.find(g => g.id.toString() === formData.enrollment.grade_id)?.name : 'Not Enrolled'}</p>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -217,28 +270,46 @@ export default function StudentAdmission() {
                                             <input required value={formData.student.first_name} onChange={e => updateStudent('first_name', e.target.value)} className="input-admission" placeholder="John" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last Name *</label>
-                                            <input required value={formData.student.last_name} onChange={e => updateStudent('last_name', e.target.value)} className="input-admission" placeholder="Doe" />
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last Name</label>
+                                            <input value={formData.student.last_name} onChange={e => updateStudent('last_name', e.target.value)} className="input-admission" placeholder="Doe" />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Admission Number *</label>
                                             <input required value={formData.student.admission_no} onChange={e => updateStudent('admission_no', e.target.value)} className="input-admission font-mono" placeholder="ADM-2026-XXX" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Primary Email *</label>
-                                            <input required type="email" value={formData.student.email} onChange={e => updateStudent('email', e.target.value)} className="input-admission" placeholder="john@edu.com" />
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Primary Email (Optional)</label>
+                                            <input type="email" value={formData.student.email} onChange={e => updateStudent('email', e.target.value)} className="input-admission" placeholder="john@edu.com" />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date of Birth *</label>
                                             <input required type="date" value={formData.student.date_of_birth} onChange={e => updateStudent('date_of_birth', e.target.value)} className="input-admission" />
                                         </div>
+                                        <ComboBox
+                                            label="Gender *"
+                                            value={formData.student.gender}
+                                            onChange={val => updateStudent('gender', val)}
+                                            options={[
+                                                { value: 'male', label: 'Male' },
+                                                { value: 'female', label: 'Female' },
+                                                { value: 'other', label: 'Other' },
+                                            ]}
+                                        />
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gender *</label>
-                                            <select value={formData.student.gender} onChange={e => updateStudent('gender', e.target.value)} className="input-admission bg-white">
-                                                <option value="male">Male</option>
-                                                <option value="female">Female</option>
-                                                <option value="other">Other</option>
-                                            </select>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mother Tongue *</label>
+                                            <input required value={formData.student.mother_tongue} onChange={e => updateStudent('mother_tongue', e.target.value)} className="input-admission" placeholder="Kannada, English, etc." />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Religion *</label>
+                                            <input required value={formData.student.religion} onChange={e => updateStudent('religion', e.target.value)} className="input-admission" placeholder="Hindu, Muslim, etc." />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nationality *</label>
+                                            <input required value={formData.student.nationality} onChange={e => updateStudent('nationality', e.target.value)} className="input-admission" placeholder="Indian" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Blood Group</label>
+                                            <input value={formData.student.blood_group} onChange={e => updateStudent('blood_group', e.target.value)} className="input-admission" placeholder="O+" />
                                         </div>
                                     </div>
                                 </div>
@@ -265,14 +336,16 @@ export default function StudentAdmission() {
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last Name *</label>
                                             <input required value={formData.guardian.last_name} onChange={e => updateGuardian('last_name', e.target.value)} className="input-admission" placeholder="Doe" />
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Relation *</label>
-                                            <select value={formData.guardian.relation} onChange={e => updateGuardian('relation', e.target.value)} className="input-admission bg-white">
-                                                <option value="father">Father</option>
-                                                <option value="mother">Mother</option>
-                                                <option value="guardian">Legal Guardian</option>
-                                            </select>
-                                        </div>
+                                        <ComboBox
+                                            label="Relation *"
+                                            value={formData.guardian.relation}
+                                            onChange={val => updateGuardian('relation', val)}
+                                            options={[
+                                                { value: 'father', label: 'Father' },
+                                                { value: 'mother', label: 'Mother' },
+                                                { value: 'guardian', label: 'Legal Guardian' },
+                                            ]}
+                                        />
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mobile Number *</label>
                                             <input required value={formData.guardian.phone} onChange={e => updateGuardian('phone', e.target.value)} className="input-admission" placeholder="+1 555-0123" />
@@ -298,27 +371,32 @@ export default function StudentAdmission() {
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-8">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Grade *</label>
-                                            <select required value={formData.enrollment.grade_id} onChange={e => updateEnrollment('grade_id', e.target.value)} className="input-admission bg-white">
-                                                <option value="">Select Grade</option>
-                                                {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Section *</label>
-                                            <select value={formData.enrollment.section} onChange={e => updateEnrollment('section', e.target.value)} className="input-admission bg-white">
-                                                <option value="A">Section A</option>
-                                                <option value="B">Section B</option>
-                                                <option value="C">Section C</option>
-                                            </select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Academic Year *</label>
-                                            <select required value={formData.enrollment.academic_year_id} onChange={e => updateEnrollment('academic_year_id', e.target.value)} className="input-admission bg-white">
-                                                {academicYears.map(y => <option key={y.id} value={y.id}>{y.name} {y.is_current ? '(Current)' : ''}</option>)}
-                                            </select>
-                                        </div>
+                                        <ComboBox
+                                            label="Target Grade *"
+                                            value={formData.enrollment.grade_id}
+                                            onChange={val => updateEnrollment('grade_id', val)}
+                                            placeholder="Select Grade"
+                                            options={grades.map(g => ({ value: g.id.toString(), label: g.name }))}
+                                        />
+                                        <ComboBox
+                                            label="Target Section *"
+                                            value={formData.enrollment.section}
+                                            onChange={val => updateEnrollment('section', val)}
+                                            options={[
+                                                { value: 'A', label: 'Section A' },
+                                                { value: 'B', label: 'Section B' },
+                                                { value: 'C', label: 'Section C' },
+                                            ]}
+                                        />
+                                        <ComboBox
+                                            label="Academic Year *"
+                                            value={formData.enrollment.academic_year_id}
+                                            onChange={val => updateEnrollment('academic_year_id', val)}
+                                            options={academicYears.map(y => ({
+                                                value: y.id.toString(),
+                                                label: `${y.name} ${y.is_current ? '(Current)' : ''}`
+                                            }))}
+                                        />
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Initial Roll Number</label>
                                             <input value={formData.enrollment.roll_number} onChange={e => updateEnrollment('roll_number', e.target.value)} className="input-admission" placeholder="e.g. 101" />
@@ -340,15 +418,17 @@ export default function StudentAdmission() {
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-8">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fee Category</label>
-                                            <select value={formData.finance.fee_category} onChange={e => updateFinance('fee_category', e.target.value)} className="input-admission bg-white">
-                                                <option value="Regular">Regular (Standard)</option>
-                                                <option value="Scholarship">Full Scholarship</option>
-                                                <option value="Sibling">Sibling Discount</option>
-                                                <option value="StaffChild">Staff Child</option>
-                                            </select>
-                                        </div>
+                                        <ComboBox
+                                            label="Fee Category"
+                                            value={formData.finance.fee_category}
+                                            onChange={val => updateFinance('fee_category', val)}
+                                            options={[
+                                                { value: 'Regular', label: 'Regular (Standard)' },
+                                                { value: 'Scholarship', label: 'Full Scholarship' },
+                                                { value: 'Sibling', label: 'Sibling Discount' },
+                                                { value: 'StaffChild', label: 'Staff Child' },
+                                            ]}
+                                        />
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Scholarship / Discount %</label>
                                             <input type="number" value={formData.finance.discount_percent} onChange={e => updateFinance('discount_percent', parseInt(e.target.value))} className="input-admission" />
@@ -389,17 +469,16 @@ export default function StudentAdmission() {
                                 <button
                                     onClick={() => {
                                         if (activeStep !== 'finance') {
-                                            const idx = steps.findIndex(s => s.id === activeStep);
-                                            setActiveStep(steps[idx + 1].id as AdmissionStep);
+                                            nextStep();
                                         } else {
                                             handleAdmission();
                                         }
                                     }}
                                     disabled={isSaving}
-                                    className="flex-1 px-10 py-5 rounded-[1.5rem] bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:opacity-90 flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-[0.98]"
+                                    className="flex-1 px-10 py-5 rounded-[1.5rem] bg-primary text-white text-xs font-black uppercase tracking-widest hover:opacity-90 flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-[0.98]"
                                 >
                                     {isSaving ? <Loader2 size={18} className="animate-spin" /> : activeStep === 'finance' ? <UserCheck size={20} /> : <ChevronRight size={20} />}
-                                    {activeStep === 'finance' ? 'Finalize Admission' : 'Continue to Next Step'}
+                                    {activeStep === 'finance' ? 'Initiate Pipeline' : 'Continue to Next Step'}
                                 </button>
                             </div>
                         </div>

@@ -40,6 +40,18 @@ import { WorkflowController } from "./api/modules/workflow/controllers/WorkflowC
 import { InternalAuthClient } from "./api/core/clients/InternalAuthClient.js";
 import { EventService } from "./api/modules/event/services/EventService.js";
 import EventController from "./api/modules/event/controllers/EventController.js";
+import DashboardService from "./api/modules/dashboard/services/DashboardService.js";
+import DashboardController from "./api/modules/dashboard/controllers/DashboardController.js";
+import AttendanceService from "./api/modules/attendance/services/AttendanceService.js";
+import AttendanceController from "./api/modules/attendance/controllers/AttendanceController.js";
+import { TeacherNoteHelper } from "./api/modules/teacher-note/helpers/TeacherNoteHelper.js";
+import { TeacherNoteService } from "./api/modules/teacher-note/services/TeacherNoteService.js";
+import { TeacherNoteController } from "./api/modules/teacher-note/controllers/TeacherNoteController.js";
+import { IntegrationRegistry } from "./api/modules/integration/core/IntegrationRegistry.js";
+import { IntegrationService } from "./api/modules/integration/services/IntegrationService.js";
+import IntegrationHelper from "./api/modules/integration/helpers/IntegrationHelper.js";
+import { PluginContextFactory } from "./api/modules/integration/core/PluginContextFactory.js";
+import { KarnatakaSATSAdapter } from "./api/modules/integration/plugins/karnataka-sats/SATSAdapter.js";
 
 import { EventEmitter } from "events";
 
@@ -108,6 +120,40 @@ function setupDI(): void {
     // ── Event Module ─────────────────────────────────────────────────────────
     container.register(EventService, { useClass: EventService });
     container.register(EventController, { useClass: EventController });
+
+    // ── Dashboard Module ─────────────────────────────────────────────────────
+    container.register(DashboardService, {
+        useFactory: (c) => new DashboardService(
+            c.resolve("DB"),
+            c.resolve(AcademicYearHelper)
+        )
+    });
+    container.register(DashboardController, {
+        useFactory: (c) => new DashboardController(c.resolve(DashboardService)),
+    });
+
+    // ── Attendance Module ───────────────────────────────────────────────────
+    container.register(AttendanceService, {
+        useFactory: (c) => new AttendanceService(c.resolve("DB"))
+    });
+    container.register(AttendanceController, {
+        useFactory: (c) => new AttendanceController(c.resolve(AttendanceService))
+    });
+
+    // ── Teacher Note Module ─────────────────────────────────────────────────
+    container.register(TeacherNoteHelper, { useClass: TeacherNoteHelper });
+    container.register(TeacherNoteService, { useClass: TeacherNoteService });
+    container.register(TeacherNoteController, { useClass: TeacherNoteController });
+
+    // ── Integration Hub ──────────────────────────────────────────────────────
+    container.register(IntegrationHelper, { useClass: IntegrationHelper });
+    container.registerSingleton(IntegrationRegistry);
+    container.register(PluginContextFactory, { useClass: PluginContextFactory });
+    container.register(IntegrationService, { useClass: IntegrationService });
+
+    // Register Plugins
+    const registry = container.resolve(IntegrationRegistry);
+    registry.register(container.resolve(KarnatakaSATSAdapter));
 }
 
 export default setupDI;

@@ -18,11 +18,18 @@ export class WorkflowService {
     }
 
     async getPipeline(tenantId: number) {
-        // Simple pipeline: list all active instances with their current step
-        return this.workflowHelper.getTemplates(tenantId); // Placeholder
+        return this.workflowHelper.getInstances(tenantId);
     }
 
     async getInstance(tenantId: number, id: number) {
         return this.workflowHelper.getInstanceDetails(tenantId, id);
+    }
+
+    async getStudentActiveWorkflow(tenantId: number, studentId: number) {
+        return this.workflowHelper.findActiveInstanceByTarget(tenantId, studentId);
+    }
+
+    async completeStepByType(tenantId: number, instanceId: number, taskType: string, data: any) {
+        return this.workflowHelper.completeStepByType(tenantId, instanceId, taskType, data);
     }
 }

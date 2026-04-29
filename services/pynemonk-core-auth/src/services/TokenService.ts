@@ -77,9 +77,6 @@ class TokenService {
         if (!user) {
             throw new Error("Invalid credentials");
         }
-        console.log("User found:", user);
-        console.log("Password:", password);
-        console.log("Hashed Password:", user.password);
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             throw new Error("Invalid credentials");

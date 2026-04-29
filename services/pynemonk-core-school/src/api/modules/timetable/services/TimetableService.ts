@@ -126,6 +126,157 @@ export class TimetableService {
         await this.pool.query('UPDATE school.timetable SET is_deleted = TRUE, updated_at = NOW() WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
     }
 
+    async toggleSticky(tenantId: number, id: number, isSticky: boolean) {
+        const query = `UPDATE school.timetable SET is_sticky = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3 RETURNING *`;
+        const res = await this.pool.query(query, [isSticky, id, tenantId]);
+        return res.rows[0];
+    }
+
+    async getBreaks(tenantId: number) {
+        const res = await this.pool.query(
+            `SELECT id, name, start_time, end_time FROM school.period_config WHERE tenant_id = $1 AND is_break = TRUE AND is_deleted = FALSE ORDER BY start_time`,
+            [tenantId]
+        );
+        return res.rows;
+    }
+
+    async createBreak(tenantId: number, data: { name: string, start_time: string, end_time: string }) {
+        const res = await this.pool.query(
+            `INSERT INTO school.period_config (tenant_id, name, start_time, end_time, is_break) VALUES ($1, $2, $3, $4, TRUE) RETURNING *`,
+            [tenantId, data.name, data.start_time, data.end_time]
+        );
+        return res.rows[0];
+    }
+
+    async deleteBreak(tenantId: number, id: number) {
+        await this.pool.query(
+            `UPDATE school.period_config SET is_deleted = TRUE WHERE id = $1 AND tenant_id = $2`,
+            [id, tenantId]
+        );
+        return { success: true };
+    }
+
+    async finalizeTimetable(tenantId: number, classroomId: number, academicYearId?: number) {
+        if (!academicYearId) {
+            const currentYear = await this.academicYearHelper.findCurrent(tenantId);
+            academicYearId = currentYear?.id;
+        }
+        await this.pool.query(`
+            UPDATE school.timetable 
+            SET is_sticky = TRUE, updated_at = NOW() 
+            WHERE tenant_id = $1 AND classroom_id = $2 AND academic_year_id = $3 AND is_deleted = FALSE
+        `, [tenantId, classroomId, academicYearId]);
+        return { success: true, message: "Timetable finalized successfully" };
+    }
+
+    async generateAutomatedTimetable(tenantId: number, classroomId: number, academicYearId?: number) {
+        if (!academicYearId) {
+            const currentYear = await this.academicYearHelper.findCurrent(tenantId);
+            academicYearId = currentYear?.id;
+        }
+
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // 1. Clear all non-sticky entries for this classroom/year
+            await client.query(`
+                UPDATE school.timetable 
+                SET is_deleted = TRUE, updated_at = NOW() 
+                WHERE tenant_id = $1 AND classroom_id = $2 AND academic_year_id = $3 AND is_sticky = FALSE
+            `, [tenantId, classroomId, academicYearId]);
+
+            // 2. Get requirements: Subjects for this grade/classroom and their target periods per week
+            const reqQuery = `
+                WITH subjects_to_schedule AS (
+                    SELECT s.id as subject_id, COALESCE(s.periods_per_week, 5) as periods_per_week
+                    FROM school.class_subject cs
+                    JOIN school.subject s ON cs.subject_id = s.id
+                    WHERE cs.classroom_id = $2 AND cs.is_deleted = FALSE
+                    UNION
+                    SELECT s.id as subject_id, COALESCE(s.periods_per_week, 5) as periods_per_week
+                    FROM school.subject s
+                    JOIN school.classroom c ON c.grade_id = s.grade_id
+                    WHERE c.id = $2 AND s.is_deleted = FALSE
+                    AND NOT EXISTS (SELECT 1 FROM school.class_subject WHERE classroom_id = $2 AND is_deleted = FALSE)
+                )
+                SELECT sts.*, ta.staff_id as teacher_id
+                FROM subjects_to_schedule sts
+                LEFT JOIN school.teacher_assignment ta ON ta.subject_id = sts.subject_id AND ta.classroom_id = $2 AND ta.academic_year_id = $1
+            `;
+            const requirements = await client.query(reqQuery, [academicYearId, classroomId]);
+            
+            // 3. Get existing occupied slots (Sticky periods + School Breaks)
+            const stickyQuery = `SELECT day_of_week, start_time, end_time FROM school.timetable WHERE classroom_id = $1 AND academic_year_id = $2 AND is_sticky = TRUE AND is_deleted = FALSE`;
+            const stickyRes = await client.query(stickyQuery, [classroomId, academicYearId]);
+            
+            const breakQuery = `SELECT start_time, end_time, name FROM school.period_config WHERE tenant_id = $1 AND is_break = TRUE AND is_deleted = FALSE`;
+            const breakRes = await client.query(breakQuery, [tenantId]);
+
+            const occupiedSlots = new Set();
+            stickyRes.rows.forEach(r => occupiedSlots.add(`${r.day_of_week}-${r.start_time}`));
+            
+            // Add breaks to occupied slots for EVERY day
+            const days = [1, 2, 3, 4, 5];
+            breakRes.rows.forEach(b => {
+                days.forEach(d => occupiedSlots.add(`${d}-${b.start_time}`));
+            });
+
+            // 4. Calculate remaining periods needed
+            const workload = requirements.rows.map(r => {
+                const existing = stickyRes.rows.filter(s => (s as any).subject_id === r.subject_id).length;
+                return { ...r, needed: Math.max(0, r.periods_per_week - existing) };
+            }).filter(w => w.needed > 0 && w.teacher_id);
+
+            if (workload.length === 0) {
+                await client.query('ROLLBACK');
+                return { success: false, message: "No subjects with assigned teachers found." };
+            }
+
+            // 5. Define standard slots
+            const times = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00"];
+
+            // 6. Greedy Allocation
+            for (const day of days) {
+                for (const time of times) {
+                    const slotKey = `${day}-${time}:00`;
+                    if (occupiedSlots.has(slotKey)) continue;
+
+                    for (let i = 0; i < workload.length; i++) {
+                        const item = workload[i];
+                        if (item.needed <= 0) continue;
+
+                        const endTime = `${(parseInt(time.split(':')[0]) + 1).toString().padStart(2, '0')}:00`;
+                        
+                        const teacherBusy = await client.query(`
+                            SELECT 1 FROM school.timetable 
+                            WHERE tenant_id = $1 AND teacher_id = $2 AND day_of_week = $3 AND is_deleted = FALSE 
+                            AND ((start_time, end_time) OVERLAPS ($4::time, $5::time))
+                        `, [tenantId, item.teacher_id, day, time, endTime]);
+
+                        if (teacherBusy.rows.length === 0) {
+                            await client.query(`
+                                INSERT INTO school.timetable (tenant_id, classroom_id, subject_id, teacher_id, academic_year_id, day_of_week, start_time, end_time, is_sticky)
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE)
+                            `, [tenantId, classroomId, item.subject_id, item.teacher_id, academicYearId, day, time, endTime]);
+                            
+                            item.needed--;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            await client.query('COMMIT');
+            return { success: true, message: "Timetable generated successfully" };
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
+        }
+    }
+
     async getAvailableSlots(tenantId: number, teacherId: number, classroomId: number, day: number) {
         const slots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00"];
         const available = [];

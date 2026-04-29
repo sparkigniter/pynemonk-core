@@ -111,6 +111,11 @@ class TenantService {
         if (!tenant) throw new ValidationError("Tenant not found");
         return tenant;
     }
+
+    /** List all registered tenants */
+    public async getAllTenants(): Promise<any[]> {
+        return this.tenantHelper.getAllTenants();
+    }
 }
 
 export default TenantService;

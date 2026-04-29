@@ -46,6 +46,8 @@ import TenantValidator from "./api/modules/tenant/validator/TenantValidator.js";
 import TenantService from "./api/modules/tenant/services/TenantService.js";
 import TenantController from "./api/modules/tenant/controllers/TenantController.js";
 
+
+
 function setupDI(): void {
 
     // ── Infrastructure ──────────────────────────────────────────────────────
@@ -103,6 +105,7 @@ function setupDI(): void {
     container.register(TenantController, {
         useFactory: (c) => new TenantController(c.resolve(TenantService)),
     });
+
 }
 
 export default setupDI;

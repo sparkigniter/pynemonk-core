@@ -10,12 +10,19 @@ dotenv.config({ path: path.resolve(__dirname, '../../../../apps/pynemonk-monolit
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const pool = new Pool({
-    user: process.env.PGUSER || 'postgres',
+    connectionString: process.env.DATABASE_URL,
     host: process.env.PGHOST === 'postgres' ? 'localhost' : (process.env.PGHOST || 'localhost'),
     database: process.env.PGDATABASE || 'pynemonk_core',
     password: process.env.PGPASSWORD || 'password',
     port: parseInt(process.env.PGPORT || '5432'),
-    ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false,
+    ssl: (process.env.PGSSL === 'true' ||
+        (process.env.PGHOST &&
+            !process.env.PGHOST.includes('localhost') &&
+            !process.env.PGHOST.includes('db') &&
+            !process.env.PGHOST.includes('postgres') &&
+            process.env.PGSSL !== 'false'))
+        ? { rejectUnauthorized: false }
+        : false,
     max: 20
 });
 

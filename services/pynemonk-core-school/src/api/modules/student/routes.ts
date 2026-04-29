@@ -15,6 +15,21 @@ studentRouter.post("/", requireAuth, requireRole(["school_admin", "principal"]),
     return ctrl.create(req, res);
 });
 
+studentRouter.get("/next-admission-number", requireAuth, requireRole(["school_admin", "principal"]), (req, res) => {
+    const ctrl = container.resolve(StudentController);
+    return ctrl.getNextAdmissionNumber(req, res);
+});
+
+studentRouter.get("/settings", requireAuth, requireRole(["school_admin", "principal"]), (req, res) => {
+    const ctrl = container.resolve(StudentController);
+    return ctrl.getSettings(req, res);
+});
+
+studentRouter.patch("/settings", requireAuth, requireRole(["school_admin", "principal"]), (req, res) => {
+    const ctrl = container.resolve(StudentController);
+    return ctrl.updateSettings(req, res);
+});
+
 /**
  * GET /api/v1/school/students
  * List students
@@ -63,6 +78,16 @@ studentRouter.post(
     (req, res) => {
         const ctrl = container.resolve(StudentController);
         return ctrl.uploadDocument(req, res);
+    },
+);
+
+studentRouter.put(
+    "/:id",
+    requireAuth,
+    requireRole(["school_admin", "principal"]),
+    (req, res) => {
+        const ctrl = container.resolve(StudentController);
+        return ctrl.update(req, res);
     },
 );
 

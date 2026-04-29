@@ -26,7 +26,9 @@ router.post("/templates", templatesRateLimiter, requireAuth, (req, res) => conta
 router.get("/templates", templatesRateLimiter, requireAuth, (req, res) => container.resolve(WorkflowController).listTemplates(req, res));
 
 // Process & Instance Management
+router.get("/pipeline", onboardRateLimiter, requireAuth, (req, res) => container.resolve(WorkflowController).getPipeline(req, res));
 router.post("/onboard", onboardRateLimiter, requireAuth, (req, res) => container.resolve(WorkflowController).startProcess(req, res));
 router.get("/instance/:id", onboardRateLimiter, requireAuth, (req, res) => container.resolve(WorkflowController).getInstance(req, res));
+router.post("/update-step", workflowRateLimiter, requireAuth, (req, res) => container.resolve(WorkflowController).updateStep(req, res));
 
 export default router;

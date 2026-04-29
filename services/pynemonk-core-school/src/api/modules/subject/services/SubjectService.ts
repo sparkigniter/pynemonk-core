@@ -33,6 +33,14 @@ export default class SubjectService {
         return this.subjectHelper.assignTeacher(tenantId, data);
     }
 
+    public async bulkAssignTeachers(tenantId: number, assignments: any[]) {
+        const results = [];
+        for (const data of assignments) {
+            results.push(await this.subjectHelper.assignTeacher(tenantId, data));
+        }
+        return results;
+    }
+
     public async getAssignments(tenantId: number, filters: any = {}) {
         if (!filters.academic_year_id) {
             const currentYear = await this.academicYearHelper.findCurrent(tenantId);

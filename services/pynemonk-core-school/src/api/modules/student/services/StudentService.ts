@@ -18,15 +18,18 @@ export default class StudentService {
     ) {}
 
     public async registerStudent(tenantId: number, data: any): Promise<any> {
-        // Validation could be expanded for new fields
+        // Validation now matches the nested frontend structure
         await this.studentValidator.validate("CREATE_STUDENT", data);
 
         const client = await this.db.connect();
         try {
             await client.query("BEGIN");
 
+            const studentData = data.student;
+            const userEmail = studentData.email || `${studentData.admission_no.replace(/[^a-zA-Z0-9]/g, '')}@pynemonk.internal`;
+            
             const authUser = await this.authClient.createUser({
-                email: data.email,
+                email: userEmail,
                 password: data.password || 'Student@123',
                 role_slug: "student",
                 tenant_id: tenantId,
@@ -34,7 +37,9 @@ export default class StudentService {
 
             const student = await this.studentHelper.createStudent(
                 {
-                    ...data,
+                    ...studentData,
+                    ...data.guardian,
+                    ...data.enrollment,
                     tenant_id: tenantId,
                     user_id: authUser.id,
                 },
@@ -48,8 +53,9 @@ export default class StudentService {
             if (studentTemplate) {
                 await this.workflowService.startOnboarding(tenantId, {
                     template_id: studentTemplate.id,
-                    target_name: `${student.first_name} ${student.last_name}`,
-                    target_email: student.email
+                    target_id: student.id,
+                    target_name: `${studentData.first_name} ${studentData.last_name}`,
+                    target_email: studentData.email
                 });
             }
 
@@ -102,6 +108,33 @@ export default class StudentService {
             metadata: { file_name: data.file_name }
         });
 
+        // AUTO-AUTOMATION: Find active workflow and complete the document step
+        try {
+            const workflow = await this.workflowService.getStudentActiveWorkflow(tenantId, studentId);
+            if (workflow) {
+                await this.workflowService.completeStepByType(tenantId, workflow.id, 'document_upload', {
+                    notes: `Auto-completed via document upload: ${data.document_type}`,
+                    attachment_url: data.file_url
+                });
+            }
+        } catch (err) {
+            console.error('Failed to auto-complete workflow step:', err);
+        }
+
         return doc;
+    }
+
+    public async updateStudentProfile(tenantId: number, studentId: number, data: any): Promise<any> {
+        const student = await this.studentHelper.updateStudent(tenantId, studentId, data);
+        
+        await this.studentHelper.createLog({
+            tenant_id: tenantId,
+            student_id: studentId,
+            event_type: 'profile_update',
+            description: `Student profile updated`,
+            metadata: { updated_fields: Object.keys(data) }
+        });
+
+        return student;
     }
 }

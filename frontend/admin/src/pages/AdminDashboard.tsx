@@ -50,17 +50,13 @@ const AdminDashboard: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen p-8 bg-slate-50">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-10">
+        <div className="p-8 space-y-8 animate-in fade-in duration-500">
+            {/* Quick Actions Header */}
+            <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                        <ShieldCheck className="text-indigo-600" size={32} />
-                        System Control Plane
-                    </h1>
-                    <p className="text-slate-500 mt-1">Platform-wide orchestration and analytics</p>
+                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">Platform Overview</h2>
+                    <p className="text-slate-500 text-sm mt-1">Real-time metrics and system health monitoring.</p>
                 </div>
-                
                 <button 
                     onClick={fetchStats}
                     className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-all shadow-sm active:scale-95"

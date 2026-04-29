@@ -54,16 +54,16 @@ export class WorkflowHelper {
     }
 
     /** Start a workflow instance for a candidate */
-    async startInstance(tenantId: number, data: { template_id: number; target_name: string; target_email?: string }) {
+    async startInstance(tenantId: number, data: { template_id: number; target_id?: number; target_name: string; target_email?: string }) {
         const client = await this.db.connect();
         try {
             await client.query('BEGIN');
             
             // 1. Create Instance
             const res = await client.query(
-                `INSERT INTO school.workflow_instance (tenant_id, template_id, target_name, target_email, status) 
-                 VALUES ($1, $2, $3, $4, 'pending') RETURNING id`,
-                [tenantId, data.template_id, data.target_name, data.target_email]
+                `INSERT INTO school.workflow_instance (tenant_id, template_id, target_id, target_name, target_email, status) 
+                 VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING id`,
+                [tenantId, data.template_id, data.target_id, data.target_name, data.target_email]
             );
             const instanceId = res.rows[0].id;
 
@@ -97,6 +97,81 @@ export class WorkflowHelper {
         } finally {
             client.release();
         }
+    }
+
+    /** Find active workflow for a specific target (e.g. student) */
+    async findActiveInstanceByTarget(tenantId: number, targetId: number) {
+        const res = await this.db.query(
+            `SELECT * FROM school.workflow_instance 
+             WHERE tenant_id = $1 AND target_id = $2 AND status = 'in_progress' AND is_deleted = FALSE 
+             LIMIT 1`,
+            [tenantId, targetId]
+        );
+        return res.rows[0];
+    }
+
+    /** Complete a step by its task type (e.g. 'document_upload') */
+    async completeStepByType(tenantId: number, instanceId: number, taskType: string, data: { notes?: string; attachment_url?: string }) {
+        const res = await this.db.query(
+            `SELECT si.id, si.step_template_id 
+             FROM school.workflow_step_instance si
+             JOIN school.workflow_step_template st ON si.step_template_id = st.id
+             WHERE si.instance_id = $1 AND si.tenant_id = $2 AND st.task_type = $3 AND si.status = 'pending'
+             LIMIT 1`,
+            [instanceId, tenantId, taskType]
+        );
+
+        if (res.rows.length > 0) {
+            const stepId = res.rows[0].id;
+            await this.db.query(
+                `UPDATE school.workflow_step_instance 
+                 SET status = 'completed', completed_at = NOW(), notes = $1, attachment_url = $2
+                 WHERE id = $3 AND tenant_id = $4`,
+                [data.notes, data.attachment_url, stepId, tenantId]
+            );
+
+            // Trigger progression to next step
+            await this.progressToNextStep(tenantId, instanceId);
+        }
+    }
+
+    private async progressToNextStep(tenantId: number, instanceId: number) {
+        // Find next pending step
+        const steps = await this.db.query(
+            `SELECT si.id, si.step_template_id 
+             FROM school.workflow_step_instance si
+             JOIN school.workflow_step_template st ON si.step_template_id = st.id
+             WHERE si.instance_id = $1 AND si.tenant_id = $2 AND si.status = 'pending'
+             ORDER BY st.step_order ASC LIMIT 1`,
+            [instanceId, tenantId]
+        );
+
+        if (steps.rows.length > 0) {
+            await this.db.query(
+                "UPDATE school.workflow_instance SET current_step_id = $1 WHERE id = $2",
+                [steps.rows[0].step_template_id, instanceId]
+            );
+        } else {
+            // All steps done!
+            await this.db.query(
+                "UPDATE school.workflow_instance SET status = 'completed', completed_at = NOW() WHERE id = $1",
+                [instanceId]
+            );
+        }
+    }
+
+    /** List active instances */
+    async getInstances(tenantId: number) {
+        const res = await this.db.query(
+            `SELECT i.*, t.name as template_name, st.name as current_step_name, st.task_type
+             FROM school.workflow_instance i
+             JOIN school.workflow_template t ON i.template_id = t.id
+             LEFT JOIN school.workflow_step_template st ON i.current_step_id = st.id
+             WHERE i.tenant_id = $1 AND i.is_deleted = FALSE
+             ORDER BY i.created_at DESC`,
+            [tenantId]
+        );
+        return res.rows;
     }
 
     /** Get detailed instance progress */

@@ -73,6 +73,17 @@ export class ExamController extends BaseController {
         }
     }
 
+    public async deletePaper(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenant_id;
+            const paperId = parseInt(req.params.paperId);
+            await this.examService.deletePaper(tenantId, paperId);
+            return this.ok(res, "Exam paper deleted successfully");
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
+
     public async addInvitation(req: Request, res: Response) {
         try {
             const tenantId = (req as any).user.tenant_id;
@@ -110,9 +121,10 @@ export class ExamController extends BaseController {
     public async saveMarks(req: Request, res: Response) {
         try {
             const tenantId = (req as any).user.tenant_id;
+            const userId = (req as any).user.id;
             const examId = parseInt(req.params.id);
             const paperId = parseInt(req.params.paperId);
-            const result = await this.examService.saveMarks(tenantId, examId, paperId, req.body);
+            const result = await this.examService.saveMarks(tenantId, examId, paperId, req.body, userId);
             return this.ok(res, "Marks saved successfully", result);
         } catch (error: any) {
             return this.internalservererror(res, error.message);
@@ -125,6 +137,37 @@ export class ExamController extends BaseController {
             const examId = parseInt(req.params.id);
             const result = await this.examService.updateStatus(tenantId, examId, req.body.status);
             return this.ok(res, "Exam status updated", result);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
+
+    public async updateExam(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenant_id;
+            const id = parseInt(req.params.id);
+            const result = await this.examService.updateExam(tenantId, id, req.body);
+            return this.ok(res, "Exam updated successfully", result);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
+
+    public async listInvitedStudents(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenant_id;
+            const examId = parseInt(req.params.id);
+            const filters = {
+                page: req.query.page ? parseInt(req.query.page as string) : 1,
+                limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+                search: req.query.search as string,
+                status: req.query.status as string,
+                grade_id: req.query.grade_id ? parseInt(req.query.grade_id as string) : undefined,
+                classroom_id: req.query.classroom_id ? parseInt(req.query.classroom_id as string) : undefined,
+                subject_id: req.query.subject_id ? parseInt(req.query.subject_id as string) : undefined
+            };
+            const result = await this.examService.getPaginatedStudents(tenantId, examId, filters);
+            return this.ok(res, "Invited students retrieved", result);
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }

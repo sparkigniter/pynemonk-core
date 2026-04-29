@@ -145,10 +145,17 @@ class AuthService {
 
         // 7. Aggregate all permissions (scopes) using the high-architecture method
         const permissions = await this.userHelper.getEffectivePermissions(user.id, selectedTenantId);
-        const scopeString = permissions.join(' ');
+        
+        // 7b. Intersect with allowed client scopes (OAuth2 strictness)
+        const clientScopes = await this.oauthClientHelper.getClientScopes(data.client_id);
+        const effectiveScopes = clientScopes.length > 0 
+            ? permissions.filter(p => clientScopes.includes(p))
+            : permissions; // Fallback if no client scopes restricted in DB
+
+        const scopeString = effectiveScopes.join(' ');
 
         console.log(`[AuthService] Login successful. User: ${user.email}, Selected Tenant: ${selectedTenantId}`);
-        console.log(`[AuthService] Scopes/Permissions: ${scopeString}`);
+        console.log(`[AuthService] Effective Scopes (User ∩ Client): ${scopeString}`);
 
         // 8. Build token payload
         const payload: TokenPayload = {
@@ -226,7 +233,14 @@ class AuthService {
 
         // 7. Aggregate all permissions (scopes) using the high-architecture method
         const permissions = await this.userHelper.getEffectivePermissions(user.id, tenantId);
-        const scopeString = permissions.join(' ');
+        
+        // 7b. Intersect with allowed client scopes
+        const clientScopes = await this.oauthClientHelper.getClientScopes(data.client_id);
+        const effectiveScopes = clientScopes.length > 0 
+            ? permissions.filter(p => clientScopes.includes(p))
+            : permissions;
+
+        const scopeString = effectiveScopes.join(' ');
 
         const payload: TokenPayload = {
             grant_type: 'refresh_token',

@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { 
-    UserPlus, Mail, Phone, BookOpen, Star, Loader2, 
+import {
+    UserPlus, Mail, Phone, BookOpen, Star, Loader2,
     CheckCircle2, CreditCard, Calendar, ShieldCheck,
     ChevronRight, User, MapPin, ArrowLeft, Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as staffApi from '../../api/staff.api';
+import { ComboBox } from '../../components/ui/ComboBox';
+import { useNotification } from '../../contexts/NotificationContext';
 
 export default function StaffRegistration() {
     const navigate = useNavigate();
+    const { notify } = useNotification();
     const [activeSection, setActiveSection] = useState('identity');
     const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
@@ -36,7 +39,7 @@ export default function StaffRegistration() {
         bank_account_no: '',
         bank_name: '',
         ifsc_code: '',
-        password: 'Password123!',
+        password: '',
     });
 
     const handleAddStaff = async (e?: React.FormEvent) => {
@@ -44,9 +47,10 @@ export default function StaffRegistration() {
         setIsSaving(true);
         try {
             await staffApi.createStaff(formData);
+            notify('success', 'Staff Registered', `${formData.first_name} ${formData.last_name} has been added to the system.`);
             navigate('/teachers');
         } catch (err: any) {
-            alert(err.message);
+            notify('error', 'Registration Failed', err.message);
         } finally {
             setIsSaving(false);
         }
@@ -64,7 +68,7 @@ export default function StaffRegistration() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex items-center gap-4">
-                    <button 
+                    <button
                         onClick={() => navigate('/teachers')}
                         className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm"
                     >
@@ -78,15 +82,15 @@ export default function StaffRegistration() {
                         <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none">Register New Staff</h1>
                     </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                     <div className="text-right hidden md:block">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Progress</p>
                         <p className="text-sm font-bold text-slate-900">{sections.findIndex(s => s.id === activeSection) + 1} / {sections.length} Sections</p>
                     </div>
                     <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                            className="h-full bg-theme-primary transition-all duration-500" 
+                        <div
+                            className="h-full bg-theme-primary transition-all duration-500"
                             style={{ width: `${((sections.findIndex(s => s.id === activeSection) + 1) / sections.length) * 100}%` }}
                         />
                     </div>
@@ -100,14 +104,14 @@ export default function StaffRegistration() {
                         const Icon = sec.icon;
                         const isActive = activeSection === sec.id;
                         const isPast = sections.findIndex(s => s.id === activeSection) > i;
-                        
+
                         return (
                             <button
                                 key={sec.id}
                                 onClick={() => setActiveSection(sec.id)}
                                 className={`w-full group flex items-start gap-4 p-4 rounded-2xl transition-all duration-300 text-left
-                                    ${isActive 
-                                        ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 scale-[1.02]' 
+                                    ${isActive
+                                        ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 scale-[1.02]'
                                         : 'hover:bg-slate-50'}`}
                             >
                                 <div className={`mt-0.5 p-2 rounded-xl transition-colors
@@ -157,14 +161,16 @@ export default function StaffRegistration() {
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-8">
-                                        <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Gender</label>
-                                            <select className="input-field-premium" value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })}>
-                                                <option>Male</option>
-                                                <option>Female</option>
-                                                <option>Other</option>
-                                            </select>
-                                        </div>
+                                        <ComboBox
+                                            label="Gender"
+                                            value={formData.gender}
+                                            onChange={val => setFormData({ ...formData, gender: val as string })}
+                                            options={[
+                                                { value: 'Male', label: 'Male' },
+                                                { value: 'Female', label: 'Female' },
+                                                { value: 'Other', label: 'Other' },
+                                            ]}
+                                        />
                                         <div className="space-y-3 group">
                                             <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Date of Birth</label>
                                             <div className="relative">
@@ -183,15 +189,17 @@ export default function StaffRegistration() {
                                             <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Nationality</label>
                                             <input className="input-field-premium" value={formData.nationality} onChange={e => setFormData({ ...formData, nationality: e.target.value })} />
                                         </div>
-                                        <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Marital Status</label>
-                                            <select className="input-field-premium" value={formData.marital_status} onChange={e => setFormData({ ...formData, marital_status: e.target.value })}>
-                                                <option>Single</option>
-                                                <option>Married</option>
-                                                <option>Widowed</option>
-                                                <option>Divorced</option>
-                                            </select>
-                                        </div>
+                                        <ComboBox
+                                            label="Marital Status"
+                                            value={formData.marital_status}
+                                            onChange={val => setFormData({ ...formData, marital_status: val as string })}
+                                            options={[
+                                                { value: 'Single', label: 'Single' },
+                                                { value: 'Married', label: 'Married' },
+                                                { value: 'Widowed', label: 'Widowed' },
+                                                { value: 'Divorced', label: 'Divorced' },
+                                            ]}
+                                        />
                                     </div>
                                 </div>
                             )}
@@ -356,7 +364,7 @@ export default function StaffRegistration() {
                                 >
                                     Cancel
                                 </button>
-                                
+
                                 <div className="flex-1 flex gap-4">
                                     {activeSection !== 'identity' && (
                                         <button

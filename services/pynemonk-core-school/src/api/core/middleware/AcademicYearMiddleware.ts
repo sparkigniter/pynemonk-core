@@ -33,6 +33,11 @@ export class AcademicYearMiddleware {
         }
 
         try {
+            if (!authReq.user) {
+                console.warn("[AcademicYearMiddleware] User not found on request. Skipping closed year protection. Ensure requireAuth is called before this middleware.");
+                return next();
+            }
+
             const helper = container.resolve(AcademicYearHelper);
             const isClosed = await helper.isClosed(authReq.user.tenantId, parseInt(academicYearId as string));
 
@@ -47,7 +52,7 @@ export class AcademicYearMiddleware {
             next();
         } catch (err) {
             console.error("[AcademicYearMiddleware] Error:", err);
-            next(); // Allow on error to avoid breaking the app, or block for strict security?
+            next(); 
         }
     }
 }

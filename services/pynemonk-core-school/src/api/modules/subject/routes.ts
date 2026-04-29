@@ -28,6 +28,12 @@ subjectRouter.post(
     requireRole(["owner", "principal", "school_admin"]),
     (req, res) => container.resolve(SubjectController).assignTeacher(req as AuthenticatedRequest, res),
 );
+subjectRouter.post(
+    "/bulk-assign-teacher",
+    requireAuth,
+    requireRole(["owner", "principal", "school_admin"]),
+    (req, res) => container.resolve(SubjectController).bulkAssignTeachers(req as AuthenticatedRequest, res),
+);
 subjectRouter.put(
     "/:id",
     requireAuth,

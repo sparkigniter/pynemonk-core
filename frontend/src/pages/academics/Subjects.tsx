@@ -9,14 +9,18 @@ import * as subjectApi from '../../api/subject.api';
 import * as gradeApi from '../../api/grade.api';
 import * as staffApi from '../../api/staff.api';
 import * as classroomApi from '../../api/classroom.api';
-import Modal from '../../components/ui/Modal';
 import { academicsApi } from '../../api/academics.api';
+import { ComboBox } from '../../components/ui/ComboBox';
+import { useNotification } from '../../contexts/NotificationContext';
+import Modal from '../../components/ui/Modal';
 
 type ViewMode = 'overview' | 'quick-edit';
 
 export default function Subjects() {
+    const { notify } = useNotification();
     // Data States
     const [subjects, setSubjects] = useState<subjectApi.Subject[]>([]);
+    const [allSubjects, setAllSubjects] = useState<subjectApi.Subject[]>([]);
     const [assignments, setAssignments] = useState<subjectApi.Assignment[]>([]);
     const [grades, setGrades] = useState<gradeApi.Grade[]>([]);
     const [staff, setStaff] = useState<staffApi.Staff[]>([]);
@@ -53,8 +57,8 @@ export default function Subjects() {
         try {
             const [gradeData, staffData, classroomData, yearsData] = await Promise.all([
                 gradeApi.getGrades(),
-                staffApi.getStaffList({ limit: 100 }),
-                classroomApi.getClassrooms(),
+                staffApi.getStaffList({ limit: 500 }),
+                classroomApi.getClassrooms({ limit: 500 }),
                 academicsApi.getYears()
             ]);
             
@@ -76,20 +80,27 @@ export default function Subjects() {
     }, [selectedGradeId]);
 
     const fetchSubjectsAndAssignments = useCallback(async () => {
-        if (!selectedGradeId) return;
+        if (!selectedGradeId || !assignFormData.academic_year_id) return;
         setLoading(true);
         try {
-            const [subjectRes, assignmentData] = await Promise.all([
+            const [subjectRes, allSubjectRes, assignmentData] = await Promise.all([
                 subjectApi.getSubjectList({ 
                     grade_id: selectedGradeId, 
                     search: searchQuery,
                     page: pagination.page,
                     limit: pagination.limit
                 }),
-                subjectApi.getAssignments()
+                subjectApi.getSubjectList({ 
+                    grade_id: selectedGradeId, 
+                    limit: 500 // Fetch all for dropdowns
+                }),
+                subjectApi.getAssignments({
+                    academic_year_id: parseInt(assignFormData.academic_year_id)
+                })
             ]);
             
             setSubjects(subjectRes.data);
+            setAllSubjects(allSubjectRes.data);
             setAssignments(assignmentData);
             setPagination(prev => ({ ...prev, total: subjectRes.pagination.total }));
         } catch (err) {
@@ -112,36 +123,55 @@ export default function Subjects() {
         localStorage.setItem('subjects_view_mode', viewMode);
     }, [viewMode]);
 
-    // Summary Calculations (Global context)
-    const stats = useMemo(() => {
-        const total = subjects.length; // Local to grade
-        const assignedIds = new Set(assignments.filter(a => subjects.some(s => s.id === a.subject_id)).map(a => a.subject_id));
-        const assigned = Array.from(assignedIds).length;
-        const missing = total - assigned;
-        return { total, assigned, missing };
-    }, [subjects, assignments]);
-
-    // Derived Matrix for Quick Edit (Specific to selected grade)
+    // Matrix Calculation (Subject-Classroom pairs)
     const matrix = useMemo(() => {
         const rows: any[] = [];
         subjects.forEach(subject => {
-            const relevantClassrooms = classrooms.filter(c => c.grade_id === subject.grade_id);
+            const relevantClassrooms = classrooms.filter(c => Number(c.grade_id) === Number(subject.grade_id));
             relevantClassrooms.forEach(classroom => {
                 const assignment = assignments.find(a => 
-                    a.subject_id === subject.id && a.classroom_id === classroom.id
+                    Number(a.subject_id) === Number(subject.id) && 
+                    Number(a.classroom_id) === Number(classroom.id)
                 );
+                
+                // Extremely defensive ID extraction
+                const rawId = assignment?.staff_id || (assignment as any)?.teacher_id || (assignment as any)?.staffId || (assignment as any)?.teacherId;
+                const teacherId = rawId ? Number(rawId) : null;
+                const teacherName = (assignment as any)?.teacher_name || 'Assigned Teacher';
+
+                // Ensure the assigned teacher is in the staff options even if not in the main staff list
+                const rowStaffOptions = [...staff];
+                if (teacherId && !staff.some(s => Number(s.id) === teacherId)) {
+                    rowStaffOptions.push({
+                        id: teacherId,
+                        first_name: teacherName,
+                        last_name: '',
+                        designation: 'Assigned'
+                    } as any);
+                }
+
                 rows.push({
                     id: `${subject.id}-${classroom.id}`,
                     subject,
                     classroom,
                     assignment,
-                    teacherId: assignment?.staff_id?.toString() || '',
-                    isAssigned: !!assignment
+                    teacherId,
+                    teacherName,
+                    staffOptions: rowStaffOptions,
+                    isAssigned: !!assignment && !!teacherId
                 });
             });
         });
         return rows;
-    }, [subjects, classrooms, assignments]);
+    }, [subjects, classrooms, assignments, staff]);
+
+    // Summary Calculations (Based on the Matrix)
+    const stats = useMemo(() => {
+        const total = matrix.length;
+        const assigned = matrix.filter(r => r.isAssigned).length;
+        const missing = total - assigned;
+        return { total, assigned, missing };
+    }, [matrix]);
 
     const handleAddSubject = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -154,8 +184,9 @@ export default function Subjects() {
             await fetchSubjectsAndAssignments();
             setIsSubjectModalOpen(false);
             setSubjectFormData({ name: '', code: '', grade_id: '', description: '' });
+            notify('success', 'Subject Created', `${subjectFormData.name} is now part of the curriculum.`);
         } catch (err: any) {
-            alert(err.message);
+            notify('error', 'Creation Failed', err.message);
         } finally {
             setIsSaving(false);
         }
@@ -175,8 +206,49 @@ export default function Subjects() {
             await fetchSubjectsAndAssignments();
             setIsAssignModalOpen(false);
             setAssignFormData(prev => ({ ...prev, staff_id: '', classroom_id: '', subject_id: '' }));
+            notify('success', 'Teacher Assigned', 'Curriculum matrix has been updated.');
         } catch (err: any) {
-            alert(err.message);
+            notify('error', 'Assignment Failed', err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+    const [bulkTeacherId, setBulkTeacherId] = useState<string>('');
+
+    const toggleRow = (id: string) => {
+        const next = new Set(selectedRows);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedRows(next);
+    };
+
+    const toggleAll = () => {
+        if (selectedRows.size === matrix.length) setSelectedRows(new Set());
+        else setSelectedRows(new Set(matrix.map(r => r.id)));
+    };
+
+    const handleBulkAssign = async () => {
+        if (!bulkTeacherId || selectedRows.size === 0) return;
+        setIsSaving(true);
+        try {
+            const payload = Array.from(selectedRows).map(id => {
+                const row = matrix.find(r => r.id === id);
+                return {
+                    staff_id: parseInt(bulkTeacherId),
+                    classroom_id: row.classroom.id,
+                    subject_id: row.subject.id,
+                    academic_year_id: parseInt(assignFormData.academic_year_id)
+                };
+            });
+            await subjectApi.bulkAssignTeachers(payload);
+            await fetchSubjectsAndAssignments();
+            setSelectedRows(new Set());
+            setBulkTeacherId('');
+            notify('success', 'Bulk Assignment Update', `${payload.length} assignments updated successfully.`);
+        } catch (err: any) {
+            notify('error', 'Bulk Update Failed', err.message);
         } finally {
             setIsSaving(false);
         }
@@ -185,7 +257,41 @@ export default function Subjects() {
     const selectedGrade = grades.find(g => g.id === selectedGradeId);
 
     return (
-        <div className="flex h-[calc(100vh-120px)] bg-slate-50/50 rounded-[3rem] overflow-hidden border border-slate-200 shadow-2xl">
+        <div className="flex h-[calc(100vh-120px)] bg-slate-50/50 rounded-[3rem] overflow-hidden border border-slate-200 shadow-2xl relative">
+            {/* Bulk Action Bar */}
+            {selectedRows.size > 0 && (
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-8 duration-500">
+                    <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-4 flex items-center gap-6 shadow-2xl shadow-slate-900/40">
+                        <div className="px-6 border-r border-white/10">
+                            <span className="text-white font-black text-sm tracking-tight">{selectedRows.size} Rows Selected</span>
+                        </div>
+                        <div className="w-64">
+                            <ComboBox
+                                placeholder="Select Teacher for all..."
+                                value={bulkTeacherId}
+                                onChange={val => setBulkTeacherId(val?.toString() || '')}
+                                options={staff.map(s => ({ value: s.id, label: `${s.first_name} ${s.last_name}` }))}
+                                variant="glass"
+                                direction="up"
+                            />
+                        </div>
+                        <button
+                            onClick={handleBulkAssign}
+                            disabled={!bulkTeacherId || isSaving}
+                            className="bg-theme-primary text-white px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                        >
+                            {isSaving ? 'Updating...' : 'Apply & Save'}
+                        </button>
+                        <button
+                            onClick={() => setSelectedRows(new Set())}
+                            className="p-3 text-slate-400 hover:text-white transition-colors"
+                        >
+                            <AlertCircle size={20} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Grade Sidebar Rail */}
             <div className="w-80 bg-white border-r border-slate-200 flex flex-col">
                 <div className="p-8 border-b border-slate-100">
@@ -207,6 +313,7 @@ export default function Subjects() {
                             onClick={() => {
                                 setSelectedGradeId(grade.id);
                                 setPagination(prev => ({ ...prev, page: 1 }));
+                                setSelectedRows(new Set());
                             }}
                             className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all duration-300 ${
                                 selectedGradeId === grade.id 
@@ -242,7 +349,7 @@ export default function Subjects() {
                                     {selectedGrade?.name || 'Curriculum Matrix'}
                                 </h1>
                             </div>
-                            <p className="text-slate-500 font-medium">Managing {pagination.total} subjects for this grade level.</p>
+                            <p className="text-slate-500 font-medium">Managing {stats.total} curriculum slots for this grade level.</p>
                         </div>
 
                         <div className="flex items-center gap-2 p-1 bg-white rounded-2xl border border-slate-200 shadow-sm">
@@ -266,20 +373,20 @@ export default function Subjects() {
                     {/* Stats Rail */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <StatCard 
-                            label="Total Subjects" 
+                            label="Matrix Slots" 
                             value={stats.total} 
                             icon={Layers} 
                             color="primary" 
                         />
                         <StatCard 
-                            label="Assigned" 
+                            label="Allocated" 
                             value={stats.assigned} 
                             icon={CheckCircle} 
                             color="emerald" 
                             percentage={stats.total ? Math.round((stats.assigned / stats.total) * 100) : 0}
                         />
                         <StatCard 
-                            label="Missing" 
+                            label="Unassigned" 
                             value={stats.missing} 
                             icon={AlertCircle} 
                             color="rose" 
@@ -319,7 +426,7 @@ export default function Subjects() {
                     {loading ? (
                         <div className="h-64 flex flex-col items-center justify-center gap-4">
                             <Loader2 size={32} className="text-theme-primary animate-spin" />
-                            <p className="text-slate-400 font-black text-xs uppercase tracking-widest">Refreshing Matrix...</p>
+                            <p className="text-slate-400 font-black text-xs uppercase tracking-widest">Updating View...</p>
                         </div>
                     ) : viewMode === 'overview' ? (
                         <div className="space-y-8">
@@ -364,10 +471,18 @@ export default function Subjects() {
                             )}
                         </div>
                     ) : (
-                        <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl shadow-slate-200/20 mb-20">
+                        <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-xl shadow-slate-200/20 mb-20 relative">
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50/80 border-b border-slate-100">
+                                        <th className="px-8 py-6 w-16">
+                                            <button 
+                                                onClick={toggleAll}
+                                                className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${selectedRows.size === matrix.length ? 'bg-theme-primary border-theme-primary' : 'bg-white border-slate-200'}`}
+                                            >
+                                                {selectedRows.size === matrix.length && <Check size={12} className="text-white" strokeWidth={4} />}
+                                            </button>
+                                        </th>
                                         <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Classroom</th>
                                         <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Subject</th>
                                         <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Assigned Faculty</th>
@@ -376,7 +491,15 @@ export default function Subjects() {
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {matrix.map((row) => (
-                                        <tr key={row.id} className="group hover:bg-slate-50/50 transition-colors">
+                                        <tr key={row.id} className={`group hover:bg-slate-50/50 transition-colors ${selectedRows.has(row.id) ? 'bg-theme-primary/5' : ''}`}>
+                                            <td className="px-8 py-6">
+                                                <button 
+                                                    onClick={() => toggleRow(row.id)}
+                                                    className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${selectedRows.has(row.id) ? 'bg-theme-primary border-theme-primary' : 'bg-white border-slate-200 group-hover:border-slate-300'}`}
+                                                >
+                                                    {selectedRows.has(row.id) && <Check size={12} className="text-white" strokeWidth={4} />}
+                                                </button>
+                                            </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-black text-slate-800">{row.classroom.name}</span>
@@ -395,39 +518,33 @@ export default function Subjects() {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
-                                                <select
-                                                    className={`w-full max-w-[280px] px-5 py-3 rounded-2xl text-sm font-bold border focus:outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all ${
-                                                        row.isAssigned ? 'bg-white border-slate-200 text-slate-700 shadow-sm' : 'bg-rose-50 border-rose-100 text-rose-600'
-                                                    }`}
+                                                <ComboBox
+                                                    placeholder="Choose Teacher..."
                                                     value={row.teacherId}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
+                                                    onChange={(val) => {
                                                         if (val) {
                                                             handleAssignTeacher(null, {
-                                                                staff_id: parseInt(val),
+                                                                staff_id: Number(val),
                                                                 classroom_id: row.classroom.id,
                                                                 subject_id: row.subject.id,
                                                                 academic_year_id: parseInt(assignFormData.academic_year_id)
                                                             });
                                                         }
                                                     }}
-                                                >
-                                                    <option value="">Choose Teacher...</option>
-                                                    {staff.map(s => (
-                                                        <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>
-                                                    ))}
-                                                </select>
+                                                    options={row.staffOptions.map((s: any) => ({ value: s.id, label: `${s.first_name} ${s.last_name}` }))}
+                                                    direction={matrix.indexOf(row) > matrix.length - 3 ? 'up' : 'down'}
+                                                />
                                             </td>
                                             <td className="px-8 py-6 text-right">
                                                 {row.isAssigned ? (
                                                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 text-[10px] font-black uppercase tracking-widest">
                                                         <Check size={14} strokeWidth={3} />
-                                                        Synced
+                                                        Active
                                                     </div>
                                                 ) : (
                                                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 text-[10px] font-black uppercase tracking-widest">
                                                         <Clock size={14} strokeWidth={3} />
-                                                        Pending
+                                                        Waiting
                                                     </div>
                                                 )}
                                             </td>
@@ -466,20 +583,13 @@ export default function Subjects() {
                         </div>
                     </div>
                     
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Grade</label>
-                        <select
-                            required
-                            className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-theme-primary/10 transition-all font-bold text-slate-700"
-                            value={subjectFormData.grade_id}
-                            onChange={e => setSubjectFormData({ ...subjectFormData, grade_id: e.target.value })}
-                        >
-                            <option value="">Select Grade</option>
-                            {grades.map(g => (
-                                <option key={g.id} value={g.id}>{g.name}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <ComboBox
+                        label="Target Grade"
+                        value={subjectFormData.grade_id ? Number(subjectFormData.grade_id) : null}
+                        onChange={val => setSubjectFormData({ ...subjectFormData, grade_id: val?.toString() || '' })}
+                        placeholder="Select Grade"
+                        options={grades.map(g => ({ value: g.id, label: g.name }))}
+                    />
 
                     <div className="flex gap-4 pt-4">
                         <button type="button" onClick={() => setIsSubjectModalOpen(false)} className="flex-1 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">Cancel</button>
@@ -496,50 +606,29 @@ export default function Subjects() {
 
             <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title="Teacher Assignment">
                 <form onSubmit={handleAssignTeacher} className="space-y-6">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pick Subject</label>
-                        <select
-                            required
-                            className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700"
-                            value={assignFormData.subject_id}
-                            onChange={e => setAssignFormData({ ...assignFormData, subject_id: e.target.value })}
-                        >
-                            <option value="">Select Subject</option>
-                            {subjects.map(s => (
-                                <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-                            ))}
-                        </select>
-                    </div>
+                    <ComboBox
+                        label="Pick Subject"
+                        value={assignFormData.subject_id ? Number(assignFormData.subject_id) : null}
+                        onChange={val => setAssignFormData({ ...assignFormData, subject_id: val?.toString() || '' })}
+                        placeholder="Select Subject"
+                        options={allSubjects.map(s => ({ value: s.id, label: `${s.name} (${s.code})` }))}
+                    />
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Educator</label>
-                        <select
-                            required
-                            className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700"
-                            value={assignFormData.staff_id}
-                            onChange={e => setAssignFormData({ ...assignFormData, staff_id: e.target.value })}
-                        >
-                            <option value="">Select Teacher</option>
-                            {staff.map(s => (
-                                <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.designation})</option>
-                            ))}
-                        </select>
-                    </div>
+                    <ComboBox
+                        label="Select Educator"
+                        value={assignFormData.staff_id ? Number(assignFormData.staff_id) : null}
+                        onChange={val => setAssignFormData({ ...assignFormData, staff_id: val?.toString() || '' })}
+                        placeholder="Select Teacher"
+                        options={staff.map(s => ({ value: s.id, label: `${s.first_name} ${s.last_name} (${s.designation})` }))}
+                    />
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Classroom</label>
-                        <select
-                            required
-                            className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700"
-                            value={assignFormData.classroom_id}
-                            onChange={e => setAssignFormData({ ...assignFormData, classroom_id: e.target.value })}
-                        >
-                            <option value="">Select Classroom</option>
-                            {classrooms.filter(c => c.grade_id === selectedGradeId).map(c => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <ComboBox
+                        label="Target Classroom"
+                        value={assignFormData.classroom_id ? Number(assignFormData.classroom_id) : null}
+                        onChange={val => setAssignFormData({ ...assignFormData, classroom_id: val?.toString() || '' })}
+                        placeholder="Select Classroom"
+                        options={classrooms.filter(c => Number(c.grade_id) === Number(selectedGradeId)).map(c => ({ value: c.id, label: c.name }))}
+                    />
 
                     <div className="flex gap-4 pt-4">
                         <button type="button" onClick={() => setIsAssignModalOpen(false)} className="flex-1 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">Cancel</button>

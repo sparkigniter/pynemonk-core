@@ -17,11 +17,24 @@ const subjects: SubjectData[] = [
     { subject: 'Computer Science', score: 95, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
 ];
 
-const SubjectPerformance: React.FC = () => {
+interface SubjectPerformanceProps {
+    data?: any[];
+}
+
+const SubjectPerformance: React.FC<SubjectPerformanceProps> = ({ data = [] }) => {
+    const displaySubjects = data.length > 0 ? data.map(item => ({
+        subject: item.subject_name || item.grade_name || 'General',
+        score: Math.round(item.average || item.average_percentage || 0),
+        color: 'var(--primary)',
+        gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))'
+    })) : subjects;
+
+    const averageScore = Math.round(displaySubjects.reduce((a, b) => a + b.score, 0) / (displaySubjects.length || 1));
+
     return (
         <div className="space-y-6">
             <div className="space-y-5">
-                {subjects.slice(0, 5).map((item, idx) => (
+                {displaySubjects.slice(0, 5).map((item, idx) => (
                     <div key={idx} className="animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
                         <div className="flex items-center justify-between mb-2 px-1">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.subject}</span>
@@ -46,7 +59,7 @@ const SubjectPerformance: React.FC = () => {
                     <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Global Average</p>
                     <div className="flex items-baseline gap-1">
                         <span className="text-3xl font-black text-slate-900 tracking-tighter">
-                            {Math.round(subjects.reduce((a, b) => a + b.score, 0) / subjects.length)}
+                            {averageScore}
                         </span>
                         <span className="text-sm font-black text-primary/40">%</span>
                     </div>

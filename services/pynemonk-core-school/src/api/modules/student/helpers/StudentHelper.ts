@@ -47,7 +47,11 @@ export default class StudentHelper {
                     c.name as classroom_name, 
                     g.id as current_grade_id, 
                     g.name as current_grade_name, 
-                    g.sequence_order as current_grade_sequence
+                    g.sequence_order as current_grade_sequence,
+                    (SELECT jsonb_object_agg(system_slug, external_id) 
+                     FROM school.external_identity 
+                     WHERE tenant_id = s.tenant_id AND entity_type = 'student' AND entity_id = s.id
+                    ) as external_ids
              FROM school.student s
              LEFT JOIN school.student_enrollment se ON s.id = se.student_id AND se.status = 'active' AND se.is_deleted = FALSE
              LEFT JOIN school.classroom c ON se.classroom_id = c.id

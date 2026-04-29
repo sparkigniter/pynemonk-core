@@ -3,6 +3,7 @@ import {
     Plus, Trash2, GripVertical, 
     Save, ShieldAlert
 } from 'lucide-react';
+import { ComboBox } from '../../components/ui/ComboBox';
 
 const WorkflowBuilder = () => {
     const [steps] = useState([
@@ -40,14 +41,16 @@ const WorkflowBuilder = () => {
                                 <label className="text-xs font-semibold text-slate-500">Template Name</label>
                                 <input type="text" className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="e.g. Standard Admission" />
                             </div>
-                            <div>
-                                <label className="text-xs font-semibold text-slate-500">Apply To</label>
-                                <select className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm">
-                                    <option>Students</option>
-                                    <option>Teachers</option>
-                                    <option>Support Staff</option>
-                                </select>
-                            </div>
+                            <ComboBox
+                                label="Apply To"
+                                value="Students"
+                                onChange={() => {}}
+                                options={[
+                                    { value: 'Students', label: 'Students' },
+                                    { value: 'Teachers', label: 'Teachers' },
+                                    { value: 'Support Staff', label: 'Support Staff' },
+                                ]}
+                            />
                         </div>
                     </div>
 
