@@ -27,8 +27,8 @@ export { runMigrations, pool };
 
 export async function init(): Promise<void> {
     setupDI();
-    // Migrations are automatically managed based on sql/migrations directory
-    await runMigrations(pool);
+    // Migrations are now managed via CLI tool: npm run migrate
+    // await runMigrations(pool);
 }
 
 export const router = Router();
