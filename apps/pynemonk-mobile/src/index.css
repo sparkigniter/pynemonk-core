@@ -1,47 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  html {
-    -webkit-tap-highlight-color: transparent;
-    font-family: 'Inter', sans-serif;
-  }
-
-  h1, h2, h3, h4 {
-    font-family: 'Outfit', sans-serif;
-  }
+:root {
+  --brand-50: #f0f4ff;
+  --brand-100: #e1e9fe;
+  --brand-500: #4f46e5;
+  --brand-600: #4338ca;
+  --brand-700: #3730a3;
+  
+  /* Safe Area Insets for Mobile */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-@layer components {
-  .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm;
-  }
-
-  .mobile-bottom-nav {
-    @apply fixed bottom-0 left-0 right-0 h-16 bg-white/90 backdrop-blur-lg border-t border-slate-200 flex items-center justify-around px-4 pb-safe z-50;
-  }
-
-  .btn-primary {
-    @apply bg-brand-600 text-white font-medium px-4 py-2.5 rounded-xl active:scale-95 transition-transform shadow-lg shadow-brand-600/20;
-  }
-
-  .input-field {
-    @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all;
-  }
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  user-select: none;
 }
 
-/* Fix for mobile safe areas */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom);
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+/* Fix for Mobile Status Bar */
+#root {
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-transparent;
+
+/* Professional Card Style */
+.premium-card {
+  @apply bg-white border border-slate-100 shadow-sm transition-all duration-300;
+  border-radius: 2rem;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+
+.premium-card:active {
+  @apply scale-[0.98] bg-slate-50;
+}
+
+/* Glassmorphism Effect */
+.glass-nav {
+  @apply bg-white/80 backdrop-blur-xl border-t border-slate-100;
+  padding-bottom: calc(0.5rem + var(--safe-bottom));
+}
+
+.mobile-bottom-nav {
+  @apply fixed bottom-0 left-0 right-0 glass-nav px-8 py-4 flex justify-between items-center z-50;
+  box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 0px;
 }

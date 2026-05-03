@@ -34,8 +34,9 @@ export function requireAuth(req: e.Request, res: e.Response, next: e.NextFunctio
             userId: decoded.sub || decoded.userId || decoded.id,
             tenantId: decoded.tenant_id || decoded.tenantId || decoded.tid,
             roles: decoded.roles || [],
+            permissions: typeof decoded.scope === "string" ? decoded.scope.split(" ") : (decoded.permissions || []),
             email: decoded.email,
-            ...decoded // Preserve other fields if needed
+            ...decoded
         };
         
         next();

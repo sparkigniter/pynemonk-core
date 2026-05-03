@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
-import { 
-  Bell, 
-  Calendar as CalendarIcon, 
-  CreditCard, 
-  GraduationCap, 
-  Home, 
-  MessageCircle, 
+import {
+  Bell,
+  Calendar as CalendarIcon,
+  CreditCard,
+  GraduationCap,
+  Home,
+  MessageCircle,
   User,
   ShieldCheck,
   Clock,
@@ -29,7 +29,12 @@ import {
   CalendarDays,
   Settings,
   Info,
-  Phone
+  Phone,
+  Camera,
+  FileImage,
+  Mic,
+  Save,
+  Image as ImageIcon
 } from 'lucide-react'
 
 // --- API Config ---
@@ -50,7 +55,7 @@ api.interceptors.request.use((config) => {
 
 // --- Types ---
 type Role = 'parent' | 'teacher'
-type TeacherView = 'home' | 'classes' | 'class_detail' | 'attendance' | 'calendar' | 'exams' | 'profile'
+type TeacherView = 'home' | 'classes' | 'class_detail' | 'attendance' | 'calendar' | 'exams' | 'profile' | 'homework' | 'homework_new'
 
 interface Student {
   id: number;
@@ -91,6 +96,18 @@ interface ExamItem {
   exam_date: string;
 }
 
+interface Homework {
+  id: number;
+  title: string;
+  description: string;
+  due_date: string;
+  subject_name: string;
+  classroom_name: string;
+  attachment_url?: string;
+  created_at: string;
+  status?: string;
+}
+
 interface TeacherDashboardData {
   stats: {
     absent_today: number;
@@ -116,8 +133,8 @@ const Login = ({ onLogin }: { onLogin: (role: Role, token: string) => void }) =>
         email: email || (selectedRole === 'teacher' ? 'teacher1@demo.edu' : 'parent1@demo.edu'),
         password,
         grant_type: 'password',
-        client_id: 'frontend_client',
-        client_secret: 'frontend_secret'
+        client_id: import.meta.env.VITE_CLIENT_ID,
+        client_secret: import.meta.env.VITE_CLIENT_SECRET
       });
       if (response.data.success) {
         const token = response.data.data.access_token;
@@ -132,38 +149,79 @@ const Login = ({ onLogin }: { onLogin: (role: Role, token: string) => void }) =>
   }
 
   return (
-    <div className="flex flex-col px-6 pt-20 pb-10 min-h-full bg-white">
-      <div className="flex-1">
-        <div className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center shadow-xl shadow-brand-600/30 mb-8">
-          <GraduationCap className="text-white w-10 h-10" />
-        </div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">Pynemonk</h1>
-        <p className="text-slate-500 mb-10 leading-relaxed">Unified School Experience</p>
+    <div className="flex flex-col px-8 pt-24 pb-12 min-h-screen bg-white">
+      <div className="flex-1 max-w-md mx-auto w-full">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-20 h-20 bg-brand-600 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-brand-600/40 mb-12"
+        >
+          <GraduationCap className="text-white w-12 h-12" />
+        </motion.div>
         
-        {error && (
-          <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl mb-6 text-xs font-bold flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" /> {error}
-          </div>
-        )}
+        <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Pynemonk</h1>
+        <p className="text-slate-400 mb-12 text-lg font-medium leading-relaxed">The unified school experience.</p>
+        
+        <AnimatePresence>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-rose-50 text-rose-600 p-5 rounded-3xl mb-8 text-xs font-black flex items-center gap-3 border border-rose-100"
+            >
+              <AlertCircle className="w-5 h-5 shrink-0" /> {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@school.edu" className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm focus:border-brand-500 outline-none transition-all" />
+        <div className="space-y-8">
+          <div className="space-y-3">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Email Address</label>
+            <input 
+              type="email" 
+              value={email} 
+              onChange={e => setEmail(e.target.value)} 
+              placeholder="name@school.edu" 
+              className="w-full bg-slate-50 border-2 border-slate-50 rounded-[1.5rem] p-5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all placeholder:text-slate-300" 
+            />
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-sm focus:border-brand-500 outline-none transition-all" />
+          
+          <div className="space-y-3">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Security Key</label>
+            <input 
+              type="password" 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              className="w-full bg-slate-50 border-2 border-slate-50 rounded-[1.5rem] p-5 text-sm font-bold focus:bg-white focus:border-brand-500 outline-none transition-all" 
+            />
           </div>
-          <div className="grid grid-cols-2 gap-4 pt-4">
-            <button onClick={() => handleLogin('teacher')} className="flex flex-col items-center gap-2 p-5 rounded-[2rem] bg-slate-50 border-2 border-slate-100 hover:border-brand-500 transition-all group">
-              <BookOpen className="text-slate-400 group-hover:text-brand-600 w-6 h-6" />
-              <span className="text-[10px] font-black uppercase text-slate-400 group-hover:text-brand-600">Staff</span>
-            </button>
-            <button onClick={() => handleLogin('parent')} className="flex flex-col items-center gap-2 p-5 rounded-[2rem] bg-slate-50 border-2 border-slate-100 hover:border-brand-500 transition-all group">
-              <Baby className="text-slate-400 group-hover:text-brand-600 w-6 h-6" />
-              <span className="text-[10px] font-black uppercase text-slate-400 group-hover:text-brand-600">Guardian</span>
-            </button>
+
+          <div className="space-y-4 pt-6">
+            <p className="text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">Sign in as</p>
+            <div className="grid grid-cols-2 gap-5">
+              <button 
+                onClick={() => handleLogin('teacher')} 
+                disabled={loading}
+                className="flex flex-col items-center gap-3 p-8 rounded-[2.5rem] bg-slate-50 border-2 border-transparent hover:border-brand-500 active:scale-95 transition-all group disabled:opacity-50"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm group-hover:text-brand-600 group-hover:shadow-md transition-all">
+                  <Users className="w-6 h-6 text-slate-400 group-hover:text-brand-600" />
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-600">Staff</span>
+              </button>
+              
+              <button 
+                onClick={() => handleLogin('parent')} 
+                disabled={loading}
+                className="flex flex-col items-center gap-3 p-8 rounded-[2.5rem] bg-slate-50 border-2 border-transparent hover:border-brand-500 active:scale-95 transition-all group disabled:opacity-50"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm group-hover:text-brand-600 group-hover:shadow-md transition-all">
+                  <Baby className="w-6 h-6 text-slate-400 group-hover:text-brand-600" />
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-600">Guardian</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -179,8 +237,10 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [students, setStudents] = useState<Student[]>([])
   const [timetable, setTimetable] = useState<TimetableItem[]>([])
   const [exams, setExams] = useState<ExamItem[]>([])
+  const [homeworks, setHomeworks] = useState<Homework[]>([])
   const [attendanceRecords, setAttendanceRecords] = useState<Record<number, 'present' | 'absent'>>({})
   const [loading, setLoading] = useState(true)
+  const [hwMode, setHwMode] = useState<'text' | 'snap' | 'voice'>('text')
 
   useEffect(() => {
     fetchMainData()
@@ -189,10 +249,12 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const fetchMainData = async () => {
     setLoading(true)
     try {
-      const res = await api.get('/school/staff/teacher/dashboard')
-      if (res.data.success) {
-        setData(res.data.data)
-      }
+      const [dashRes, ttRes] = await Promise.all([
+        api.get('/school/staff/teacher/dashboard'),
+        api.get('/school/staff/teacher/timetable')
+      ]);
+      if (dashRes.data.success) setData(dashRes.data.data)
+      if (ttRes.data.success) setTimetable(ttRes.data.data)
     } catch (err) { console.error(err) }
     setLoading(false)
   }
@@ -219,14 +281,14 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
         student_id: parseInt(studentId),
         status
       }))
-      
+
       const res = await api.post('/school/attendance', {
         date: new Date().toISOString().split('T')[0],
         classroom_id: selectedClass.classroom_id,
         subject_id: selectedClass.subject_id,
         records
       })
-      
+
       if (res.data.success) {
         alert('Attendance submitted successfully!')
         setView('class_detail')
@@ -255,6 +317,15 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
     setLoading(false)
   }
 
+  const fetchHomework = async () => {
+    setLoading(true)
+    try {
+      const res = await api.get('/school/homework')
+      if (res.data.success) setHomeworks(res.data.data)
+    } catch (err) { console.error(err) }
+    setLoading(false)
+  }
+
   const handleClassClick = (cls: Assignment) => {
     setSelectedClass(cls)
     fetchClassStudents(cls.classroom_id)
@@ -267,6 +338,7 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
     if (newView === 'exams') fetchExams()
     if (newView === 'classes') fetchMainData()
     if (newView === 'profile') fetchProfile()
+    if (newView === 'homework') fetchHomework()
   }
 
   const fetchProfile = async () => {
@@ -283,10 +355,10 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
   return (
     <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden relative">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-xl px-6 pt-14 pb-6 flex items-center justify-between border-b border-slate-100 shrink-0 sticky top-0 z-20">
+      <header className="bg-white/80 backdrop-blur-xl px-6 pb-6 flex items-center justify-between border-b border-slate-100 shrink-0 sticky top-0 z-20" style={{ paddingTop: 'calc(var(--safe-top) + 1.5rem)' }}>
         <div className="flex items-center gap-3">
           {view !== 'home' && (
-            <button onClick={() => navigateTo('home')} className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400">
+            <button onClick={() => navigateTo('home')} className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
@@ -299,7 +371,7 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
             </h2>
           </div>
         </div>
-        <button onClick={onLogout} className="w-10 h-10 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500">
+        <button onClick={onLogout} className="w-10 h-10 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 active:scale-90 transition-transform">
           <LogOut className="w-5 h-5" />
         </button>
       </header>
@@ -326,11 +398,16 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                   <h3 className="text-2xl font-black text-slate-900">{data?.assignments.length || 0}</h3>
                   <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total Classes</p>
                 </div>
-                <div className="bg-slate-900 p-6 rounded-[2.5rem] shadow-xl shadow-slate-200 text-left relative overflow-hidden">
-                  <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center mb-4 relative z-10"><ShieldCheck className="text-white/60 w-5 h-5" /></div>
-                  <h3 className="text-[12px] font-black text-white uppercase mb-1 relative z-10">Secure Portal</h3>
-                  <p className="text-slate-400 text-[8px] font-bold uppercase tracking-widest relative z-10">Authorized Access Only</p>
-                  <div className="absolute -bottom-5 -right-5 w-20 h-20 bg-white/5 rounded-full blur-2xl"></div>
+                <div className="bg-slate-900 p-6 rounded-[2.5rem] shadow-xl shadow-slate-200 text-left relative overflow-hidden group active:scale-95 transition-all" onClick={() => navigateTo('calendar')}>
+                  <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center mb-4 relative z-10"><Clock className="text-white/60 w-5 h-5" /></div>
+                  <h3 className="text-[12px] font-black text-white uppercase mb-1 relative z-10">Next Period</h3>
+                  <p className="text-slate-400 text-[14px] font-bold relative z-10">
+                    {timetable.find(t => t.day_of_week === (new Date().getDay() || 7))?.subject_name || 'No more classes'}
+                  </p>
+                  <p className="text-brand-500 text-[10px] font-black uppercase tracking-widest mt-1 relative z-10">
+                    {timetable.find(t => t.day_of_week === (new Date().getDay() || 7))?.classroom_name || 'Today'}
+                  </p>
+                  <div className="absolute -bottom-5 -right-5 w-20 h-20 bg-brand-500/10 rounded-full blur-2xl"></div>
                 </div>
               </div>
 
@@ -340,9 +417,9 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                   <CalendarDays className="w-4 h-4" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Full Schedule</span>
                 </button>
-                <button onClick={() => navigateTo('exams')} className="bg-white border border-slate-100 p-4 rounded-[2rem] flex items-center justify-center gap-3 text-slate-600">
-                  <FileSpreadsheet className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Gradebook</span>
+                <button onClick={() => navigateTo('homework')} className="bg-indigo-600 p-4 rounded-[2rem] flex items-center justify-center gap-3 text-white shadow-lg shadow-indigo-200">
+                  <ClipboardCheck className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Homework</span>
                 </button>
               </div>
 
@@ -359,10 +436,23 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         <div className="w-14 h-14 bg-slate-900 rounded-[1.5rem] flex items-center justify-center text-white text-lg font-black">{cls.classroom_name}</div>
                         <div>
                           <h5 className="font-bold text-slate-900">{cls.subject_name}</h5>
-                          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">{cls.grade_name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">{cls.grade_name}</p>
+                            {cls.can_take_attendance && <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>}
+                          </div>
                         </div>
                       </div>
-                      <ChevronRight className="text-slate-200 w-5 h-5 group-hover:text-brand-600" />
+                      <div className="flex items-center gap-3">
+                        {cls.can_take_attendance && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setSelectedClass(cls); setView('attendance'); fetchClassStudents(cls.classroom_id); }}
+                            className="bg-brand-50 text-brand-600 p-2 rounded-xl"
+                          >
+                            <CheckCircle2 size={16} />
+                          </button>
+                        )}
+                        <ChevronRight className="text-slate-200 w-5 h-5 group-hover:text-brand-600" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -394,10 +484,10 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 <div className="relative z-10">
                   <h3 className="text-3xl font-black mb-1">{selectedClass?.classroom_name}</h3>
                   <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">{selectedClass?.subject_name}</p>
-                  
+
                   {selectedClass?.can_take_attendance && (
                     <div className="mt-8 flex gap-3">
-                      <button 
+                      <button
                         onClick={() => setView('attendance')}
                         className="bg-brand-500 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2"
                       >
@@ -432,47 +522,76 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
           {view === 'attendance' && (
             <motion.div key="attendance" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="px-6 py-6 space-y-6">
-              <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-1">
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
-                <h3 className="text-xl font-black text-slate-900">{selectedClass?.classroom_name} • {selectedClass?.subject_name}</h3>
-              </div>
-
-              <div className="space-y-3">
-                {students.map((student) => (
-                  <div key={student.id} className="bg-white p-4 rounded-[2rem] border border-slate-50 shadow-sm flex items-center gap-4">
-                    <div className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 font-bold text-xs">{student.roll_number}</div>
-                    <div className="flex-1">
-                      <h6 className="font-bold text-slate-900 text-sm">{student.first_name}</h6>
-                    </div>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => setAttendanceRecords(prev => ({ ...prev, [student.id]: 'present' }))}
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${attendanceRecords[student.id] === 'present' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-slate-50 text-slate-400'}`}
-                      >
-                        <CheckCircle2 className="w-5 h-5" />
-                      </button>
-                      <button 
-                        onClick={() => setAttendanceRecords(prev => ({ ...prev, [student.id]: 'absent' }))}
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${attendanceRecords[student.id] === 'absent' ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-slate-50 text-slate-400'}`}
-                      >
-                        <XCircle className="w-5 h-5" />
-                      </button>
-                    </div>
+              {!selectedClass ? (
+                <div className="space-y-4">
+                  <div className="bg-white p-8 rounded-[3rem] text-center border border-slate-100">
+                    <div className="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-4 text-brand-600"><ClipboardCheck size={32} /></div>
+                    <h3 className="text-xl font-black text-slate-900">Take Attendance</h3>
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Select a class to begin</p>
                   </div>
-                ))}
-              </div>
+                  <div className="grid gap-3">
+                    {data?.assignments.filter(a => a.can_take_attendance).map((cls, i) => (
+                      <button 
+                        key={i} 
+                        onClick={() => { setSelectedClass(cls); fetchClassStudents(cls.classroom_id); }}
+                        className="bg-white p-5 rounded-[2rem] border border-slate-50 shadow-sm flex items-center justify-between text-left group active:scale-95 transition-all"
+                      >
+                        <div>
+                          <h5 className="font-bold text-slate-900">{cls.classroom_name}</h5>
+                          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">{cls.subject_name}</p>
+                        </div>
+                        <div className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-brand-600 group-hover:text-white transition-all">
+                          <ArrowRight size={18} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-1">
+                      {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                    <h3 className="text-xl font-black text-slate-900">{selectedClass?.classroom_name} • {selectedClass?.subject_name}</h3>
+                  </div>
 
-              <div className="sticky bottom-4 px-2 pb-10">
-                <button 
-                  onClick={submitAttendance}
-                  disabled={loading}
-                  className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm shadow-xl shadow-slate-200 active:scale-[0.98] transition-transform disabled:opacity-50"
-                >
-                  {loading ? 'Submitting...' : 'Complete Attendance'}
-                </button>
-              </div>
+                  <div className="space-y-3">
+                    {students.map((student) => (
+                      <div key={student.id} className="bg-white p-4 rounded-[2rem] border border-slate-50 shadow-sm flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 font-bold text-xs">{student.roll_number}</div>
+                        <div className="flex-1">
+                          <h6 className="font-bold text-slate-900 text-sm">{student.first_name}</h6>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setAttendanceRecords(prev => ({ ...prev, [student.id]: 'present' }))}
+                            className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${attendanceRecords[student.id] === 'present' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-slate-50 text-slate-400'}`}
+                          >
+                            <CheckCircle2 className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => setAttendanceRecords(prev => ({ ...prev, [student.id]: 'absent' }))}
+                            className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${attendanceRecords[student.id] === 'absent' ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-slate-50 text-slate-400'}`}
+                          >
+                            <XCircle className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="sticky bottom-4 px-2 pb-10">
+                    <button
+                      onClick={submitAttendance}
+                      disabled={loading}
+                      className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm shadow-xl shadow-slate-200 active:scale-[0.98] transition-transform disabled:opacity-50"
+                    >
+                      {loading ? 'Submitting...' : 'Complete Attendance'}
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           )}
 
@@ -522,6 +641,139 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
             </motion.div>
           )}
 
+          {view === 'homework' && (
+            <motion.div key="homework" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="px-6 py-6 space-y-6">
+              <button
+                onClick={() => setView('homework_new')}
+                className="w-full bg-slate-900 text-white p-6 rounded-[2.5rem] flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-transform"
+              >
+                <Plus size={20} />
+                <span className="text-xs font-black uppercase tracking-widest">New Homework</span>
+              </button>
+
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Recent Assignments</h4>
+                {homeworks.map((hw, i) => (
+                  <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="bg-indigo-50 text-indigo-600 text-[8px] font-black uppercase px-2 py-1 rounded-full mb-2 inline-block">{hw.subject_name}</span>
+                        <h5 className="text-lg font-bold text-slate-900">{hw.title}</h5>
+                        <p className="text-slate-400 text-xs font-medium">{hw.classroom_name}</p>
+                      </div>
+                      {hw.attachment_url && <FileImage className="text-slate-200" />}
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                      <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase">
+                        <Clock size={12} /> Due {new Date(hw.due_date).toLocaleDateString()}
+                      </div>
+                      <button className="text-indigo-600 text-[10px] font-black uppercase">View</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {view === 'homework_new' && (
+            <motion.div key="homework_new" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="px-6 py-6 space-y-8 pb-32">
+              <div className="bg-slate-900 p-8 rounded-[3rem] text-white flex flex-col items-center gap-6 text-center overflow-hidden relative">
+                <div className="flex gap-4 p-1 bg-white/10 rounded-2xl relative z-10">
+                  <button 
+                    onClick={() => setHwMode('text')} 
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${hwMode === 'text' ? 'bg-white text-slate-900 shadow-lg' : 'text-white/60'}`}
+                  >
+                    Type
+                  </button>
+                  <button 
+                    onClick={() => setHwMode('snap')} 
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${hwMode === 'snap' ? 'bg-white text-slate-900 shadow-lg' : 'text-white/60'}`}
+                  >
+                    Snap
+                  </button>
+                  <button 
+                    onClick={() => setHwMode('voice')} 
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${hwMode === 'voice' ? 'bg-white text-slate-900 shadow-lg' : 'text-white/60'}`}
+                  >
+                    Voice
+                  </button>
+                </div>
+
+                <div className="relative z-10 flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
+                    {hwMode === 'text' && <ClipboardCheck size={32} className="text-white" />}
+                    {hwMode === 'snap' && <Camera size={32} className="text-white" />}
+                    {hwMode === 'voice' && <Mic size={32} className="text-white" />}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black">
+                      {hwMode === 'text' ? 'Type Instructions' : hwMode === 'snap' ? 'Snap Blackboard' : 'Record Message'}
+                    </h3>
+                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-1">Zero-friction assignment</p>
+                  </div>
+                </div>
+                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-brand-500/20 rounded-full blur-3xl"></div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Class & Subject</label>
+                  <select className="w-full bg-white border-2 border-slate-100 rounded-[1.5rem] p-4 text-sm font-bold appearance-none outline-none focus:border-indigo-500 shadow-sm">
+                    <option>Select Target Class</option>
+                    {data?.assignments.map((a, i) => <option key={i}>{a.classroom_name} - {a.subject_name}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Homework Title</label>
+                  <input type="text" placeholder="e.g. Chapter 4 Practice" className="w-full bg-white border-2 border-slate-100 rounded-[1.5rem] p-4 text-sm font-bold outline-none focus:border-indigo-500 shadow-sm" />
+                </div>
+
+                {hwMode === 'text' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Description</label>
+                    <textarea 
+                      placeholder="Type homework instructions here..." 
+                      className="w-full bg-white border-2 border-slate-100 rounded-[1.5rem] p-6 text-sm font-bold outline-none focus:border-indigo-500 shadow-sm min-h-[150px]"
+                    />
+                  </div>
+                )}
+
+                {hwMode === 'snap' && (
+                  <div className="bg-indigo-50 p-8 rounded-[2.5rem] border-2 border-dashed border-indigo-200 flex flex-col items-center gap-4 transition-all hover:bg-indigo-100/50">
+                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-indigo-500">
+                      <Camera size={24} />
+                    </div>
+                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Tap to capture blackboard</p>
+                  </div>
+                )}
+
+                {hwMode === 'voice' && (
+                  <div className="bg-rose-50 p-8 rounded-[2.5rem] border-2 border-dashed border-rose-200 flex flex-col items-center gap-4 transition-all hover:bg-rose-100/50">
+                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-rose-500 animate-pulse">
+                      <Mic size={24} />
+                    </div>
+                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Hold to record instructions</p>
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="w-1 bg-rose-200 rounded-full" style={{ height: Math.random() * 20 + 10 + 'px' }}></div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="fixed bottom-10 left-6 right-6">
+                <button
+                  onClick={() => navigateTo('homework')}
+                  className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-sm shadow-2xl active:scale-[0.98] transition-transform"
+                >
+                  Publish to Students
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           {view === 'profile' && (
             <motion.div key="profile" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="px-6 py-8 space-y-8">
               {/* Profile Card */}
@@ -531,12 +783,12 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 </div>
                 <h3 className="text-2xl font-black text-slate-900 mb-1">{profile?.first_name} {profile?.last_name}</h3>
                 <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">{profile?.staff_no || 'EMP-2026-001'}</p>
-                
+
                 <div className="flex gap-2 mb-2">
                   <span className="bg-brand-50 text-brand-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Permanent</span>
                   <span className="bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Active</span>
                 </div>
-                
+
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-50 rounded-full blur-3xl opacity-50"></div>
               </div>
 
@@ -607,7 +859,7 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
   )
 }
 
-type ParentView = 'home' | 'attendance' | 'exams' | 'faculty'
+type ParentView = 'home' | 'attendance' | 'exams' | 'faculty' | 'homework'
 
 const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [view, setView] = useState<ParentView>('home')
@@ -615,6 +867,7 @@ const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [attendance, setAttendance] = useState<any>(null)
   const [exams, setExams] = useState<any>(null)
+  const [homeworks, setHomeworks] = useState<Homework[]>([])
   const [classroom, setClassroom] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
@@ -651,6 +904,9 @@ const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
       if (attRes.data.success) setAttendance(attRes.data.data)
       if (examRes.data.success) setExams(examRes.data.data)
       if (classRes.data.success) setClassroom(classRes.data.data)
+
+      const hwRes = await api.get(`/school/homework?classroomId=${classRes.data.data.classroom.id}`)
+      if (hwRes.data.success) setHomeworks(hwRes.data.data)
     } catch (err) { console.error(err) }
     setLoading(false)
   }
@@ -660,11 +916,11 @@ const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
   return (
     <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden relative">
       {/* Dynamic Header */}
-      <header className="bg-white/80 backdrop-blur-xl px-6 pt-14 pb-6 border-b border-slate-100 shrink-0 sticky top-0 z-20">
+      <header className="bg-white/80 backdrop-blur-xl px-6 pb-6 border-b border-slate-100 shrink-0 sticky top-0 z-20" style={{ paddingTop: 'calc(var(--safe-top) + 1.5rem)' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {view !== 'home' && (
-              <button onClick={() => setView('home')} className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400">
+              <button onClick={() => setView('home')} className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
                 <ArrowLeft className="w-5 h-5" />
               </button>
             )}
@@ -672,12 +928,12 @@ const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
               <p className="text-brand-600 text-[10px] font-black uppercase tracking-[0.2em] mb-1">
                 {view === 'home' ? 'Parent Portal' : view.toUpperCase()}
               </p>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight leading-tight">
                 {selectedStudent?.first_name}'s {view === 'home' ? 'Dashboard' : view}
               </h2>
             </div>
           </div>
-          <button onClick={onLogout} className="w-10 h-10 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500">
+          <button onClick={onLogout} className="w-10 h-10 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 active:scale-90 transition-transform">
             <LogOut className="w-5 h-5" />
           </button>
         </div>
@@ -732,6 +988,18 @@ const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
                   <h3 className="text-2xl font-black text-slate-900">{exams?.upcoming.length || 0}</h3>
                   <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Upcoming Exams</p>
                 </button>
+                <button onClick={() => setView('homework')} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm text-left group active:scale-95 transition-all col-span-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-brand-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><ClipboardCheck className="text-brand-600 w-5 h-5" /></div>
+                      <div>
+                        <h3 className="text-2xl font-black text-slate-900">{homeworks.length}</h3>
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Pending Homework</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="text-slate-200" />
+                  </div>
+                </button>
               </div>
 
               {/* Class Teacher Quick View */}
@@ -784,6 +1052,40 @@ const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
             </motion.div>
           )}
 
+          {view === 'homework' && (
+            <motion.div key="homework" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="px-6 py-6 space-y-4">
+              {homeworks.map((hw, i) => (
+                <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase px-2 py-1 rounded-full mb-2 inline-block">{hw.subject_name}</span>
+                      <h5 className="text-lg font-bold text-slate-900">{hw.title}</h5>
+                      <p className="text-slate-400 text-xs font-medium">Assigned on {new Date(hw.created_at).toLocaleDateString()}</p>
+                    </div>
+                    {hw.attachment_url && <FileImage className="text-brand-600" />}
+                  </div>
+                  <p className="text-slate-500 text-xs leading-relaxed line-clamp-2">
+                    {hw.description || 'View details for assignment instructions.'}
+                  </p>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                    <div className="flex items-center gap-1.5 text-[8px] font-black text-rose-500 uppercase">
+                      <Clock size={12} /> Due {new Date(hw.due_date).toLocaleDateString()}
+                    </div>
+                    <button className="bg-brand-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">Submit</button>
+                  </div>
+                </div>
+              ))}
+              {homeworks.length === 0 && (
+                <div className="py-20 text-center">
+                  <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ClipboardCheck className="text-slate-200" size={32} />
+                  </div>
+                  <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">All caught up!</p>
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {view === 'attendance' && (
             <motion.div key="attendance" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="px-6 py-6 space-y-8">
               <div className="grid grid-cols-3 gap-3">
@@ -809,10 +1111,9 @@ const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         <p className="text-sm font-bold text-slate-800">{new Date(rec.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
                         {rec.remarks && <p className="text-[10px] text-slate-400 italic mt-0.5">{rec.remarks}</p>}
                       </div>
-                      <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
-                        rec.status === 'present' ? 'bg-emerald-50 text-emerald-600' : 
+                      <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${rec.status === 'present' ? 'bg-emerald-50 text-emerald-600' :
                         rec.status === 'absent' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
-                      }`}>
+                        }`}>
                         {rec.status}
                       </div>
                     </div>
@@ -865,9 +1166,9 @@ const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         </div>
                       </div>
                       <div className="w-full bg-slate-50 h-2 rounded-full overflow-hidden">
-                        <div 
-                          className="bg-brand-500 h-full rounded-full transition-all duration-1000" 
-                          style={{ width: `${(res.marks / res.max_marks) * 100}%` }} 
+                        <div
+                          className="bg-brand-500 h-full rounded-full transition-all duration-1000"
+                          style={{ width: `${(res.marks / res.max_marks) * 100}%` }}
                         />
                       </div>
                       <div className="flex justify-between items-center mt-2">
@@ -946,30 +1247,45 @@ const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
 }
 
 function App() {
-  const [role, setRole] = useState<Role | null>(null)
+  const [role, setRole] = useState<Role | null>(localStorage.getItem('role') as Role)
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'))
 
   const handleLogout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('role')
     setToken(null)
     setRole(null)
+  }
+
+  const handleLogin = (r: Role, t: string) => {
+    localStorage.setItem('token', t)
+    localStorage.setItem('role', r)
+    setRole(r)
+    setToken(t)
   }
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-0 md:p-6 lg:p-10">
       <div className="w-full md:max-w-[420px] bg-white min-h-screen md:min-h-[880px] md:max-h-[900px] md:rounded-[4rem] shadow-2xl relative overflow-hidden md:border-[12px] md:border-slate-800 flex flex-col scale-95 md:scale-100 transition-all">
         <AnimatePresence mode="wait">
-          {!token ? (
+          {!token || !role ? (
             <motion.div key="login" className="flex-1 overflow-y-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
-              <Login onLogin={(r, t) => { setRole(r); setToken(t); }} />
+              <Login onLogin={handleLogin} />
             </motion.div>
           ) : role === 'teacher' ? (
             <motion.div key="teacher" className="flex-1 flex flex-col overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <TeacherDashboard onLogout={handleLogout} />
             </motion.div>
-          ) : (
+          ) : role === 'parent' ? (
             <motion.div key="parent" className="flex-1 flex flex-col overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ParentDashboard onLogout={handleLogout} />
+            </motion.div>
+          ) : (
+            <motion.div key="fallback" className="flex-1 flex items-center justify-center p-10 text-center">
+              <div>
+                <p className="text-slate-400 text-sm font-bold mb-4">Account session error. Please log in again.</p>
+                <button onClick={handleLogout} className="bg-brand-600 text-white px-6 py-2 rounded-xl text-xs font-black uppercase">Sign Out</button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

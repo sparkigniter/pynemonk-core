@@ -5,7 +5,7 @@ import {
     Settings, School, BookOpen, DollarSign, BarChart2,
     ChevronRight, LogOut, ChevronDown, Building2, Layers,
     Calendar, RefreshCw, X, ClipboardList, Clock, Sparkles,
-    StickyNote, Zap
+    StickyNote, Zap, Shield, BookCheck
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAvailableIntegrations } from '../../api/integration.api';
@@ -27,13 +27,15 @@ const navigation = {
         { name: 'Courses', path: '/courses', icon: BookOpen, permissions: ['class:read'] },
         { name: 'Classrooms', path: '/classrooms', icon: Building2, permissions: ['class:read'] },
         { name: 'Timetable', path: '/timetable', icon: Clock, permissions: ['timetable:read'] },
-        { name: 'Exams', path: '/exams', icon: ClipboardList, permissions: ['class:read'] },
-        { name: 'Teacher Diary', path: '/teacher-diary', icon: StickyNote, permissions: ['timetable:read'] },
-        { name: 'Calendar', path: '/calendar', icon: Calendar, badge: 'New', permissions: ['class:read'] },
+        { name: 'Exams', path: '/exams', icon: ClipboardList, permissions: ['exam:read'] },
+        { name: 'Teacher Diary', path: '/teacher-diary', icon: StickyNote, permissions: ['teacher_note:read'] },
+        { name: 'Homework', path: '/homework', icon: BookCheck, permissions: ['assignment:read'] },
+        { name: 'Calendar', path: '/calendar', icon: Calendar, permissions: ['class:read'] },
     ],
     people: [
-        { name: 'Students', path: '/students', icon: GraduationCap, badge: '1,248', permissions: ['student:read'] },
-        { name: 'Teachers', path: '/teachers', icon: Users, badge: '84', permissions: ['staff:read'] },
+        { name: 'Students', path: '/students', icon: GraduationCap, permissions: ['student:read', 'student.directory:read'] },
+        { name: 'Teachers', path: '/teachers', icon: Users, permissions: ['staff:read'] },
+        { name: 'Staff Directory', path: '/staff-directory', icon: Users, permissions: ['staff.directory:read'] },
         { name: 'Attendance', path: '/attendance', icon: CalendarCheck, permissions: ['student.attendance:read'] },
     ],
     operations: [
@@ -50,6 +52,7 @@ const navigation = {
         { name: 'Finance', path: '/finance', icon: DollarSign, permissions: ['fee:read'] },
         { name: 'Reports', path: '/reports', icon: BarChart2, permissions: ['report:read'] },
         { name: 'Integrations', path: '/integrations', icon: Zap, permissions: ['settings:write'] },
+        { name: 'IAM', path: '/iam', icon: Shield, permissions: ['settings:write'] },
         { name: 'Rollover', path: '/rollover', icon: RefreshCw, permissions: ['settings:write'] },
     ],
 };
@@ -59,7 +62,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
     const [showSwitcher, setShowSwitcher] = useState(false);
     const [openMenus, setOpenMenus] = useState<string[]>([]);
     const [dynamicItems, setDynamicItems] = useState<DynamicNavItem[]>([]);
-    const { user, tenants, tenantFetchError, logout } = useAuth();
+    const { user, tenants, tenantFetchError, logout, can } = useAuth();
     const navigate = useNavigate();
     const switcherRef = useRef<HTMLDivElement>(null);
 
@@ -109,10 +112,8 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
     };
 
     const hasPermission = (requiredPermissions?: string[]) => {
-        if (!user) return false;
-        const isSystemAdmin = user?.roles?.includes('system_admin');
-        return isSystemAdmin || !requiredPermissions || requiredPermissions.length === 0 || 
-            requiredPermissions.some((p: string) => user?.permissions?.includes(p));
+        if (!requiredPermissions || requiredPermissions.length === 0) return true;
+        return requiredPermissions.some((p: string) => can(p));
     };
 
     const handleSwitch = (slug: string) => {
@@ -201,11 +202,6 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                                 <span className={`text-sm font-medium flex-1 ${isChild ? 'text-xs opacity-80' : ''}`}>
                                     {item.name}
                                 </span>
-                                {item.badge && (
-                                    <span className="text-xs rounded-full px-2 py-0.5 bg-white/10 text-white/60">
-                                        {item.badge}
-                                    </span>
-                                )}
                             </>
                         )}
                         {isChild && isActive && (

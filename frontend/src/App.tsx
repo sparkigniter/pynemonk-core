@@ -30,7 +30,10 @@ import StaffRegistration from './pages/admin/StaffRegistration';
 import StudentAdmission from './pages/students/StudentAdmission';
 import MarksEntry from './pages/academics/MarksEntry';
 import TeacherDiary from './pages/academics/TeacherDiary';
+import Homework from './pages/academics/Homework';
+import HomeworkForm from './pages/academics/HomeworkForm';
 import Integrations from './pages/admin/Integrations';
+import IAM from './pages/admin/IAM';
 
 export default function App() {
   return (
@@ -57,6 +60,7 @@ export default function App() {
           <Route path="students/register" element={<StudentAdmission />} />
           <Route path="students/:id" element={<StudentProfile />} />
           <Route path="teachers" element={<Teachers />} />
+          <Route path="staff-directory" element={<Teachers />} />
           <Route path="teachers/register" element={<StaffRegistration />} />
           <Route path="grades" element={<Grades />} />
           <Route path="attendance" element={<Attendance />} />
@@ -81,7 +85,11 @@ export default function App() {
           <Route path="onboarding/teachers" element={<OnboardingPipeline type="Teacher" />} />
           <Route path="workflow-builder" element={<WorkflowBuilder />} />
           <Route path="teacher-diary" element={<TeacherDiary />} />
+          <Route path="homework" element={<Homework />} />
+          <Route path="homework/new" element={<HomeworkForm />} />
+          <Route path="homework/:id/edit" element={<HomeworkForm />} />
           <Route path="integrations" element={<Integrations />} />
+          <Route path="iam" element={<IAM />} />
         </Route>
 
         {/* Catch-all */}

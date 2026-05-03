@@ -14,11 +14,33 @@ import {
 } from 'lucide-react';
 import { examApi } from '../../api/exam.api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function ExamOverview() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { notify } = useNotification();
+    const { can } = useAuth();
+
+    if (!can('exam:read')) {
+        return (
+            <div className="h-[80vh] flex flex-col items-center justify-center gap-6 text-center px-4">
+                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-rose-500/10">
+                    <ShieldCheck size={40} />
+                </div>
+                <div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Access Restricted</h2>
+                    <p className="text-slate-400 font-medium mt-2 max-w-sm">You do not have permission to view examination records.</p>
+                </div>
+                <button 
+                    onClick={() => navigate('/')}
+                    className="mt-4 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                >
+                    Return Home
+                </button>
+            </div>
+        );
+    }
 
     const [exam, setExam] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -85,12 +107,14 @@ export default function ExamOverview() {
                             <p className="text-xs text-slate-400 mt-1 font-medium">Please add subjects to the Date Sheet before beginning evaluation.</p>
                         </div>
                     </div>
-                    <button 
-                        onClick={() => navigate(`/exams/${id}/papers`)}
-                        className="px-6 py-3 bg-theme-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
-                    >
-                        Configure Schedule
-                    </button>
+                    {can('exam:write') && (
+                        <button 
+                            onClick={() => navigate(`/exams/${id}/papers`)}
+                            className="px-6 py-3 bg-theme-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                        >
+                            Configure Schedule
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -126,20 +150,24 @@ export default function ExamOverview() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <Link 
-                        to={`/exams/${id}/edit`}
-                        className="p-4 bg-white border border-slate-200 text-slate-400 hover:text-theme-primary rounded-2xl transition-all shadow-sm active:scale-95"
-                    >
-                        <Settings size={20} />
-                    </Link>
-                    <button 
-                        onClick={handlePublishResults}
-                        disabled={!canEvaluate}
-                        className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 disabled:opacity-30 disabled:grayscale ${exam.is_published ? 'bg-white border-2 border-emerald-500 text-emerald-500' : 'bg-theme-primary text-white shadow-theme-primary/20'}`}
-                    >
-                        <ShieldCheck size={18} />
-                        {exam.is_published ? 'Unpublish Results' : 'Publish Results'}
-                    </button>
+                    {can('exam:write') && (
+                        <>
+                            <Link 
+                                to={`/exams/${id}/edit`}
+                                className="p-4 bg-white border border-slate-200 text-slate-400 hover:text-theme-primary rounded-2xl transition-all shadow-sm active:scale-95"
+                            >
+                                <Settings size={20} />
+                            </Link>
+                            <button 
+                                onClick={handlePublishResults}
+                                disabled={!canEvaluate}
+                                className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 disabled:opacity-30 disabled:grayscale ${exam.is_published ? 'bg-white border-2 border-emerald-500 text-emerald-500' : 'bg-theme-primary text-white shadow-theme-primary/20'}`}
+                            >
+                                <ShieldCheck size={18} />
+                                {exam.is_published ? 'Unpublish Results' : 'Publish Results'}
+                            </button>
+                        </>
+                    )}
                 </div>
             </header>
 
@@ -193,14 +221,16 @@ export default function ExamOverview() {
                                 })()}
                             </div>
                         </div>
-                        <Link 
-                            to={`/exams/${id}/invitations`}
-                            className="mt-10 w-full flex items-center justify-between p-5 bg-theme-primary text-white rounded-[1.5rem] group overflow-hidden relative active:scale-95 transition-all shadow-xl shadow-theme-primary/10"
-                        >
-                            <span className="text-xs font-black uppercase tracking-widest relative z-10">Manage Candidates</span>
-                            <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform relative z-10" />
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
-                        </Link>
+                        {can('exam:write') && (
+                            <Link 
+                                to={`/exams/${id}/invitations`}
+                                className="mt-10 w-full flex items-center justify-between p-5 bg-theme-primary text-white rounded-[1.5rem] group overflow-hidden relative active:scale-95 transition-all shadow-xl shadow-theme-primary/10"
+                            >
+                                <span className="text-xs font-black uppercase tracking-widest relative z-10">Manage Candidates</span>
+                                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform relative z-10" />
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                            </Link>
+                        )}
                     </section>
 
                     <section className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden">
@@ -227,13 +257,15 @@ export default function ExamOverview() {
                                 <p className="text-[10px] font-black text-slate-400 uppercase">No Papers Scheduled</p>
                             </div>
                         )}
-                        <Link 
-                            to={`/exams/${id}/papers`}
-                            className="mt-8 w-full flex items-center justify-between p-5 bg-slate-900 text-white rounded-[1.5rem] group overflow-hidden relative active:scale-95 transition-all shadow-xl shadow-slate-900/10"
-                        >
-                            <span className="text-xs font-black uppercase tracking-widest relative z-10">Manage Schedule</span>
-                            <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform relative z-10" />
-                        </Link>
+                        {can('exam:write') && (
+                            <Link 
+                                to={`/exams/${id}/papers`}
+                                className="mt-8 w-full flex items-center justify-between p-5 bg-slate-900 text-white rounded-[1.5rem] group overflow-hidden relative active:scale-95 transition-all shadow-xl shadow-slate-900/10"
+                            >
+                                <span className="text-xs font-black uppercase tracking-widest relative z-10">Manage Schedule</span>
+                                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform relative z-10" />
+                            </Link>
+                        )}
                     </section>
 
                     <section className="bg-theme-primary/5 border border-theme-primary/10 p-10 rounded-[3.5rem]">
@@ -319,18 +351,20 @@ export default function ExamOverview() {
                                     </div>
 
                                     <div className="mt-auto pt-6 border-t border-slate-50 grid grid-cols-1 gap-2 relative z-10">
-                                        <button 
-                                            disabled={!canEvaluate}
-                                            onClick={() => {
-                                                if (exam.papers?.length > 0) {
-                                                    navigate(`/exams/${id}/papers/${exam.papers[0].id}/marks?classroom=${section.classroom_id}`);
-                                                }
-                                            }}
-                                            className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 shadow-xl shadow-slate-900/10 transition-all disabled:opacity-20"
-                                        >
-                                            <UserCheck size={16} className="text-theme-primary" />
-                                            Enter Class Marks
-                                        </button>
+                                        {(can('mark:write') || can('exam:write')) && (
+                                            <button 
+                                                disabled={!canEvaluate}
+                                                onClick={() => {
+                                                    if (exam.papers?.length > 0) {
+                                                        navigate(`/exams/${id}/papers/${exam.papers[0].id}/marks?classroom=${section.classroom_id}`);
+                                                    }
+                                                }}
+                                                className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 shadow-xl shadow-slate-900/10 transition-all disabled:opacity-20"
+                                            >
+                                                <UserCheck size={16} className="text-theme-primary" />
+                                                Enter Class Marks
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -340,9 +374,11 @@ export default function ExamOverview() {
                                     <Users size={48} className="text-slate-200 mx-auto mb-6" />
                                     <h3 className="text-2xl font-black text-slate-900 tracking-tight">No Sections Invited</h3>
                                     <p className="text-slate-400 mt-2 font-medium max-w-xs mx-auto">Define your target audience to start the evaluation process.</p>
-                                    <Link to={`/exams/${id}/invitations`} className="mt-8 inline-flex items-center gap-3 px-10 py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-sm">
-                                        Select Audience
-                                    </Link>
+                                    {can('exam:write') && (
+                                        <Link to={`/exams/${id}/invitations`} className="mt-8 inline-flex items-center gap-3 px-10 py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-sm">
+                                            Select Audience
+                                        </Link>
+                                    )}
                                 </div>
                             )}
                         </div>

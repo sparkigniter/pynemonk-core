@@ -42,17 +42,17 @@ class OauthClientHelper {
   }
 
   public async getAllClients() {
-    const res = await this.db.query(`SELECT id, name, description, client_id, created_at, updated_at FROM auth.client`);
+    const res = await this.db.query(`SELECT id, name, description, client_id, is_active, created_at, updated_at FROM auth.client`);
     return res;
   }
 
   public async getClientByName(name: string) {
-    const res = await this.db.query(`SELECT id, name, description, client_id, created_at, updated_at FROM auth.client WHERE name = $1`, [name]);
+    const res = await this.db.query(`SELECT id, name, description, client_id, is_active, created_at, updated_at FROM auth.client WHERE name = $1`, [name]);
     return res.rows[0];
   }
 
   public async getClientById(clientId: string) {
-    const res = await this.db.query(`SELECT id, name, description, client_id, created_at, updated_at FROM auth.client WHERE client_id = $1`, [clientId]);
+    const res = await this.db.query(`SELECT id, name, description, client_id, client_secret, is_active, created_at, updated_at FROM auth.client WHERE client_id = $1`, [clientId]);
     return res.rows[0];
   }
 
@@ -74,6 +74,29 @@ class OauthClientHelper {
     `;
     const res = await this.db.query(query, [clientId]);
     return res.rows.map((r: any) => r.value);
+  }
+
+  public async getClientRoles(clientId: string): Promise<string[]> {
+    const query = `
+        SELECT r.slug
+        FROM auth.role r
+        JOIN auth.client_role cr ON r.id = cr.role_id
+        JOIN auth.client c ON cr.client_id = c.id
+        WHERE c.client_id = $1 AND r.is_deleted = FALSE;
+    `;
+    const res = await this.db.query(query, [clientId]);
+    return res.rows.map((r: any) => r.slug);
+  }
+
+  public async isRoleAllowed(clientId: string, roleSlugs: string[]): Promise<boolean> {
+    // 1. SuperAdmin Override: system_admin is allowed everywhere
+    if (roleSlugs.includes('system_admin')) return true;
+
+    // 2. Client-Role Tagging: check if any roles are explicitly restricted
+    const allowedRoles = await this.getClientRoles(clientId);
+    if (allowedRoles.length === 0) return true; // Open if no restrictions defined
+    
+    return roleSlugs.some(slug => allowedRoles.includes(slug));
   }
 }
 

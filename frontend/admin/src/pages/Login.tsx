@@ -18,8 +18,8 @@ const Login: React.FC = () => {
             const res = await api.post('/auth/login', {
                 email,
                 password,
-                client_id: 'frontend_client',
-                client_secret: 'frontend_secret',
+                client_id: import.meta.env.VITE_CLIENT_ID,
+                client_secret: import.meta.env.VITE_CLIENT_SECRET,
                 grant_type: 'password'
             });
 

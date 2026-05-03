@@ -15,8 +15,14 @@ class PasswordGrantHandler implements GrantHandler {
 
     public async handle(tokenPayload: TokenPayload): Promise<TokenResponse> {
         // Narrow to the specific payload type
-        const payload = tokenPayload as PasswordGrantPayload;
+        const payload = tokenPayload as any;
         console.log("Password grant payload: ", payload);
+
+        // If we have a pre-verified context, bypass the DB and Bcrypt calls
+        if (payload.preverified_context) {
+            return this.tokenService.generateIdentityTokenPair(payload.email, payload.client_id, payload.preverified_context);
+        }
+
         if (!payload.password) {
             throw new Error("Invalid credentials");
         }
@@ -24,7 +30,7 @@ class PasswordGrantHandler implements GrantHandler {
         if (!user) {
             throw new Error("Invalid credentials");
         }
-        return this.tokenService.generateTokenPair(payload);
+        return this.tokenService.generateIdentityTokenPair(payload.username, payload.client_id);
     }
 }
 

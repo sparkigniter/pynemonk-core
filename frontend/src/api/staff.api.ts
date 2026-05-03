@@ -54,6 +54,11 @@ export async function getStaffList(params?: {
     limit?: number; 
     search?: string; 
     status?: string; 
+    gender?: string;
+    designation?: string;
+    blood_group?: string;
+    religion?: string;
+    nationality?: string;
 }): Promise<PaginatedResponse<Staff>> {
     const query = new URLSearchParams();
     if (params) {

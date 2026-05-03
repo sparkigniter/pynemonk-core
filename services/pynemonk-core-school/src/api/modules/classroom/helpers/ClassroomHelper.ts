@@ -11,6 +11,7 @@ export default class ClassroomHelper extends BaseModel {
     public async findAll(tenantId: number, filters: {
         academic_year_id?: number;
         grade_id?: number;
+        ids?: number[];
         search?: string;
         page?: number;
         limit?: number;
@@ -34,6 +35,12 @@ export default class ClassroomHelper extends BaseModel {
         if (filters.grade_id) {
             query += ` AND c.grade_id = $${paramIndex}`;
             params.push(filters.grade_id);
+            paramIndex++;
+        }
+
+        if (filters.ids) {
+            query += ` AND c.id = ANY($${paramIndex})`;
+            params.push(filters.ids);
             paramIndex++;
         }
 
@@ -70,6 +77,10 @@ export default class ClassroomHelper extends BaseModel {
         if (filters.grade_id) {
             countQuery += ` AND c.grade_id = $${countParams.length + 1}`;
             countParams.push(filters.grade_id);
+        }
+        if (filters.ids) {
+            countQuery += ` AND c.id = ANY($${countParams.length + 1})`;
+            countParams.push(filters.ids);
         }
         if (filters.search) {
             countQuery += ` AND (c.name ILIKE $${countParams.length + 1} OR c.section ILIKE $${countParams.length + 1})`;

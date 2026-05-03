@@ -11,7 +11,7 @@ export default class GuardianController {
     public async getMyStudents(req: Request, res: Response): Promise<void> {
         try {
             const user = (req as any).user;
-            const students = await this.guardianHelper.getGuardianStudents(user.tenant_id, parseInt(user.sub));
+            const students = await this.guardianHelper.getGuardianStudents(user.tenantId, user.userId);
             
             res.json({
                 success: true,
@@ -29,7 +29,7 @@ export default class GuardianController {
         try {
             const user = (req as any).user;
             const studentId = parseInt(req.params.studentId);
-            const attendance = await this.guardianHelper.getStudentAttendance(user.tenant_id, studentId);
+            const attendance = await this.guardianHelper.getStudentAttendance(user.tenantId, studentId);
             res.json({ success: true, data: attendance });
         } catch (error: any) {
             res.status(500).json({ success: false, message: error.message });
@@ -40,7 +40,7 @@ export default class GuardianController {
         try {
             const user = (req as any).user;
             const studentId = parseInt(req.params.studentId);
-            const exams = await this.guardianHelper.getStudentExams(user.tenant_id, studentId);
+            const exams = await this.guardianHelper.getStudentExams(user.tenantId, studentId);
             res.json({ success: true, data: exams });
         } catch (error: any) {
             res.status(500).json({ success: false, message: error.message });
@@ -51,7 +51,7 @@ export default class GuardianController {
         try {
             const user = (req as any).user;
             const studentId = parseInt(req.params.studentId);
-            const details = await this.guardianHelper.getStudentClassroomDetails(user.tenant_id, studentId);
+            const details = await this.guardianHelper.getStudentClassroomDetails(user.tenantId, studentId);
             res.json({ success: true, data: details });
         } catch (error: any) {
             res.status(500).json({ success: false, message: error.message });

@@ -22,6 +22,7 @@ export function requireAuth(req: e.Request, res: e.Response, next: e.NextFunctio
 
     try {
         const decoded = jwt.verify(token, secret, { algorithms: ["HS256"] });
+        console.log("[AuthMiddleware] Decoded User:", JSON.stringify(decoded, null, 2));
         (req as any).user = decoded;
         next();
     } catch (err) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { 
-    LayoutDashboard, School, Layers, Settings, 
+    LayoutDashboard, School, 
     ShieldCheck, LogOut, ChevronRight, Menu, X 
 } from 'lucide-react';
 
@@ -19,8 +19,7 @@ const AdminLayout: React.FC = () => {
     const navItems = [
         { name: 'Dashboard', path: '/', icon: LayoutDashboard },
         { name: 'Schools', path: '/schools', icon: School },
-        { name: 'Auth Clients', path: '/clients', icon: Layers },
-        { name: 'Role Scopes', path: '/roles', icon: Settings },
+        { name: 'Identity & Access', path: '/clients', icon: ShieldCheck },
     ];
 
     return (

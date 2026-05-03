@@ -59,13 +59,23 @@ export default class StudentController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const studentId = parseInt(req.params.id, 10);
+            const scope = await this.getScope(req);
+            const user = (req as any).user;
+            const canReadFull = user.permissions.includes('student:read') || scope.accessLevel === "FULL";
+
+            // HYBRID SECURITY: Access is restricted to scope unless user has FULL access.
+            if (!canReadFull && !scope.hasStudent(studentId)) {
+                ApiResponseHandler.forbidden(res, "You do not have access to this student's profile");
+                return;
+            }
 
             const student = await this.studentService.getStudentProfile(tenantId, studentId);
             if (!student) {
                 ApiResponseHandler.badrequest(res, "Student not found");
                 return;
             }
-            ApiResponseHandler.ok(res, "Success", student);
+            
+            ApiResponseHandler.ok(res, "Success", canReadFull ? student : this.sanitizeStudent(student));
         } catch (error: any) {
             console.error(error);
             ApiResponseHandler.badrequest(res, "Failed to fetch student");
@@ -76,22 +86,59 @@ export default class StudentController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const scope = await this.getScope(req);
-            const { page, limit, search, classroom_id, academic_year_id } = req.query;
-
-            const filters = {
+            const user = (req as any).user;
+            const { page, limit, search, classroom_id, academic_year_id, gender, blood_group, religion, nationality, grade_id } = req.query;
+            const filters: any = {
                 page: page ? parseInt(page as string, 10) : 1,
                 limit: limit ? parseInt(limit as string, 10) : 10,
                 search: search as string,
                 classroom_id: classroom_id ? parseInt(classroom_id as string) : undefined,
-                academic_year_id: academic_year_id ? parseInt(academic_year_id as string) : undefined
+                academic_year_id: academic_year_id ? parseInt(academic_year_id as string) : undefined,
+                gender: gender as string,
+                blood_group: blood_group as string,
+                religion: religion as string,
+                nationality: nationality as string,
+                grade_id: grade_id ? parseInt(grade_id as string) : undefined
             };
 
-            const students = await this.studentService.listStudents(tenantId, filters, scope);
-            ApiResponseHandler.ok(res, "Success", students);
+            const canReadFull = user.permissions.includes('student:read') || scope.accessLevel === "FULL";
+            const canReadDirectory = user.permissions.includes('student.directory:read');
+
+            // HYBRID SECURITY: Visibility is ALWAYS restricted to scope unless user has FULL access.
+            // Directory read only controls sanitization, not bypass of the data scope.
+            if (!canReadFull) {
+                filters.ids = scope.studentIds;
+            }
+
+            const result = await this.studentService.listStudents(tenantId, filters);
+            
+            // Sanitize if not full access
+            if (!canReadFull) {
+                result.data = result.data.map((s: any) => this.sanitizeStudent(s));
+            }
+
+            ApiResponseHandler.ok(res, "Success", result);
         } catch (error: any) {
             console.error(error);
             ApiResponseHandler.badrequest(res, "Failed to list students");
         }
+    }
+
+    /**
+     * Strips sensitive PII from student record for public directory view.
+     */
+    private sanitizeStudent(student: any) {
+        const {
+            phone,
+            address,
+            date_of_birth,
+            blood_group,
+            nationality,
+            religion,
+            guardian_id,
+            ...sanitized
+        } = student;
+        return sanitized;
     }
 
     public async uploadDocument(req: e.Request, res: e.Response): Promise<void> {

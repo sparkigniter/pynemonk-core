@@ -16,8 +16,9 @@ export class TeacherNoteService {
     }
 
     async listNotes(tenantId: number, userId: number, filters: any) {
-        const staffId = await this.getStaffId(tenantId, userId);
-        return this.noteHelper.listNotes(tenantId, staffId, filters);
+        const staff = await this.staffHelper.findByUserId(tenantId, userId);
+        if (!staff) return [];
+        return this.noteHelper.listNotes(tenantId, staff.id, filters);
     }
 
     async createNote(tenantId: number, userId: number, data: Partial<TeacherNote>) {

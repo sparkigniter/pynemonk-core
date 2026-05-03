@@ -1,43 +1,38 @@
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
 import { container } from "tsyringe";
 import EventController from "./controllers/EventController.js";
 import { requireAuth } from "../../core/middleware/requireAuth.js";
-import { requireRole } from "../../core/middleware/requireRole.js";
+import { requirePermission } from "../../core/middleware/requirePermission.js";
+import { apiRateLimiter, sensitiveRateLimiter } from "../../core/middleware/RateLimiter.js";
 
 const eventRouter = Router();
 
-const eventRateLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100,
-});
-
-eventRouter.get("/", eventRateLimiter, requireAuth, (req, res) => container.resolve(EventController).list(req, res));
+eventRouter.get("/", apiRateLimiter, requireAuth, requirePermission(["announcement:read"]), (req, res) => container.resolve(EventController).list(req, res));
 
 eventRouter.post(
     "/",
-    eventRateLimiter,
+    apiRateLimiter,
+    sensitiveRateLimiter,
     requireAuth,
-    requireAuth,
-    requireRole(["owner", "principal", "school_admin"]),
+    requirePermission(["announcement:write"]),
     (req, res) => container.resolve(EventController).create(req, res)
 );
 
 eventRouter.put(
     "/:id",
-    eventRateLimiter,
+    apiRateLimiter,
+    sensitiveRateLimiter,
     requireAuth,
-    requireAuth,
-    requireRole(["owner", "principal", "school_admin"]),
+    requirePermission(["announcement:write"]),
     (req, res) => container.resolve(EventController).update(req, res)
 );
 
 eventRouter.delete(
     "/:id",
-    eventRateLimiter,
+    apiRateLimiter,
+    sensitiveRateLimiter,
     requireAuth,
-    requireAuth,
-    requireRole(["owner", "principal", "school_admin"]),
+    requirePermission(["announcement:write"]),
     (req, res) => container.resolve(EventController).delete(req, res)
 );
 

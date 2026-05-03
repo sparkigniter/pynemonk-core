@@ -72,14 +72,14 @@ export default function ExamInvitations() {
         if (!id) return;
         try {
             setIsLoading(true);
-            const [details, gradesData, classroomsData, subjectsData] = await Promise.all([
+            const [details, gradeRes, classroomsData, subjectsData] = await Promise.all([
                 examApi.getExamDetails(parseInt(id)),
                 getGrades(),
                 getClassrooms(),
                 getSubjectList({ limit: 1000 })
             ]);
             setExam(details);
-            setGrades(gradesData);
+            setGrades(gradeRes.data);
             setClassrooms(classroomsData.data);
             setSubjects(subjectsData.data);
         } catch (err) {

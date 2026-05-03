@@ -2,7 +2,8 @@ import * as express from "express";
 import { container } from "tsyringe";
 import StudentController from "./controllers/StudentController.js";
 import { requireAuth } from "../../../api/core/middleware/requireAuth.js";
-import { requireRole } from "../../../api/core/middleware/requireRole.js";
+import { requirePermission } from "../../core/middleware/requirePermission.js";
+import { apiRateLimiter, sensitiveRateLimiter } from "../../core/middleware/RateLimiter.js";
 
 const studentRouter = express.Router();
 
@@ -10,22 +11,22 @@ const studentRouter = express.Router();
  * POST /api/v1/school/students
  * Register a new student (requires school admin or principal)
  */
-studentRouter.post("/", requireAuth, requireRole(["school_admin", "principal"]), (req, res) => {
+studentRouter.post("/", apiRateLimiter, sensitiveRateLimiter, requireAuth, requirePermission(["student:write"]), (req, res) => {
     const ctrl = container.resolve(StudentController);
     return ctrl.create(req, res);
 });
 
-studentRouter.get("/next-admission-number", requireAuth, requireRole(["school_admin", "principal"]), (req, res) => {
+studentRouter.get("/next-admission-number", apiRateLimiter, requireAuth, requirePermission(["student:write"]), (req, res) => {
     const ctrl = container.resolve(StudentController);
     return ctrl.getNextAdmissionNumber(req, res);
 });
 
-studentRouter.get("/settings", requireAuth, requireRole(["school_admin", "principal"]), (req, res) => {
+studentRouter.get("/settings", apiRateLimiter, requireAuth, requirePermission(["settings:read"]), (req, res) => {
     const ctrl = container.resolve(StudentController);
     return ctrl.getSettings(req, res);
 });
 
-studentRouter.patch("/settings", requireAuth, requireRole(["school_admin", "principal"]), (req, res) => {
+studentRouter.patch("/settings", apiRateLimiter, sensitiveRateLimiter, requireAuth, requirePermission(["settings:write"]), (req, res) => {
     const ctrl = container.resolve(StudentController);
     return ctrl.updateSettings(req, res);
 });
@@ -36,8 +37,9 @@ studentRouter.patch("/settings", requireAuth, requireRole(["school_admin", "prin
  */
 studentRouter.get(
     "/",
+    apiRateLimiter,
     requireAuth,
-    requireRole(["school_admin", "principal", "teacher"]),
+    requirePermission(["student:read"]),
     (req, res) => {
         const ctrl = container.resolve(StudentController);
         return ctrl.list(req, res);
@@ -46,6 +48,7 @@ studentRouter.get(
 
 studentRouter.get(
     "/profile/me",
+    apiRateLimiter,
     requireAuth,
     (req, res) => {
         const ctrl = container.resolve(StudentController);
@@ -59,8 +62,9 @@ studentRouter.get(
  */
 studentRouter.get(
     "/:id",
+    apiRateLimiter,
     requireAuth,
-    requireRole(["school_admin", "principal", "teacher"]),
+    requirePermission(["student:read"]),
     (req, res) => {
         const ctrl = container.resolve(StudentController);
         return ctrl.get(req, res);
@@ -73,8 +77,10 @@ studentRouter.get(
  */
 studentRouter.post(
     "/:id/documents",
+    apiRateLimiter,
+    sensitiveRateLimiter,
     requireAuth,
-    requireRole(["school_admin", "principal"]),
+    requirePermission(["student:write"]),
     (req, res) => {
         const ctrl = container.resolve(StudentController);
         return ctrl.uploadDocument(req, res);
@@ -83,8 +89,10 @@ studentRouter.post(
 
 studentRouter.put(
     "/:id",
+    apiRateLimiter,
+    sensitiveRateLimiter,
     requireAuth,
-    requireRole(["school_admin", "principal"]),
+    requirePermission(["student:write"]),
     (req, res) => {
         const ctrl = container.resolve(StudentController);
         return ctrl.update(req, res);

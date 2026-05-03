@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { examApi } from '../../api/exam.api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import type { Exam, ExamTerm } from '../../api/exam.api';
 
 // ── Components ───────────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
 export default function Exams() {
   const navigate = useNavigate();
   const { notify } = useNotification();
+  const { can } = useAuth();
   const [exams, setExams] = useState<Exam[]>([]);
   const [terms, setTerms] = useState<ExamTerm[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,28 +104,32 @@ export default function Exams() {
               <ClipboardList className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-black text-slate-900 tracking-tight">Examinations</h1>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight">Exams</h1>
               <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Assessment Control Center
+                Manage your school exams
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsTermModalOpen(true)}
-              className="bg-white text-slate-600 px-6 py-3.5 rounded-2xl text-sm font-black hover:bg-slate-50 transition-all shadow-sm border border-slate-200 active:scale-95"
-            >
-              Manage Terms
-            </button>
-            <button
-              onClick={() => navigate('/exams/new')}
-              className="bg-primary text-white px-8 py-3.5 rounded-2xl text-sm font-black hover:opacity-90 flex items-center gap-3 transition-all shadow-lg shadow-primary/20 active:scale-95"
-            >
-              <Plus className="w-5 h-5" />
-              Schedule Exam
-            </button>
+            {can('exam:write') && (
+              <>
+                <button
+                  onClick={() => setIsTermModalOpen(true)}
+                  className="bg-white text-slate-600 px-6 py-3.5 rounded-2xl text-sm font-black hover:bg-slate-50 transition-all shadow-sm border border-slate-200 active:scale-95"
+                >
+                  Manage Terms
+                </button>
+                <button
+                  onClick={() => navigate('/exams/new')}
+                  className="bg-primary text-white px-8 py-3.5 rounded-2xl text-sm font-black hover:opacity-90 flex items-center gap-3 transition-all shadow-lg shadow-primary/20 active:scale-95"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Exam
+                </button>
+              </>
+            )}
           </div>
         </header>
 
@@ -224,15 +230,17 @@ export default function Exams() {
               </div>
 
               {/* Edit Shortcut */}
-              <button 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/exams/${exam.id}/edit`);
-                }}
-                className="absolute top-16 right-7 p-2 text-slate-200 hover:text-theme-primary hover:bg-slate-50 rounded-xl transition-all"
-              >
-                <Settings size={18} />
-              </button>
+              {can('exam:write') && (
+                <button 
+                  onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/exams/${exam.id}/edit`);
+                  }}
+                  className="absolute top-16 right-7 p-2 text-slate-200 hover:text-theme-primary hover:bg-slate-50 rounded-xl transition-all"
+                >
+                  <Settings size={18} />
+                </button>
+              )}
             </div>
           ))}
 
@@ -243,7 +251,9 @@ export default function Exams() {
               </div>
               <h3 className="text-3xl font-black text-slate-900 tracking-tight">No Active Assessments</h3>
               <p className="text-slate-400 mt-3 font-medium text-lg max-w-sm mx-auto">Initialize your first assessment cycle to begin evaluating student performance.</p>
-              <button onClick={() => navigate('/exams/new')} className="mt-10 px-12 py-5 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-2xl">Create Exam Cycle</button>
+              {can('exam:write') && (
+                <button onClick={() => navigate('/exams/new')} className="mt-10 px-12 py-5 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-2xl">Add New Exam</button>
+              )}
             </div>
           )}
         </div>

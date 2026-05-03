@@ -8,9 +8,11 @@ import type { Classroom } from '../../api/classroom.api';
 import { getAttendanceRoster, saveAttendance } from '../../api/attendance.api';
 import { ComboBox } from '../../components/ui/ComboBox';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const AttendancePage: React.FC = () => {
     const { notify } = useNotification();
+    const { can } = useAuth();
     const [classrooms, setClassrooms] = useState<Classroom[]>([]);
     const [selectedClass, setSelectedClass] = useState<number | null>(null);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -63,7 +65,7 @@ const AttendancePage: React.FC = () => {
     };
 
     const toggleStatus = (studentId: number) => {
-        if (isHistoryMode) return;
+        if (isHistoryMode || !can('student.attendance:write')) return;
         setRoster(prev => prev.map(s => {
             if (s.student_id === studentId) {
                 const statuses = ['present', 'absent', 'late'];
@@ -84,7 +86,7 @@ const AttendancePage: React.FC = () => {
                 enrollment_id: s.enrollment_id,
                 status: s.status
             }));
-            await saveAttendance(selectedDate, records);
+            await saveAttendance(selectedDate, selectedClass, records);
             notify('success', 'Attendance Saved', 'Presence records have been updated successfully.');
             setHasChanges(false);
         } catch (err: any) {
@@ -124,21 +126,23 @@ const AttendancePage: React.FC = () => {
                     {isHistoryMode ? (
                         <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-600 rounded-full border border-amber-100 mt-1">
                             <Clock size={12} className="animate-pulse" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">History Mode (Read Only)</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Past Records</span>
                         </div>
                     ) : (
-                        <p className="text-slate-500 font-medium mt-1">Efficient campus presence management</p>
+                        <p className="text-slate-500 font-medium mt-1">Keep track of student attendance easily.</p>
                     )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                    <button 
-                        onClick={markAllPresent}
-                        className="px-5 py-2.5 rounded-2xl bg-primary/5 text-primary text-sm font-bold hover:bg-primary/10 transition-all flex items-center gap-2 border border-primary/10"
-                    >
-                        <CheckCircle2 size={16} />
-                        Mark All Present
-                    </button>
+                    {can('student.attendance:write') && (
+                        <button 
+                            onClick={markAllPresent}
+                            className="px-5 py-2.5 rounded-2xl bg-primary/5 text-primary text-sm font-bold hover:bg-primary/10 transition-all flex items-center gap-2 border border-primary/10"
+                        >
+                            <CheckCircle2 size={16} />
+                            Mark All Present
+                        </button>
+                    )}
                     <div className="h-10 w-px bg-slate-200 mx-2 hidden md:block" />
                     <div className="flex items-center gap-2 bg-white p-1 rounded-2xl border border-slate-100 shadow-sm">
                         <input 
@@ -205,7 +209,7 @@ const AttendancePage: React.FC = () => {
                             onClick={() => toggleStatus(student.student_id)}
                             className={`
                                 group relative overflow-hidden rounded-[2rem] p-5 transition-all duration-300 transform 
-                                ${isHistoryMode ? 'cursor-default' : 'cursor-pointer active:scale-95'}
+                                ${(isHistoryMode || !can('student.attendance:write')) ? 'cursor-default' : 'cursor-pointer active:scale-95'}
                                 border-2
                                 ${student.status === 'present' ? 'bg-emerald-50/30 border-emerald-100 hover:border-emerald-300 shadow-emerald-100/20' : ''}
                                 ${student.status === 'absent' ? 'bg-rose-50/30 border-rose-100 hover:border-rose-300 shadow-rose-100/20' : ''}
@@ -247,6 +251,15 @@ const AttendancePage: React.FC = () => {
                 </div>
             )}
 
+            {/* Pagination Controls */}
+            {roster.length > 0 && (
+                <div className="mt-8 flex items-center justify-between bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Showing <span className="text-slate-900">{filteredRoster.length}</span> students
+                    </p>
+                </div>
+            )}
+
             {/* Empty State */}
             {!loading && filteredRoster.length === 0 && (
                 <div className="bg-white rounded-[2.5rem] p-12 text-center border border-dashed border-slate-200">
@@ -261,8 +274,8 @@ const AttendancePage: React.FC = () => {
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl z-50 animate-bounce-in">
                     <div className="bg-slate-900 rounded-[2rem] p-4 shadow-2xl flex items-center justify-between gap-4 border border-white/10">
                         <div className="px-4">
-                            <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Staged Changes</p>
-                            <p className="text-white font-black">{roster.length} Records ready</p>
+                            <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Unsaved Changes</p>
+                            <p className="text-white font-black">{roster.length} Students ready</p>
                         </div>
                         <button 
                             onClick={handleSave}
@@ -270,7 +283,7 @@ const AttendancePage: React.FC = () => {
                             className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-2xl font-black flex items-center gap-2 transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
                         >
                             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                            {saving ? 'Saving...' : 'Submit Attendance'}
+                            {saving ? 'Saving...' : 'Save Attendance'}
                         </button>
                     </div>
                 </div>

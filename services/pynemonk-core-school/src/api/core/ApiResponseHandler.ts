@@ -27,6 +27,14 @@ class ApiResponseHandler extends ResponseHandler {
         });
         return res.status(400).json(jsonRes);
     }
+
+    public static forbidden(res: express.Response, message?: string): express.Response {
+        const jsonRes: JSON = this.jsonResponse({
+            message: message ?? "Forbidden: You do not have permission to access this resource",
+            success: false,
+        });
+        return res.status(403).json(jsonRes);
+    }
 }
 
 export default ApiResponseHandler;

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { 
-    Plus, Layers, ChevronRight, Edit2, Trash2, 
-    Loader2, LayoutGrid, Map, Award, TrendingUp,
-    Settings2, Users, Building2, BookOpen, GraduationCap
+import {
+    Plus, Layers, ChevronRight, Edit2, Trash2,
+    Loader2, LayoutGrid, Map, Award,
+    Users, Building2, BookOpen, GraduationCap,
+    Search
 } from 'lucide-react';
 import * as gradeApi from '../../api/grade.api';
 import Modal from '../../components/ui/Modal';
@@ -14,7 +15,9 @@ export default function Grades() {
     const [isSaving, setIsSaving] = useState(false);
     const [viewMode, setViewMode] = useState<'roadmap' | 'grid'>('grid');
     const [editingGrade, setEditingGrade] = useState<gradeApi.Grade | null>(null);
-    
+    const [search, setSearch] = useState('');
+    const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 12, pages: 1 });
+
     const [formData, setFormData] = useState({
         name: '',
         slug: '',
@@ -22,15 +25,24 @@ export default function Grades() {
     });
 
     useEffect(() => {
-        fetchGrades();
-    }, []);
+        const timer = setTimeout(() => {
+            fetchGrades();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [search, pagination.page]);
 
     const sortedGrades = [...grades].sort((a, b) => a.sequence_order - b.sequence_order);
 
     const fetchGrades = async () => {
+        setLoading(true);
         try {
-            const data = await gradeApi.getGrades();
-            setGrades(data);
+            const res = await gradeApi.getGrades({
+                search,
+                page: pagination.page,
+                limit: pagination.limit
+            });
+            setGrades(res.data);
+            setPagination(res.pagination);
         } catch (error) {
             console.error('Failed to fetch grades', error);
         } finally {
@@ -88,30 +100,41 @@ export default function Grades() {
                             <Layers className="text-white w-6 h-6" />
                         </div>
                         <div>
-                            <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none">Grade Hierarchy</h1>
-                            <p className="text-slate-400 font-medium mt-1">Structure your school's academic progression path.</p>
+                            <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none">Grade Levels</h1>
+                            <p className="text-slate-400 font-medium mt-1">Organize your school's classes and academic levels.</p>
                         </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-4 pt-2">
                         <div className="flex p-1 bg-slate-100 rounded-xl border border-slate-200/50">
-                            <button 
+                            <button
                                 onClick={() => setViewMode('roadmap')}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'roadmap' ? 'bg-white text-theme-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             >
                                 <Map size={14} /> Roadmap
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setViewMode('grid')}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'grid' ? 'bg-white text-theme-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             >
                                 <LayoutGrid size={14} /> Grid View
                             </button>
                         </div>
+
+                        <div className="relative w-full lg:w-80">
+                            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Search grades..."
+                                className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-[1rem] text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-slate-300 shadow-sm"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
                     </div>
                 </div>
 
-                <button 
+                <button
                     onClick={() => { setEditingGrade(null); setFormData({ name: '', slug: '', sequence_order: 0 }); setIsModalOpen(true); }}
                     className="flex items-center gap-3 px-8 py-4 bg-theme-primary text-white rounded-[1.25rem] font-black text-xs uppercase tracking-[0.1em] hover:opacity-90 transition-all active:scale-95 shadow-2xl shadow-primary/20 group"
                 >
@@ -124,16 +147,16 @@ export default function Grades() {
             {loading ? (
                 <div className="h-[50vh] flex flex-col items-center justify-center gap-4 bg-white rounded-[3rem] border border-slate-100">
                     <div className="w-12 h-12 border-4 border-slate-100 border-t-theme-primary rounded-full animate-spin" />
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Building Roadmap...</p>
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Loading Grades...</p>
                 </div>
             ) : grades.length === 0 ? (
                 <div className="h-[60vh] flex flex-col items-center justify-center text-center bg-white rounded-[3rem] border border-slate-100 border-dashed border-2">
                     <div className="w-24 h-24 rounded-[2.5rem] bg-slate-50 flex items-center justify-center text-slate-300 mb-8">
                         <Map size={48} />
                     </div>
-                    <h3 className="text-2xl font-black text-slate-900 mb-2">The Roadmap is Empty</h3>
-                    <p className="text-slate-400 max-w-sm mb-10 font-medium">Create your first academic grade to start visualizing the student journey.</p>
-                    <button 
+                    <h3 className="text-2xl font-black text-slate-900 mb-2">No Grades Defined</h3>
+                    <p className="text-slate-400 max-w-sm mb-10 font-medium">Create your first academic grade level to start building your school's structure.</p>
+                    <button
                         onClick={() => setIsModalOpen(true)}
                         className="px-10 py-5 bg-theme-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20"
                     >
@@ -163,9 +186,6 @@ export default function Grades() {
                                                 <span className="px-2 py-0.5 bg-slate-50 text-slate-400 rounded-lg text-[8px] font-black uppercase tracking-tighter border border-slate-100">{grade.slug}</span>
                                             </div>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <div className="flex items-center gap-1 px-2 py-1 bg-primary/5 text-primary rounded-lg text-[9px] font-black uppercase tracking-widest">
-                                                    <TrendingUp size={10} /> Level {grade.sequence_order}
-                                                </div>
                                                 <div className="flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-widest">
                                                     <Users size={10} /> {grade.student_count || 0} Students
                                                 </div>
@@ -182,11 +202,6 @@ export default function Grades() {
                                             <div className="flex flex-col items-center gap-1">
                                                 <div className="p-1.5 bg-white rounded-lg shadow-sm text-blue-500"><BookOpen size={12} /></div>
                                                 <span className="text-[10px] font-black text-slate-800">{grade.subject_count || 6}</span>
-                                            </div>
-                                            <div className="w-px h-8 bg-slate-200/50" />
-                                            <div className="flex flex-col items-center gap-1">
-                                                <div className="p-1.5 bg-white rounded-lg shadow-sm text-emerald-500"><Award size={12} /></div>
-                                                <span className="text-[10px] font-black text-slate-800">96%</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -225,10 +240,10 @@ export default function Grades() {
                                     </button>
                                 </div>
                             </div>
-                            
+
                             <h3 className="text-lg font-black text-slate-800 mb-0.5">{grade.name}</h3>
                             <p className="text-slate-400 font-bold text-[9px] mb-6 uppercase tracking-widest">{grade.slug}</p>
-                            
+
                             <div className="grid grid-cols-2 gap-3 mb-6">
                                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100/50 flex flex-col gap-1">
                                     <div className="flex items-center gap-1.5 text-slate-400">
@@ -247,51 +262,51 @@ export default function Grades() {
                             </div>
 
                             <button className="w-full py-3 bg-slate-50 text-slate-400 rounded-xl font-black text-[9px] uppercase tracking-widest group-hover:bg-theme-primary group-hover:text-white transition-all active:scale-95">
-                                Manage Hierarchy
+                                Manage Grade
                             </button>
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* ── Side Actions & Insights ── */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="bg-theme-primary rounded-[2.5rem] p-8 text-white space-y-6 shadow-2xl shadow-primary/20">
-                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                        <Award className="text-white w-6 h-6" />
-                    </div>
-                    <div>
-                        <h4 className="text-xl font-black">Progression Insight</h4>
-                        <p className="text-white/50 text-sm mt-1">Students follow the sequence order defined in this roadmap.</p>
-                    </div>
-                    <div className="pt-6 border-t border-white/10">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Current Coverage</span>
-                            <span className="text-sm font-black">85%</span>
+            {/* Pagination Controls */}
+            {pagination.pages > 1 && (
+                <div className="flex items-center justify-between bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Showing <span className="text-slate-900">{grades.length}</span> of <span className="text-slate-900">{pagination.total}</span> Levels
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            disabled={pagination.page === 1}
+                            onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                            className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 transition-all shadow-sm"
+                        >
+                            <ChevronRight size={18} className="rotate-180" />
+                        </button>
+                        <div className="flex items-center gap-1.5">
+                            {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(p => (
+                                <button
+                                    key={p}
+                                    onClick={() => setPagination(prev => ({ ...prev, page: p }))}
+                                    className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${pagination.page === p ? 'bg-slate-900 text-white shadow-lg' : 'bg-white border border-slate-100 text-slate-400'}`}
+                                >
+                                    {p}
+                                </button>
+                            ))}
                         </div>
-                        <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                            <div className="h-full bg-white w-[85%] rounded-full" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="md:col-span-2 bg-white rounded-[2.5rem] border border-slate-100 p-8 flex flex-col md:flex-row items-center gap-8 shadow-sm">
-                    <div className="w-full md:w-1/3">
-                        <div className="aspect-square bg-slate-50 rounded-3xl flex items-center justify-center p-8 border border-slate-100">
-                             <TrendingUp className="text-slate-200 w-full h-full" />
-                        </div>
-                    </div>
-                    <div className="flex-1 space-y-4 text-center md:text-left">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-100">
-                            <Settings2 size={12} /> Optimization Tip
-                        </div>
-                        <h4 className="text-2xl font-black text-slate-800">Review Sequence Orders</h4>
-                        <p className="text-slate-400 font-medium leading-relaxed">Ensuring your sequence orders are strictly chronological allows the automated **Rollover Service** to promote students to the next level seamlessly.</p>
-                        <button className="text-theme-primary font-black text-[10px] uppercase tracking-[0.2em] hover:opacity-70 transition-all flex items-center gap-2 mx-auto md:mx-0">
-                            View Promotion Logic <ChevronRight size={14} />
+                        <button
+                            disabled={pagination.page === pagination.pages}
+                            onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                            className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 transition-all shadow-sm"
+                        >
+                            <ChevronRight size={18} />
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* ── Side Actions & Insights ── */}
+            <div className="hidden">
             </div>
 
             {/* ── Create/Edit Modal ── */}
@@ -305,47 +320,47 @@ export default function Grades() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grade Name *</label>
-                            <input 
-                                required 
-                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 placeholder:text-slate-300 focus:bg-white focus:border-theme-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all" 
-                                value={formData.name} 
-                                onChange={e => setFormData({...formData, name: e.target.value})} 
-                                placeholder="e.g. Grade 10" 
+                            <input
+                                required
+                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 placeholder:text-slate-300 focus:bg-white focus:border-theme-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                placeholder="e.g. Grade 10"
                             />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Level Slug *</label>
-                            <input 
-                                required 
-                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 placeholder:text-slate-300 focus:bg-white focus:border-theme-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all" 
-                                value={formData.slug} 
-                                onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})} 
-                                placeholder="grade-10" 
+                            <input
+                                required
+                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 placeholder:text-slate-300 focus:bg-white focus:border-theme-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                                value={formData.slug}
+                                onChange={e => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                                placeholder="grade-10"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Progression Sequence *</label>
-                        <input 
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sort Order *</label>
+                        <input
                             type="number"
-                            required 
-                            className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 focus:bg-white focus:border-theme-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all" 
-                            value={formData.sequence_order} 
-                            onChange={e => setFormData({...formData, sequence_order: parseInt(e.target.value)})} 
+                            required
+                            className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-slate-700 focus:bg-white focus:border-theme-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                            value={formData.sequence_order}
+                            onChange={e => setFormData({ ...formData, sequence_order: parseInt(e.target.value) })}
                         />
-                        <p className="text-[10px] text-slate-400 font-medium italic mt-2 leading-relaxed">This determines the promotion order. Level 1 rolls over to Level 2, and so on.</p>
+                        <p className="text-[10px] text-slate-400 font-medium italic mt-2 leading-relaxed">Lower numbers appear first in the list.</p>
                     </div>
 
                     <div className="flex gap-4 pt-6">
-                        <button 
+                        <button
                             type="button"
                             onClick={() => setIsModalOpen(false)}
                             className="flex-1 px-8 py-4 bg-white border border-slate-100 text-slate-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all"
                         >
                             Cancel
                         </button>
-                        <button 
+                        <button
                             disabled={isSaving}
                             className="flex-[2] px-8 py-4 bg-theme-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl shadow-primary/20"
                         >

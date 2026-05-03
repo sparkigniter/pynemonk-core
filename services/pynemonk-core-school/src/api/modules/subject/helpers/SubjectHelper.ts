@@ -23,6 +23,7 @@ export default class SubjectHelper extends BaseModel {
         tenantId: number,
         filters: {
             grade_id?: number;
+            ids?: number[];
             search?: string;
             page?: number;
             limit?: number;
@@ -40,6 +41,12 @@ export default class SubjectHelper extends BaseModel {
         if (filters.grade_id) {
             query += ` AND s.grade_id = $${paramIndex}`;
             values.push(filters.grade_id);
+            paramIndex++;
+        }
+
+        if (filters.ids) {
+            query += ` AND s.id = ANY($${paramIndex})`;
+            values.push(filters.ids);
             paramIndex++;
         }
 
@@ -72,6 +79,10 @@ export default class SubjectHelper extends BaseModel {
         if (filters.grade_id) {
             countQuery += ` AND s.grade_id = $2`;
             countValues.push(filters.grade_id);
+        }
+        if (filters.ids) {
+            countQuery += ` AND s.id = ANY($${countValues.length + 1})`;
+            countValues.push(filters.ids);
         }
         if (filters.search) {
             countQuery += ` AND (s.name ILIKE $${countValues.length + 1} OR s.code ILIKE $${countValues.length + 1})`;

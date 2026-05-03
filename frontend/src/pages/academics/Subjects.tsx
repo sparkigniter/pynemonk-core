@@ -12,12 +12,14 @@ import * as classroomApi from '../../api/classroom.api';
 import { academicsApi } from '../../api/academics.api';
 import { ComboBox } from '../../components/ui/ComboBox';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import Modal from '../../components/ui/Modal';
 
 type ViewMode = 'overview' | 'quick-edit';
 
 export default function Subjects() {
     const { notify } = useNotification();
+    const { can, user } = useAuth();
     // Data States
     const [subjects, setSubjects] = useState<subjectApi.Subject[]>([]);
     const [allSubjects, setAllSubjects] = useState<subjectApi.Subject[]>([]);
@@ -55,13 +57,14 @@ export default function Subjects() {
 
     const fetchInitialData = useCallback(async () => {
         try {
-            const [gradeData, staffData, classroomData, yearsData] = await Promise.all([
+            const [gradeRes, staffData, classroomData, yearsData] = await Promise.all([
                 gradeApi.getGrades(),
                 staffApi.getStaffList({ limit: 500 }),
                 classroomApi.getClassrooms({ limit: 500 }),
                 academicsApi.getYears()
             ]);
             
+            const gradeData = gradeRes.data;
             setGrades(gradeData);
             setStaff(staffData.data);
             setClassrooms(classroomData.data);
@@ -259,7 +262,7 @@ export default function Subjects() {
     return (
         <div className="flex h-[calc(100vh-120px)] bg-slate-50/50 rounded-[3rem] overflow-hidden border border-slate-200 shadow-2xl relative">
             {/* Bulk Action Bar */}
-            {selectedRows.size > 0 && (
+            {selectedRows.size > 0 && can('class:write') && (
                 <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-8 duration-500">
                     <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-4 flex items-center gap-6 shadow-2xl shadow-slate-900/40">
                         <div className="px-6 border-r border-white/10">
@@ -295,7 +298,7 @@ export default function Subjects() {
             {/* Grade Sidebar Rail */}
             <div className="w-80 bg-white border-r border-slate-200 flex flex-col">
                 <div className="p-8 border-b border-slate-100">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Academic Grades</h3>
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Grades</h3>
                     <div className="relative group">
                         <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input 
@@ -346,10 +349,10 @@ export default function Subjects() {
                                     <GraduationCap size={24} />
                                 </div>
                                 <h1 className="text-3xl font-black text-slate-900 tracking-tight font-heading">
-                                    {selectedGrade?.name || 'Curriculum Matrix'}
+                                    {selectedGrade?.name || 'Subject Assignments'}
                                 </h1>
                             </div>
-                            <p className="text-slate-500 font-medium">Managing {stats.total} curriculum slots for this grade level.</p>
+                            <p className="text-slate-500 font-medium">Managing {stats.total} subjects for this grade level.</p>
                         </div>
 
                         <div className="flex items-center gap-2 p-1 bg-white rounded-2xl border border-slate-200 shadow-sm">
@@ -373,7 +376,7 @@ export default function Subjects() {
                     {/* Stats Rail */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <StatCard 
-                            label="Matrix Slots" 
+                            label="Subject Slots" 
                             value={stats.total} 
                             icon={Layers} 
                             color="primary" 
@@ -407,16 +410,18 @@ export default function Subjects() {
                         </div>
                         
                         <div className="flex gap-3">
-                            <button
-                                onClick={() => {
-                                    setSubjectFormData(prev => ({ ...prev, grade_id: selectedGradeId?.toString() || '' }));
-                                    setIsSubjectModalOpen(true);
-                                }}
-                                className="flex items-center gap-2 px-8 py-3.5 bg-theme-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-theme-primary/20 hover:scale-105 active:scale-95 transition-all"
-                            >
-                                <Plus size={16} />
-                                Add Subject
-                            </button>
+                            {can('class:write') && (
+                                <button
+                                    onClick={() => {
+                                        setSubjectFormData(prev => ({ ...prev, grade_id: selectedGradeId?.toString() || '' }));
+                                        setIsSubjectModalOpen(true);
+                                    }}
+                                    className="flex items-center gap-2 px-8 py-3.5 bg-theme-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-theme-primary/20 hover:scale-105 active:scale-95 transition-all"
+                                >
+                                    <Plus size={16} />
+                                    Add Subject
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -439,10 +444,10 @@ export default function Subjects() {
                                             assignments: assignments.filter(a => a.subject_id === subject.id),
                                             isAssigned: assignments.some(a => a.subject_id === subject.id)
                                         }} 
-                                        onAssign={() => {
+                                        onAssign={can('class:write') ? () => {
                                             setAssignFormData(prev => ({ ...prev, subject_id: subject.id.toString() }));
                                             setIsAssignModalOpen(true);
-                                        }}
+                                        } : undefined}
                                     />
                                 ))}
                             </div>
@@ -518,22 +523,33 @@ export default function Subjects() {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
-                                                <ComboBox
-                                                    placeholder="Choose Teacher..."
-                                                    value={row.teacherId}
-                                                    onChange={(val) => {
-                                                        if (val) {
-                                                            handleAssignTeacher(null, {
-                                                                staff_id: Number(val),
-                                                                classroom_id: row.classroom.id,
-                                                                subject_id: row.subject.id,
-                                                                academic_year_id: parseInt(assignFormData.academic_year_id)
-                                                            });
-                                                        }
-                                                    }}
-                                                    options={row.staffOptions.map((s: any) => ({ value: s.id, label: `${s.first_name} ${s.last_name}` }))}
-                                                    direction={matrix.indexOf(row) > matrix.length - 3 ? 'up' : 'down'}
-                                                />
+                                                {can('class:write') && user?.roles.some((r: any) => ['admin', 'school_admin'].includes(r)) ? (
+                                                    <ComboBox
+                                                        placeholder="Choose Teacher..."
+                                                        value={row.teacherId}
+                                                        onChange={(val) => {
+                                                            if (val) {
+                                                                handleAssignTeacher(null, {
+                                                                    staff_id: Number(val),
+                                                                    classroom_id: row.classroom.id,
+                                                                    subject_id: row.subject.id,
+                                                                    academic_year_id: parseInt(assignFormData.academic_year_id)
+                                                                });
+                                                            }
+                                                        }}
+                                                        options={row.staffOptions.map((s: any) => ({ value: s.id, label: `${s.first_name} ${s.last_name}` }))}
+                                                        direction={matrix.indexOf(row) > matrix.length - 3 ? 'up' : 'down'}
+                                                    />
+                                                ) : (
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
+                                                            <Users size={16} />
+                                                        </div>
+                                                        <span className="text-sm font-black text-slate-600">
+                                                            {row.teacherName || 'Not Assigned'}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-8 py-6 text-right">
                                                 {row.isAssigned ? (
@@ -558,7 +574,7 @@ export default function Subjects() {
             </div>
 
             {/* Modals remain same as previous version but with grade-awareness */}
-            <Modal isOpen={isSubjectModalOpen} onClose={() => setIsSubjectModalOpen(false)} title="New Subject Definition">
+            <Modal isOpen={isSubjectModalOpen} onClose={() => setIsSubjectModalOpen(false)} title="Add New Subject">
                 <form onSubmit={handleAddSubject} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
@@ -604,7 +620,7 @@ export default function Subjects() {
                 </form>
             </Modal>
 
-            <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title="Teacher Assignment">
+            <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title="Assign Teacher">
                 <form onSubmit={handleAssignTeacher} className="space-y-6">
                     <ComboBox
                         label="Pick Subject"
@@ -615,7 +631,7 @@ export default function Subjects() {
                     />
 
                     <ComboBox
-                        label="Select Educator"
+                        label="Select Teacher"
                         value={assignFormData.staff_id ? Number(assignFormData.staff_id) : null}
                         onChange={val => setAssignFormData({ ...assignFormData, staff_id: val?.toString() || '' })}
                         placeholder="Select Teacher"
@@ -623,7 +639,7 @@ export default function Subjects() {
                     />
 
                     <ComboBox
-                        label="Target Classroom"
+                        label="Select Class"
                         value={assignFormData.classroom_id ? Number(assignFormData.classroom_id) : null}
                         onChange={val => setAssignFormData({ ...assignFormData, classroom_id: val?.toString() || '' })}
                         placeholder="Select Classroom"
@@ -723,19 +739,21 @@ function SubjectCard({ subject, onAssign }: any) {
                     )}
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-[9px] font-black uppercase tracking-widest">
-                        {subject.isAssigned ? <Check size={12} /> : <Clock size={12} />}
-                        {subject.isAssigned ? 'Active' : 'Awaiting'}
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                        <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-[9px] font-black uppercase tracking-widest">
+                            {subject.isAssigned ? <Check size={12} /> : <Clock size={12} />}
+                            {subject.isAssigned ? 'Active' : 'Awaiting'}
+                        </div>
+                        {onAssign && (
+                            <button 
+                                onClick={onAssign}
+                                className="flex items-center gap-1 text-xs font-black text-slate-400 hover:text-theme-primary uppercase tracking-widest transition-all"
+                            >
+                                {subject.isAssigned ? "Manage" : "Assign"}
+                                <ChevronRight size={14} />
+                            </button>
+                        )}
                     </div>
-                    <button 
-                        onClick={onAssign}
-                        className="flex items-center gap-1 text-xs font-black text-slate-400 hover:text-theme-primary uppercase tracking-widest transition-all"
-                    >
-                        {subject.isAssigned ? "Manage" : "Assign"}
-                        <ChevronRight size={14} />
-                    </button>
-                </div>
             </div>
         </div>
     );

@@ -56,13 +56,46 @@ class TokenService {
     }
 
     /**
-     * Token Pair Generator
-     * @param tokenPayload 
-     * @returns 
+     * Standard Token Pair Generator (Legacy compatibility)
      */
     public generateTokenPair(tokenPayload: TokenPayload): TokenResponse {
-        const accessToken: string = this.generateToken(tokenPayload);
-        const refreshToken: string = this.generateRefreshToken(tokenPayload);
+        const accessToken = this.generateToken(tokenPayload);
+        const refreshToken = this.generateRefreshToken(tokenPayload);
+        return {
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            token_type: "Bearer",
+            expires_in: this.accessTokenExpiryTime
+        };
+    }
+
+    /**
+     * Token Pair Generator (Identity Aware)
+     * Optimized for login grants to include full RBAC context.
+     */
+    public async generateIdentityTokenPair(email: string, clientId: string, prefetchedContext?: any): Promise<TokenResponse> {
+        const context = prefetchedContext || await this.userHelper.getIdentityContext(email, clientId);
+        if (!context) throw new Error("User identity not found");
+
+        const payload: any = {
+            sub: context.user_id,
+            email: context.email,
+            tenant_id: context.tenant_id,
+            roles: context.roles.map((r: any) => r.slug), // Extract slugs for easy checking
+            scope: context.permissions.join(" "),
+            iat: Math.floor(Date.now() / 1000)
+        };
+
+        const accessToken = jwt.sign(payload, this.JWT_ACCESS_SECRET, {
+            expiresIn: this.accessTokenExpiryTime,
+            algorithm: "HS256"
+        });
+
+        const refreshToken = jwt.sign(payload, this.JWT_REFRESH_SECRET, {
+            expiresIn: this.refreshTokenExpiryTime,
+            algorithm: "HS256"
+        });
+
         return {
             access_token: accessToken,
             refresh_token: refreshToken,

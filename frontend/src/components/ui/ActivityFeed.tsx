@@ -72,9 +72,6 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ data = [] }) => {
                 ))}
             </div>
             
-            <button className="w-full mt-4 py-4 rounded-2xl border border-dashed border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:border-primary/20 hover:text-primary hover:bg-primary/5 transition-all duration-300">
-                View Full Audit Logs
-            </button>
         </div>
     );
 };

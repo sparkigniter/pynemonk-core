@@ -61,8 +61,8 @@ export default function StudentAdmission() {
 
     useEffect(() => {
         const loadGrades = async () => {
-            const g = await gradeApi.getGrades();
-            setGrades(g);
+            const response = await gradeApi.getGrades();
+            setGrades(response.data);
         };
         loadGrades();
     }, []);

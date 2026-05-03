@@ -58,15 +58,22 @@ export class ExamHelper extends BaseModel {
         return res.rows[0];
     }
 
-    public async findAllExams(tenantId: number, academicYearId: number) {
-        const query = `
+    public async findAllExams(tenantId: number, academicYearId: number, ids?: number[]) {
+        let query = `
             SELECT e.*, et.name as term_name
             FROM school.exam e
             LEFT JOIN school.exam_term et ON e.exam_term_id = et.id
             WHERE e.tenant_id = $1 AND e.academic_year_id = $2 AND e.is_deleted = FALSE
-            ORDER BY e.start_date DESC
         `;
-        const res = await this.db.query(query, [tenantId, academicYearId]);
+        const params: any[] = [tenantId, academicYearId];
+
+        if (ids) {
+            query += ` AND e.id = ANY($3)`;
+            params.push(ids);
+        }
+
+        query += ` ORDER BY e.start_date DESC`;
+        const res = await this.db.query(query, params);
         return res.rows;
     }
 

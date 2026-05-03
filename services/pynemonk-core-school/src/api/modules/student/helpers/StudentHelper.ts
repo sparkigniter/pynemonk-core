@@ -125,20 +125,11 @@ export default class StudentHelper {
 
     public async listStudents(
         tenantId: number,
-        filters: any = {},
-        scope: any = { accessLevel: "FULL" },
+        filters: any = {}
     ): Promise<any> {
         const page = Math.max(1, filters.page || 1);
         const limit = Math.max(1, Math.min(100, filters.limit || 10));
         const offset = (page - 1) * limit;
-
-        let query = `
-            SELECT DISTINCT s.*, COUNT(*) OVER() as total_count, 
-                   c.name as classroom_name, c.section as classroom_section
-            FROM school.student s
-            LEFT JOIN school.student_enrollment se ON s.id = se.student_id AND se.is_deleted = FALSE AND se.status = 'active'
-            LEFT JOIN school.classroom c ON se.classroom_id = c.id
-        `;
 
         const conditions = [`s.tenant_id = $1`, `s.is_deleted = false`];
         const params: any[] = [tenantId];
@@ -156,6 +147,12 @@ export default class StudentHelper {
             paramIndex++;
         }
 
+        if (filters.grade_id) {
+            conditions.push(`c.grade_id = $${paramIndex}`);
+            params.push(filters.grade_id);
+            paramIndex++;
+        }
+
         if (filters.search) {
             conditions.push(
                 `(s.first_name ILIKE $${paramIndex} OR s.last_name ILIKE $${paramIndex} OR s.admission_no ILIKE $${paramIndex})`,
@@ -164,20 +161,63 @@ export default class StudentHelper {
             paramIndex++;
         }
 
-        query += ` WHERE ` + conditions.join(" AND ");
-        query += ` ORDER BY s.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-        params.push(limit, offset);
+        if (filters.gender) {
+            conditions.push(`s.gender = $${paramIndex}`);
+            params.push(filters.gender);
+            paramIndex++;
+        }
 
-        const res = await this.db.query(query, params);
+        if (filters.blood_group) {
+            conditions.push(`s.blood_group = $${paramIndex}`);
+            params.push(filters.blood_group);
+            paramIndex++;
+        }
 
-        const totalCount = res.rows.length > 0 ? parseInt(res.rows[0].total_count) : 0;
-        const students = res.rows.map((row: any) => {
-            const { total_count, ...data } = row;
-            return data;
-        });
+        if (filters.religion) {
+            conditions.push(`s.religion = $${paramIndex}`);
+            params.push(filters.religion);
+            paramIndex++;
+        }
+
+        if (filters.nationality) {
+            conditions.push(`s.nationality = $${paramIndex}`);
+            params.push(filters.nationality);
+            paramIndex++;
+        }
+
+        if (filters.ids) {
+            conditions.push(`s.id = ANY($${paramIndex})`);
+            params.push(filters.ids);
+            paramIndex++;
+        }
+
+        const whereClause = ` WHERE ` + conditions.join(" AND ");
+        const baseJoin = `
+            FROM school.student s
+            LEFT JOIN school.student_enrollment se ON s.id = se.student_id AND se.is_deleted = FALSE AND se.status = 'active'
+            LEFT JOIN school.classroom c ON se.classroom_id = c.id
+        `;
+
+        // 1. Get accurate total count
+        const countQuery = `SELECT COUNT(DISTINCT s.id) as total ${baseJoin} ${whereClause}`;
+        const countRes = await this.db.query(countQuery, params);
+        const totalCount = parseInt(countRes.rows[0].total);
+
+        // 2. Get paginated data
+        const dataQuery = `
+            SELECT DISTINCT ON (s.created_at, s.id) s.*, 
+                   c.name as classroom_name, c.section as classroom_section
+            ${baseJoin}
+            ${whereClause}
+            ORDER BY s.created_at DESC, s.id ASC
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+        `;
+        
+        const dataParams = [...params, limit, offset];
+        const res = await this.db.query(dataQuery, dataParams);
 
         return {
-            data: students,
+            data: res.rows,
             pagination: {
                 total: totalCount,
                 page,

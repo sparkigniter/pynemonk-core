@@ -27,21 +27,24 @@ export default class TeacherHelper {
                     AND t.is_deleted = FALSE
                     AND t.tenant_id = $2
                 ) as is_scheduled_today,
-                CASE 
-                    WHEN COALESCE(sett.attendance_mode, 'DAILY') = 'DAILY' THEN (c.class_teacher_id = st.id)
-                    ELSE EXISTS (
-                        SELECT 1 FROM school.timetable t
-                        WHERE t.teacher_id = st.id 
-                        AND t.classroom_id = c.id 
-                        AND (t.subject_id = s.id OR s.id IS NULL)
-                        AND t.day_of_week = EXTRACT(ISODOW FROM CURRENT_DATE)
-                        AND t.is_deleted = FALSE
-                        AND t.tenant_id = $2
-                    )
-                END as can_take_attendance
+                (
+                    SELECT CASE 
+                        WHEN COALESCE(val.value, 'DAILY') = 'DAILY' THEN (c.class_teacher_id = st.id OR c.class_teacher_id IS NULL)
+                        ELSE EXISTS (
+                            SELECT 1 FROM school.timetable t
+                            WHERE t.teacher_id = st.id 
+                            AND t.classroom_id = c.id 
+                            AND (t.subject_id = s.id OR s.id IS NULL)
+                            AND t.day_of_week = EXTRACT(ISODOW FROM CURRENT_DATE)
+                            AND t.is_deleted = FALSE
+                            AND t.tenant_id = $2
+                        )
+                    END
+                    FROM (SELECT value FROM school.settings WHERE tenant_id = $2 AND key = 'attendance_mode' AND is_deleted = FALSE LIMIT 1) val
+                    UNION ALL SELECT (c.class_teacher_id = st.id OR c.class_teacher_id IS NULL) LIMIT 1
+                ) as can_take_attendance
              FROM school.staff st
              JOIN school.academic_year ay ON ay.is_current = TRUE AND ay.tenant_id = $2
-             LEFT JOIN school.settings sett ON sett.tenant_id = $2
              JOIN school.classroom c ON (c.class_teacher_id = st.id OR EXISTS (
                  SELECT 1 FROM school.teacher_assignment ta 
                  WHERE ta.staff_id = st.id AND ta.classroom_id = c.id AND ta.is_deleted = FALSE AND ta.academic_year_id = ay.id
@@ -88,10 +91,9 @@ export default class TeacherHelper {
                  AND created_at >= CURRENT_DATE - INTERVAL '24 hours'
                  AND tenant_id = $2) as notes_sent_24h,
                 
-                (SELECT COALESCE(s.attendance_mode, 'DAILY') 
-                 FROM school.staff st 
-                 LEFT JOIN school.settings s ON s.tenant_id = st.tenant_id 
-                 WHERE st.user_id = $1 AND st.tenant_id = $2
+                (SELECT COALESCE(value, 'DAILY') 
+                 FROM school.settings 
+                 WHERE tenant_id = $2 AND key = 'attendance_mode' AND is_deleted = FALSE
                  LIMIT 1) as attendance_mode`,
             [userId, tenantId]
         );

@@ -25,6 +25,7 @@ export interface Student {
     classroom_name?: string;
     logs?: any[];
     documents?: any[];
+    avatar_url?: string;
 }
 
 export async function getStudentList(params?: {
@@ -33,6 +34,11 @@ export async function getStudentList(params?: {
     search?: string;
     classroom_id?: number;
     academic_year_id?: number;
+    gender?: string;
+    blood_group?: string;
+    religion?: string;
+    nationality?: string;
+    grade_id?: number;
 }): Promise<PaginatedResponse<Student>> {
     const query = new URLSearchParams();
     if (params) {

@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
 import { injectable, inject } from "tsyringe";
 import SubjectService from "../services/SubjectService.js";
-import BaseController from "../../../core/controllers/BaseController.js";
+import ResourceController from "../../../core/controllers/ResourceController.js";
 import { AuthenticatedRequest } from "../../../core/middleware/AuthMiddleware.js";
 
 @injectable()
-export default class SubjectController extends BaseController {
+export default class SubjectController extends ResourceController {
     constructor(@inject(SubjectService) private subjectService: SubjectService) {
         super();
     }
@@ -13,12 +13,19 @@ export default class SubjectController extends BaseController {
     public async list(req: AuthenticatedRequest, res: Response) {
         try {
             const tenantId = this.getTenantId(req);
-            const filters = {
+            const scope = await this.getScope(req);
+            
+            const filters: any = {
                 grade_id: req.query.grade_id ? parseInt(req.query.grade_id as string) : undefined,
                 search: req.query.search as string,
                 page: req.query.page ? parseInt(req.query.page as string) : undefined,
                 limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
             };
+
+            if (scope.accessLevel !== "FULL") {
+                filters.ids = scope.subjectIds;
+            }
+
             const subjects = await this.subjectService.getSubjects(tenantId, filters);
             return this.ok(res, "Subjects retrieved", subjects);
         } catch (error: any) {
@@ -30,6 +37,12 @@ export default class SubjectController extends BaseController {
         try {
             const tenantId = this.getTenantId(req);
             const id = parseInt(req.params.id);
+            const scope = await this.getScope(req);
+
+            if (!scope.hasSubject(id)) {
+                return this.forbidden(res, "You do not have access to this subject");
+            }
+
             const subject = await this.subjectService.getSubjectById(tenantId, id);
             if (!subject) return this.notfound(res, "Subject not found");
             return this.ok(res, "Subject details retrieved", subject);
@@ -73,6 +86,12 @@ export default class SubjectController extends BaseController {
     public async assignTeacher(req: AuthenticatedRequest, res: Response) {
         try {
             const tenantId = this.getTenantId(req);
+            const scope = await this.getScope(req);
+
+            if (scope.accessLevel !== "FULL") {
+                return this.forbidden(res, "Only administrators can assign teachers to subjects");
+            }
+
             const assignment = await this.subjectService.assignTeacher(tenantId, req.body);
             return this.ok(res, "Teacher assigned successfully", assignment);
         } catch (error: any) {
@@ -83,6 +102,12 @@ export default class SubjectController extends BaseController {
     public async bulkAssignTeachers(req: AuthenticatedRequest, res: Response) {
         try {
             const tenantId = this.getTenantId(req);
+            const scope = await this.getScope(req);
+
+            if (scope.accessLevel !== "FULL") {
+                return this.forbidden(res, "Only administrators can perform bulk assignments");
+            }
+
             const { assignments } = req.body;
             if (!Array.isArray(assignments)) {
                 return this.badrequest(res, "Assignments must be an array");
