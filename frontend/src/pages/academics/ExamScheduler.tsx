@@ -15,12 +15,34 @@ import { useNotification } from '../../contexts/NotificationContext';
 import type { Grade } from '../../api/grade.api';
 import type { Classroom } from '../../api/classroom.api';
 import type { Exam } from '../../api/exam.api';
+import { useAuth } from '../../contexts/AuthContext';
 type Step = 'identity' | 'participants' | 'review';
 
 export default function ExamScheduler() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { notify } = useNotification();
+    const { can } = useAuth();
+
+    if (!can('exam:write')) {
+        return (
+            <div className="h-[80vh] flex flex-col items-center justify-center gap-6 text-center px-4">
+                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-rose-500/10 transform rotate-12">
+                    <ShieldCheck size={40} />
+                </div>
+                <div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Access Denied</h2>
+                    <p className="text-slate-400 font-medium mt-2 max-w-sm">You do not have the administrative clearance required to schedule or modify examinations.</p>
+                </div>
+                <button 
+                    onClick={() => navigate('/exams')}
+                    className="mt-4 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                >
+                    Return to Mission Control
+                </button>
+            </div>
+        );
+    }
 
     const [currentStep, setCurrentStep] = useState<Step>('identity');
     const [grades, setGrades] = useState<Grade[]>([]);
@@ -47,11 +69,11 @@ export default function ExamScheduler() {
     const loadInitialData = async () => {
         try {
             setIsLoading(true);
-            const [gradesData, classroomsData] = await Promise.all([
+            const [gradeRes, classroomsData] = await Promise.all([
                 getGrades(),
                 getClassrooms()
             ]);
-            setGrades(gradesData);
+            setGrades(gradeRes.data);
             setClassrooms(classroomsData.data);
 
             if (id) {
@@ -180,8 +202,8 @@ export default function ExamScheduler() {
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">{id ? 'Refine' : 'Schedule'} Examination</h1>
-                        <p className="text-slate-500 font-medium mt-1">Initialize the assessment container and target candidates.</p>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">{id ? 'Refine' : 'Add'} Exam Planner</h1>
+                        <p className="text-slate-500 font-medium mt-1">Set up the exam details and select participating classes.</p>
                     </div>
                 </div>
 
@@ -215,8 +237,8 @@ export default function ExamScheduler() {
                                 <div className="inline-flex p-4 bg-slate-900 text-white rounded-3xl shadow-xl mb-6 transform -rotate-2">
                                     <ShieldCheck size={32} />
                                 </div>
-                                <h2 className="text-4xl font-black text-slate-900 tracking-tight">Identity & Purpose</h2>
-                                <p className="text-slate-400 font-medium mt-2">Define the core metadata for this assessment container.</p>
+                                <h2 className="text-4xl font-black text-slate-900 tracking-tight">Exam Details</h2>
+                                <p className="text-slate-400 font-medium mt-2">Enter the basic information for this exam.</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -298,8 +320,8 @@ export default function ExamScheduler() {
                                     <div className="inline-flex p-3 bg-indigo-500 text-white rounded-2xl shadow-lg mb-4">
                                         <Users size={24} />
                                     </div>
-                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">Audience Targeting</h3>
-                                    <p className="text-sm font-medium text-slate-400 mt-1">Select the grades and sections participating in this assessment cycle.</p>
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">Select Classes</h3>
+                                    <p className="text-sm font-medium text-slate-400 mt-1">Select the grades and classes participating in this exam.</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-2">
                                     <button
@@ -314,7 +336,7 @@ export default function ExamScheduler() {
                                     </button>
                                     <div className="flex items-center gap-3 px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-slate-800 shadow-xl">
                                         <ShieldCheck size={14} className="text-theme-primary" />
-                                        {examData.invitations.length} Sections Targeted
+                                        {examData.invitations.length} Classes Selected
                                     </div>
                                 </div>
                             </div>
@@ -433,7 +455,7 @@ export default function ExamScheduler() {
                                 disabled={isSaving}
                                 className="flex items-center gap-4 px-14 py-6 bg-slate-900 text-white rounded-[2.5rem] text-sm font-black uppercase tracking-[0.2em] hover:scale-105 active:scale-95 shadow-[0_20px_50px_rgba(0,0,0,0.2)] transition-all disabled:opacity-50 group/save"
                             >
-                                {isSaving ? 'Finalizing Assessment...' : 'Initialize & Schedule Papers'}
+                                {isSaving ? 'Saving Exam...' : 'Save & Add Papers'}
                                 <ChevronRight size={22} className="group-hover/save:translate-x-1 transition-transform" />
                             </button>
                         ) : (

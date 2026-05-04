@@ -11,56 +11,64 @@ export default class SettingsController extends BaseController {
 
     public async getSettings(req: Request, res: Response) {
         try {
-            const tenantId = (req as any).user.tenant_id;
+            const tenantId = (req as any).user.tenantId;
             const result = await this.db.query(
-                'SELECT * FROM school.settings WHERE tenant_id = $1',
+                'SELECT key, value FROM school.settings WHERE tenant_id = $1 AND is_deleted = FALSE',
                 [tenantId]
             );
-            return this.ok(res, "Settings retrieved", result.rows[0]);
+            
+            // Convert array of {key, value} to a single object {key: value}
+            const settings = result.rows.reduce((acc: any, row: any) => {
+                acc[row.key] = row.value;
+                return acc;
+            }, {});
+
+            return this.ok(res, "Settings retrieved", settings);
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }
     }
 
     public async updateSettings(req: Request, res: Response) {
+        const client = await this.db.connect();
         try {
-            const tenantId = (req as any).user.tenant_id;
-            const { attendance_mode, admission_number_format } = req.body;
+            const tenantId = (req as any).user.tenantId;
+            const settingsData = req.body; // Expecting { key: value, ... }
             
-            const updates: string[] = [];
-            const values: any[] = [tenantId];
-            let paramIndex = 2;
+            await client.query('BEGIN');
 
-            if (attendance_mode) {
-                if (!['DAILY', 'PERIOD_WISE'].includes(attendance_mode)) {
-                    return this.badrequest(res, "Invalid attendance mode");
+            for (const [key, value] of Object.entries(settingsData)) {
+                if (key === 'attendance_mode' && !['DAILY', 'PERIOD_WISE'].includes(value as string)) {
+                    continue; // Skip invalid values or throw error
                 }
-                updates.push(`attendance_mode = $${paramIndex}`);
-                values.push(attendance_mode);
-                paramIndex++;
+
+                await client.query(
+                    `INSERT INTO school.settings (tenant_id, key, value)
+                     VALUES ($1, $2, $3)
+                     ON CONFLICT (tenant_id, key) 
+                     DO UPDATE SET value = $3, updated_at = NOW(), is_deleted = FALSE`,
+                    [tenantId, key, String(value)]
+                );
             }
 
-            if (admission_number_format) {
-                updates.push(`admission_number_format = $${paramIndex}`);
-                values.push(admission_number_format);
-                paramIndex++;
-            }
-
-            if (updates.length === 0) {
-                return this.badrequest(res, "No settings provided for update");
-            }
-
-            const result = await this.db.query(
-                `UPDATE school.settings 
-                 SET ${updates.join(', ')}, updated_at = NOW() 
-                 WHERE tenant_id = $1 
-                 RETURNING *`,
-                values
+            await client.query('COMMIT');
+            
+            // Fetch updated settings
+            const result = await client.query(
+                'SELECT key, value FROM school.settings WHERE tenant_id = $1 AND is_deleted = FALSE',
+                [tenantId]
             );
+            const settings = result.rows.reduce((acc: any, row: any) => {
+                acc[row.key] = row.value;
+                return acc;
+            }, {});
 
-            return this.ok(res, "Settings updated successfully", result.rows[0]);
+            return this.ok(res, "Settings updated successfully", settings);
         } catch (error: any) {
+            await client.query('ROLLBACK');
             return this.internalservererror(res, error.message);
+        } finally {
+            client.release();
         }
     }
 }

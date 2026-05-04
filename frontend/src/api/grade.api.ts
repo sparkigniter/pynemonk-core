@@ -10,8 +10,21 @@ export interface Grade {
     classroom_count?: number;
 }
 
-export const getGrades = async (): Promise<Grade[]> => {
-    return request<Grade[]>('/school/grades');
+import type { PaginatedResponse } from './staff.api';
+
+export const getGrades = async (params?: { 
+    page?: number; 
+    limit?: number; 
+    search?: string; 
+    ignoreScope?: boolean;
+}): Promise<PaginatedResponse<Grade>> => {
+    const query = new URLSearchParams();
+    if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+            if (value) query.append(key, value.toString());
+        });
+    }
+    return request<PaginatedResponse<Grade>>(`/school/grades?${query.toString()}`);
 };
 
 export const createGrade = async (data: Partial<Grade>): Promise<Grade> => {

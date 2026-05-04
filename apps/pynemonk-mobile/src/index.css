@@ -1,47 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  html {
-    -webkit-tap-highlight-color: transparent;
-    font-family: 'Inter', sans-serif;
-  }
-
-  h1, h2, h3, h4 {
-    font-family: 'Outfit', sans-serif;
-  }
+:root {
+  /* Default (Indigo/Professional) */
+  --primary: #4f46e5;
+  --accent: #8b5cf6;
+  --sidebar-from: #1e1b4b;
+  --sidebar-via: #312e81;
+  --sidebar-to: #4338ca;
+  --sidebar-active: rgba(255, 255, 255, 0.12);
+  --sidebar-dot: #818cf8;
+  --gradient-hero: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  
+  --brand-50: #f0f4ff;
+  --brand-100: #e1e9fe;
+  --brand-500: #4f46e5;
+  --brand-600: #4338ca;
+  --brand-700: #3730a3;
+  
+  /* Safe Area Insets for Mobile */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-@layer components {
-  .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm;
-  }
-
-  .mobile-bottom-nav {
-    @apply fixed bottom-0 left-0 right-0 h-16 bg-white/90 backdrop-blur-lg border-t border-slate-200 flex items-center justify-around px-4 pb-safe z-50;
-  }
-
-  .btn-primary {
-    @apply bg-brand-600 text-white font-medium px-4 py-2.5 rounded-xl active:scale-95 transition-transform shadow-lg shadow-brand-600/20;
-  }
-
-  .input-field {
-    @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all;
-  }
+[data-theme='amber'] {
+  --primary: #d97706;
+  --accent: #f59e0b;
+  --sidebar-from: #451a03;
+  --sidebar-via: #78350f;
+  --sidebar-to: #92400e;
+  --sidebar-active: rgba(255, 255, 255, 0.1);
+  --sidebar-dot: #fbbf24;
+  --gradient-hero: linear-gradient(135deg, #b45309 0%, #f59e0b 100%);
+  --brand-500: #d97706;
+  --brand-600: #b45309;
 }
 
-/* Fix for mobile safe areas */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom);
+[data-theme='emerald'] {
+  --primary: #059669;
+  --accent: #10b981;
+  --sidebar-from: #064e3b;
+  --sidebar-via: #065f46;
+  --sidebar-to: #047857;
+  --sidebar-active: rgba(255, 255, 255, 0.08);
+  --sidebar-dot: #34d399;
+  --gradient-hero: linear-gradient(135deg, #047857 0%, #10b981 100%);
+  --brand-500: #059669;
+  --brand-600: #047857;
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+[data-theme='ocean'] {
+  --primary: #0284c7;
+  --accent: #0ea5e9;
+  --sidebar-from: #0c4a6e;
+  --sidebar-via: #075985;
+  --sidebar-to: #0369a1;
+  --sidebar-active: rgba(255, 255, 255, 0.1);
+  --sidebar-dot: #38bdf8;
+  --gradient-hero: linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%);
+  --brand-500: #0284c7;
+  --brand-600: #0369a1;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-transparent;
+
+[data-theme='midnight'] {
+  --primary: #6366f1;
+  --accent: #8b5cf6;
+  --sidebar-from: #0f172a;
+  --sidebar-via: #1e293b;
+  --sidebar-to: #334155;
+  --sidebar-active: rgba(255, 255, 255, 0.1);
+  --sidebar-dot: #818cf8;
+  --gradient-hero: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+  --brand-500: #6366f1;
+  --brand-600: #4f46e5;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Fix for Mobile Status Bar */
+#root {
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Professional Card Style */
+.premium-card {
+  @apply bg-white border border-slate-100 shadow-sm transition-all duration-300;
+  border-radius: 2rem;
+}
+
+.premium-card:active {
+  @apply scale-[0.98] bg-slate-50;
+}
+
+/* Glassmorphism Effect */
+.glass-nav {
+  @apply bg-white/80 backdrop-blur-xl border-t border-slate-100;
+  padding-bottom: calc(0.5rem + var(--safe-bottom));
+}
+
+.mobile-bottom-nav {
+  @apply fixed bottom-0 left-0 right-0 glass-nav px-8 py-4 flex justify-between items-center z-50;
+  box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 0px;
 }

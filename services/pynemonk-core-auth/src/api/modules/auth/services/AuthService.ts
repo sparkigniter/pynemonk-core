@@ -54,133 +54,80 @@ class AuthService {
      * to the appropriate grant handler based on the requested grant_type.
      */
     public async login(data: LoginRequest): Promise<LoginResult> {
-        // 1. Validate input shape
+        // 1. Basic validation
         await this.userValidator.validate("LOGIN", data);
 
-        // 2. Validate OAuth client
-        let clientDbSecret: string;
-        try {
-            clientDbSecret = await this.oauthClientHelper.getClientSecret(data.client_id);
-        } catch (error) {
-            console.log("Invalid client_id login service ", error);
-            throw new ValidationError("Invalid client_id");
-        }
-        if (clientDbSecret !== data.client_secret) {
-            console.log("Invalid client_secret login service");
-            throw new ValidationError("Invalid client_secret");
+        // 2. Validate Client (Query 1)
+        const client = await this.oauthClientHelper.getClientById(data.client_id);
+        if (!client || !client.is_active || client.client_secret !== data.client_secret) {
+            throw new ValidationError("Invalid client credentials or client inactive");
         }
 
-        // 3. Look up user
-        const user = await this.userHelper.getUserByEmail(data.email);
-        if (!user) {
+        // 3. Fetch Full Login Context (Query 2 - The Super Query)
+        const context = await this.userHelper.getFullLoginContext(data.email, data.client_id, data.school_slug);
+        if (!context) {
             throw new ValidationError("Invalid email or password");
         }
 
-        // 4. Verify password
-        const passwordHash = await this.userHelper.getPasswordHash(user.id);
-        if (!passwordHash) {
-            throw new ValidationError("Invalid email or password");
-        }
-        const valid = await bcrypt.compare(data.password, passwordHash);
+        // 4. Verify Password
+        const valid = await bcrypt.compare(data.password, context.password);
         if (!valid) {
             throw new ValidationError("Invalid email or password");
         }
 
-        // 5. Handle Tenancy
-        let selectedTenantId: number | undefined;
+        // 5. Handle Tenancy Discovery
+        const allTenants = context.all_tenants || [];
+        const currentTenant = context.current_tenant?.[0];
 
-        if (data.school_slug) {
-            // Specific school requested
-            const tenant = await this.userHelper.getTenantBySlug(data.school_slug);
-            if (!tenant) {
-                throw new ValidationError("Invalid School ID");
-            }
-
-            // Check if user has roles in this tenant
-            const userRoles = await this.userHelper.getUserRoles(user.id);
-            const rolesInTenant = userRoles.filter(r => r.tenant_id === tenant.id);
-
-            if (rolesInTenant.length === 0) {
-                throw new ValidationError("This user is not registered at " + tenant.name);
-            }
-
-            selectedTenantId = tenant.id;
-        } else {
-            // No school requested - find user's schools
-            const tenants = await this.userHelper.getUserTenants(user.id);
-
-            if (tenants.length === 0) {
-                // If no tenants, check for global roles (tenant_id IS NULL)
-                const userRoles = await this.userHelper.getUserRoles(user.id);
-                const hasGlobalRole = userRoles.some(r => r.tenant_id === null);
-
-                if (!hasGlobalRole) {
-                    throw new ValidationError("No schools associated with this account.");
-                }
-                // Global admin, selectedTenantId remains undefined
-            } else if (tenants.length > 1) {
-                return {
-                    status: 'MULTIPLE_TENANTS',
-                    tenants: tenants.map(t => ({
-                        id: t.id,
-                        uuid: t.uuid,
-                        name: t.name,
-                        slug: t.slug
-                    }))
-                };
-            } else {
-                // Exactly one tenant
-                selectedTenantId = tenants[0].id;
-            }
+        if (!data.school_slug && allTenants.length > 1) {
+            return {
+                status: 'MULTIPLE_TENANTS',
+                tenants: allTenants.map((t: any) => ({
+                    id: t.id,
+                    uuid: t.uuid,
+                    name: t.name,
+                    slug: t.slug
+                }))
+            };
         }
 
-        // 6. Fetch all roles for this user (filtered by tenant if selected)
-        const allRoles = await this.userHelper.getUserRoles(user.id);
-        const roles = selectedTenantId
-            ? allRoles.filter(r => r.tenant_id === selectedTenantId || r.tenant_id === null)
-            : allRoles;
+        // 6. Build Token Payload
+        const roles = context.roles || [];
+        const roleSlugs = roles.map((r: any) => r.slug);
+        console.log("[AuthService.login] Roles found:", JSON.stringify(roles, null, 2));
+        console.log("[AuthService.login] roleSlugs:", roleSlugs);
 
-        const roleSlugs = roles.map(r => r.slug);
-        const primaryRole = roles.find(r => r.is_primary) || roles[0];
+        const primaryRole = roles.find((r: any) => r.is_primary) || roles[0];
+        const scopeString = (context.permissions || []).join(' ');
 
-        // 7. Aggregate all permissions (scopes) using the high-architecture method
-        const permissions = await this.userHelper.getEffectivePermissions(user.id, selectedTenantId);
-        
-        // 7b. Intersect with allowed client scopes (OAuth2 strictness)
-        const clientScopes = await this.oauthClientHelper.getClientScopes(data.client_id);
-        const effectiveScopes = clientScopes.length > 0 
-            ? permissions.filter(p => clientScopes.includes(p))
-            : permissions; // Fallback if no client scopes restricted in DB
+        // Verify Role-Client Access
+        const isAllowed = await this.oauthClientHelper.isRoleAllowed(data.client_id, roleSlugs);
+        console.log("[AuthService.login] isAllowed for client:", data.client_id, "=>", isAllowed);
+        if (!isAllowed) {
+            throw new ValidationError("Access Denied: Your role is not authorized to use this application.");
+        }
 
-        const scopeString = effectiveScopes.join(' ');
-
-        console.log(`[AuthService] Login successful. User: ${user.email}, Selected Tenant: ${selectedTenantId}`);
-        console.log(`[AuthService] Effective Scopes (User ∩ Client): ${scopeString}`);
-
-        // 8. Build token payload
-        const payload: TokenPayload = {
+        const payload: any = {
             grant_type: data.grant_type,
             client_id: data.client_id,
             client_secret: data.client_secret,
-            scope: scopeString, // Permissions are now the scope
-            username: data.email,
-            password: data.password,
-            sub: String(user.id),
-            email: user.email,
-            role_id: primaryRole ? primaryRole.id : user.role_id,
+            scope: scopeString,
+            sub: String(context.user_id),
+            email: context.email,
+            role_id: primaryRole ? primaryRole.id : null,
             roles: roleSlugs,
-            tenant_id: selectedTenantId,
-        } as any;
+            tenant_id: currentTenant?.id || null,
+            preverified_context: context // Peak optimization: pass the whole context
+        };
 
-        console.log(`[AuthService] Generated token payload:`, JSON.stringify(payload));
-
-        // 8. Dispatch to the grant handler
+        // 7. Dispatch to the grant handler
         const handler = this.grantFactory.getHandler(data.grant_type);
         const tokenPair = await handler.handle(payload);
 
+        // 8. Save session
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + REFRESH_TTL_DAYS);
-        await this.userHelper.saveRefreshToken(user.id, 0, tokenPair.refresh_token, expiresAt);
+        await this.userHelper.saveRefreshToken(context.user_id, 0, tokenPair.refresh_token, expiresAt);
 
         return tokenPair;
     }
@@ -232,7 +179,7 @@ class AuthService {
         const tenantId = stored.tenant_id || (tenants.length === 1 ? tenants[0].id : user.tenant_id);
 
         // 7. Aggregate all permissions (scopes) using the high-architecture method
-        const permissions = await this.userHelper.getEffectivePermissions(user.id, tenantId);
+        const permissions = await this.userHelper.getEffectivePermissions(user.id, data.client_id, tenantId);
         
         // 7b. Intersect with allowed client scopes
         const clientScopes = await this.oauthClientHelper.getClientScopes(data.client_id);

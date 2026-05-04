@@ -23,10 +23,10 @@ class UserHelper {
             RETURNING id, email, role_id, is_deleted, created_at, updated_at;
         `;
         const res = await this.db.query(query, [email, roleId, false, new Date(), new Date()]);
-        
+
         // Also assign the initial role in the join table
         await this.assignRole(res.rows[0].id, roleId, true);
-        
+
         return res.rows[0];
     }
 
@@ -193,43 +193,120 @@ class UserHelper {
      * 2. Permissions assigned via Roles (legacy JSONB data_scope)
      * 3. (Optional future) Permissions assigned directly to User
      */
-    public async getEffectivePermissions(userId: number, tenant_id?: number): Promise<string[]> {
+    public async getEffectivePermissions(userId: number, clientId: string, tenant_id?: number): Promise<string[]> {
         const query = `
-            -- 1. Relational Scopes from Role-Scope Assignment (Preferred)
+            WITH all_user_roles AS (
+                SELECT r.id as role_id
+                FROM auth.user_role ur
+                JOIN auth.role r ON ur.role_id = r.id
+                WHERE ur.user_id = $1 AND ur.is_deleted = FALSE
+                UNION
+                SELECT r.id as role_id
+                FROM auth.user u
+                JOIN auth.role r ON u.role_id = r.id
+                WHERE u.id = $1 AND u.is_deleted = FALSE
+            )
             SELECT DISTINCT s.value as key
-            FROM auth.scope s
-            JOIN auth.role_scope rs ON s.id = rs.scope_id
-            LEFT JOIN auth.user_role ur ON rs.role_id = ur.role_id AND ur.is_deleted = FALSE
-            LEFT JOIN auth.user u ON rs.role_id = u.role_id AND u.is_deleted = FALSE
-            WHERE (ur.user_id = $1 OR u.id = $1)
-              AND rs.granted = TRUE
-              AND (rs.tenant_id = $2 OR rs.tenant_id IS NULL)
-
-            UNION
-
-            -- 2. Legacy Relational Permissions from Join Table
-            SELECT DISTINCT p.key
-            FROM auth.permission p
-            JOIN auth.role_permission rp ON p.id = rp.permission_id
-            LEFT JOIN auth.user_role ur ON rp.role_id = ur.role_id AND ur.is_deleted = FALSE
-            LEFT JOIN auth.user u ON rp.role_id = u.role_id AND u.is_deleted = FALSE
-            WHERE (ur.user_id = $1 OR u.id = $1)
-              AND rp.granted = TRUE
-              AND (rp.tenant_id = $2 OR rp.tenant_id IS NULL)
-
-            UNION
-
-            -- 3. Legacy/Cache Permissions from JSONB (data_scope)
-            SELECT DISTINCT jsonb_array_elements_text(r.data_scope) as key
-            FROM auth.role r
-            LEFT JOIN auth.user_role ur ON r.id = ur.role_id AND ur.is_deleted = FALSE
-            LEFT JOIN auth.user u ON r.id = u.role_id AND u.is_deleted = FALSE
-            WHERE (ur.user_id = $1 OR u.id = $1)
-              AND (r.tenant_id = $2 OR r.tenant_id IS NULL)
+            FROM auth.client_role_scope crs
+            JOIN auth.scope s ON crs.scope_id = s.id
+            JOIN auth.client c ON crs.client_id = c.id
+            WHERE crs.role_id IN (SELECT role_id FROM all_user_roles)
+              AND c.client_id = $2
+              AND crs.granted = TRUE
         `;
 
-        const res = await this.db.query(query, [userId, tenant_id ?? null]);
+        const res = await this.db.query(query, [userId, clientId]);
         return res.rows.map((r: { key: string }) => r.key);
+    }
+    /**
+     * Super Login Query - Consolidates all authentication and identity data
+     * Fetches: Credentials, Tenants, Roles, and Effective Scopes in one trip.
+     */
+    public async getFullLoginContext(email: string, clientId: string, schoolSlug?: string): Promise<any> {
+        const query = `
+            WITH user_info AS (
+                -- Identify the user and their home tenant
+                SELECT u.id, u.tenant_id, u.email, uc.password_hash 
+                FROM auth.user u 
+                JOIN auth.user_credential uc ON u.id = uc.user_id
+                WHERE u.email = $1 AND u.is_deleted = FALSE
+            ),
+            all_user_roles AS (
+                -- Identify ALL active role IDs for this user
+                SELECT r.id as role_id, r.tenant_id, r.slug
+                FROM auth.user_role ur
+                JOIN auth.role r ON ur.role_id = r.id
+                WHERE ur.user_id = (SELECT id FROM user_info) AND ur.is_deleted = FALSE
+                UNION
+                SELECT r.id as role_id, r.tenant_id, r.slug
+                FROM auth.user u
+                JOIN auth.role r ON u.role_id = r.id
+                WHERE u.id = (SELECT id FROM user_info) AND u.is_deleted = FALSE
+            ),
+            selected_tenant AS (
+                -- Resolve the current school context
+                SELECT id, name, slug, uuid FROM auth.tenant 
+                WHERE is_deleted = FALSE
+                  AND (($3::text IS NULL AND id = (SELECT tenant_id FROM user_info)) OR ($3::text IS NOT NULL AND slug = $3))
+                LIMIT 1
+            ),
+            all_user_tenants AS (
+                -- List all schools the user has access to
+                SELECT DISTINCT t.id, t.name, t.slug, t.uuid
+                FROM auth.user_role ur
+                JOIN auth.role r ON ur.role_id = r.id
+                JOIN auth.tenant t ON r.tenant_id = t.id
+                WHERE ur.user_id = (SELECT id FROM user_info) AND ur.is_deleted = FALSE AND t.is_deleted = FALSE
+            ),
+            effective_permissions AS (
+                -- SOURCE 1: App-Specific Role Scopes (The primary Admin UI target)
+                -- This is now the strict, single source of truth for permissions.
+                SELECT s.value
+                FROM auth.client_role_scope crs
+                JOIN auth.scope s ON crs.scope_id = s.id
+                JOIN auth.client c ON crs.client_id = c.id
+                WHERE crs.role_id IN (SELECT role_id FROM all_user_roles)
+                  AND c.client_id = $2
+                  AND crs.granted = TRUE
+            )
+            SELECT 
+                u.id as user_id, u.email, u.password_hash,
+                (SELECT JSON_AGG(t) FROM selected_tenant t) as current_tenant,
+                (SELECT JSON_AGG(t) FROM all_user_tenants t) as all_tenants,
+                (SELECT JSON_AGG(r) FROM all_user_roles r) as all_roles,
+                COALESCE((
+                    SELECT ARRAY_AGG(DISTINCT value) FROM effective_permissions
+                ), '{}') as permissions
+            FROM user_info u;
+        `;
+
+        const res = await this.db.query(query, [email, clientId, schoolSlug || null]);
+        const row = res.rows[0];
+        if (!row) {
+            console.log(`[UserHelper.getFullLoginContext] No user found for email: ${email}`);
+            return null;
+        }
+
+        console.log(`[UserHelper.getFullLoginContext] User: ${email}, Client: ${clientId}, Slug: ${schoolSlug}`);
+        console.log(`[UserHelper.getFullLoginContext] Roles detected:`, JSON.stringify(row.all_roles, null, 2));
+        console.log(`[UserHelper.getFullLoginContext] Permissions (Final):`, JSON.stringify(row.permissions, null, 2));
+
+        return {
+            user_id: row.user_id,
+            email: row.email,
+            password: row.password_hash,
+            tenant_id: row.current_tenant ? row.current_tenant[0].id : null,
+            roles: row.all_roles || [],
+            permissions: row.permissions || []
+        };
+    }
+
+    /**
+     * Optimized Identity Context fetcher for Token generation
+     */
+    public async getIdentityContext(email: string, clientId: string): Promise<any> {
+        // Reuse the logic but without school_slug
+        return this.getFullLoginContext(email, clientId);
     }
 }
 

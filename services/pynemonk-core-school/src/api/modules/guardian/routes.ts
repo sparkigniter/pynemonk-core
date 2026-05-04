@@ -2,36 +2,41 @@ import { Router } from "express";
 import { container } from "tsyringe";
 import GuardianController from "./controllers/GuardianController.js";
 import { requireAuth } from "../../core/middleware/requireAuth.js";
-import { requireRole } from "../../core/middleware/requireRole.js";
+import { requirePermission } from "../../core/middleware/requirePermission.js";
+import { apiRateLimiter, sensitiveRateLimiter } from "../../core/middleware/RateLimiter.js";
 
 const guardianRouter = Router();
 
 // Parent specific routes
 guardianRouter.get(
     "/my-students", 
+    apiRateLimiter,
     requireAuth, 
-    requireRole(["parent"]), 
+    requirePermission(["child.academic:read"]), 
     (req, res) => container.resolve(GuardianController).getMyStudents(req, res)
 );
 
 guardianRouter.get(
     "/student/:studentId/attendance",
+    apiRateLimiter,
     requireAuth,
-    requireRole(["parent"]),
+    requirePermission(["child.attendance:read"]),
     (req, res) => container.resolve(GuardianController).getStudentAttendance(req, res)
 );
 
 guardianRouter.get(
     "/student/:studentId/exams",
+    apiRateLimiter,
     requireAuth,
-    requireRole(["parent"]),
+    requirePermission(["child.academic:read"]),
     (req, res) => container.resolve(GuardianController).getStudentExams(req, res)
 );
 
 guardianRouter.get(
     "/student/:studentId/classroom",
+    apiRateLimiter,
     requireAuth,
-    requireRole(["parent"]),
+    requirePermission(["child.timetable:read"]),
     (req, res) => container.resolve(GuardianController).getStudentClassroomDetails(req, res)
 );
 

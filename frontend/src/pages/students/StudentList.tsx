@@ -5,6 +5,11 @@ import * as studentApi from '../../api/student.api';
 import { downloadIntegrationExport } from '../../api/integration.api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAcademics } from '../../contexts/AcademicsContext';
+import AdvancedFilters from '../../components/ui/AdvancedFilters';
+import type { FilterField } from '../../components/ui/AdvancedFilters';
+import { getClassrooms } from '../../api/classroom.api';
+import type { Classroom } from '../../api/classroom.api';
+import { getGrades } from '../../api/grade.api';
 
 export default function StudentList() {
     const { isYearClosed } = useAcademics();
@@ -12,10 +17,47 @@ export default function StudentList() {
     const [loading, setLoading] = useState(true);
     const [exporting, setExporting] = useState(false);
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, can } = useAuth();
     const [search, setSearch] = useState('');
     const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 });
     const [showAuditOnly, setShowAuditOnly] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [advancedFilters, setAdvancedFilters] = useState<any>({});
+    const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+    const [grades, setGrades] = useState<any[]>([]);
+    const [selectedGradeId, setSelectedGradeId] = useState<number | null>(null);
+
+    const filterFields: FilterField[] = [
+        { 
+            id: 'classroom_id', 
+            label: 'Classroom', 
+            type: 'select', 
+            options: classrooms.map(c => ({ value: c.id, label: `${c.name}${c.section}` }))
+        },
+        { 
+            id: 'gender', 
+            label: 'Gender', 
+            type: 'select', 
+            options: [
+                { value: 'Male', label: 'Male' },
+                { value: 'Female', label: 'Female' },
+                { value: 'Other', label: 'Other' }
+            ]
+        },
+        { 
+            id: 'blood_group', 
+            label: 'Blood Group', 
+            type: 'select', 
+            options: [
+                { value: 'A+', label: 'A+' }, { value: 'A-', label: 'A-' },
+                { value: 'B+', label: 'B+' }, { value: 'B-', label: 'B-' },
+                { value: 'AB+', label: 'AB+' }, { value: 'AB-', label: 'AB-' },
+                { value: 'O+', label: 'O+' }, { value: 'O-', label: 'O-' }
+            ]
+        },
+        { id: 'nationality', label: 'Nationality', type: 'text', placeholder: 'e.g. Indian' },
+        { id: 'religion', label: 'Religion', type: 'text', placeholder: 'e.g. Hindu' }
+    ];
 
     const handleSATSExport = async () => {
         setExporting(true);
@@ -37,7 +79,9 @@ export default function StudentList() {
             const response = await studentApi.getStudentList({
                 search,
                 page: pagination.page,
-                limit: pagination.limit
+                limit: pagination.limit,
+                grade_id: selectedGradeId || undefined,
+                ...advancedFilters
             });
             setStudents(response.data);
             setPagination(response.pagination);
@@ -48,15 +92,41 @@ export default function StudentList() {
         }
     };
 
+    const loadInitialData = async () => {
+        try {
+            const [classRes, gradeRes] = await Promise.all([
+                getClassrooms({ limit: 100 }),
+                getGrades({ limit: 100, ignoreScope: true })
+            ]);
+            setClassrooms(classRes.data);
+            const sortedGrades = (gradeRes.data || []).sort((a: any, b: any) => a.sequence_order - b.sequence_order);
+            setGrades(sortedGrades);
+            
+            // Default to first grade if available
+            if (sortedGrades.length > 0 && !selectedGradeId) {
+                setSelectedGradeId(sortedGrades[0].id);
+            }
+        } catch (err) {
+            console.error('Failed to load initial data', err);
+        }
+    };
+
     useEffect(() => {
+        loadInitialData();
+    }, []);
+
+    useEffect(() => {
+        if (selectedGradeId === null && grades.length > 0) return; // Wait for initial grade selection
+        
         const timer = setTimeout(() => {
             fetchStudents();
         }, 300);
         return () => clearTimeout(timer);
-    }, [search, pagination.page]);
+    }, [search, pagination.page, advancedFilters, selectedGradeId]);
 
-    const canAdmit = user?.permissions?.includes('student:write');
-    const canSeeFees = user?.permissions?.includes('fee:read');
+    const canAdmit = can('student:write');
+    const canSeeFees = can('fee:read');
+    const canSyncSats = can('report:export') || can('student:write');
 
     const isSatsReady = (student: studentApi.Student) => {
         return !!(student.mother_tongue && student.nationality && student.gender && student.date_of_birth && student.address);
@@ -76,14 +146,16 @@ export default function StudentList() {
                     <p className="text-slate-500 text-sm font-medium mt-1">Manage enrollments, dossiers, and academic history.</p>
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <button
-                        onClick={handleSATSExport}
-                        disabled={exporting}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-2xl hover:bg-emerald-100 transition-all shadow-sm font-black text-xs uppercase tracking-widest active:scale-95 disabled:opacity-50"
-                    >
-                        {exporting ? <RefreshCw size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />}
-                        {exporting ? 'Syncing...' : 'Sync to SATS'}
-                    </button>
+                    {canSyncSats && (
+                        <button
+                            onClick={handleSATSExport}
+                            disabled={exporting}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-2xl hover:bg-emerald-100 transition-all shadow-sm font-black text-xs uppercase tracking-widest active:scale-95 disabled:opacity-50"
+                        >
+                            {exporting ? <RefreshCw size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />}
+                            {exporting ? 'Syncing...' : 'Sync to SATS'}
+                        </button>
+                    )}
                     {canAdmit && (
                         <button
                             onClick={() => navigate('/students/register')}
@@ -131,137 +203,218 @@ export default function StudentList() {
                 </div>
             </div>
 
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
-                <div className="p-6 border-b border-slate-50 flex flex-col sm:flex-row gap-4 items-center justify-between bg-slate-50/30">
-                    <div className="relative w-full sm:w-96">
-                        <Search className="w-4 h-4 absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                        <input
-                            id="student-search"
-                            type="text"
-                            placeholder="Search by name or admission number..."
-                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder-slate-400"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
-                    {showAuditOnly && (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest animate-pulse">
-                            <AlertCircle size={14} />
-                            Viewing Compliance Gaps
+            <div className="flex flex-col lg:flex-row gap-8">
+                {/* Grade Sidebar */}
+                <div className="w-full lg:w-72 flex-shrink-0">
+                    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 lg:sticky lg:top-8">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="bg-primary/10 p-2.5 rounded-xl text-primary">
+                                <GraduationCap size={18} />
+                            </div>
+                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Grades</h3>
                         </div>
-                    )}
-                    <button className="flex items-center gap-3 px-6 py-3 bg-white border border-slate-100 rounded-2xl text-xs font-black text-slate-600 hover:bg-slate-50 transition-all w-full sm:w-auto justify-center active:scale-95 uppercase tracking-widest shadow-sm">
-                        <Filter size={16} />
-                        Advanced Filters
-                    </button>
+                        
+                        <div className="space-y-1">
+                            {grades.map(grade => (
+                                <button
+                                    key={grade.id}
+                                    onClick={() => { setSelectedGradeId(grade.id); setPagination(p => ({ ...p, page: 1 })); }}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-black transition-all group
+                                        ${selectedGradeId === grade.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}
+                                >
+                                    <span className="truncate">{grade.name}</span>
+                                    {selectedGradeId === grade.id && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20 gap-4">
-                            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                            <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">Updating Records...</p>
-                        </div>
-                    ) : filteredStudents.length === 0 ? (
-                        <div className="p-20 flex flex-col items-center justify-center text-center">
-                            <div className="w-20 h-20 rounded-[2rem] bg-slate-50 flex items-center justify-center text-slate-300 mb-6 border border-slate-100">
-                                <GraduationCap size={40} />
+                {/* Main Content Area */}
+                <div className="flex-1 min-w-0 space-y-6">
+                    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
+                        <div className="p-6 border-b border-slate-50 flex flex-col sm:flex-row gap-4 items-center justify-between bg-slate-50/30">
+                            <div className="relative w-full sm:w-96">
+                                <Search className="w-4 h-4 absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                                <input
+                                    id="student-search"
+                                    type="text"
+                                    placeholder="Search by name or admission number..."
+                                    className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder-slate-400"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
                             </div>
-                            <h3 className="text-xl font-black text-slate-800 mb-2">{showAuditOnly ? 'No Compliance Gaps!' : 'No Students Found'}</h3>
-                            <p className="text-slate-500 max-w-sm mb-8 font-medium">
-                                {showAuditOnly ? 'All students in this view have complete profiles ready for government portal synchronization.' : 'Your directory is currently empty.'}
-                            </p>
+                            {showAuditOnly && (
+                                <div className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest animate-pulse">
+                                    <AlertCircle size={14} />
+                                    Viewing Compliance Gaps
+                                </div>
+                            )}
+                            <div className="relative w-full sm:w-auto">
+                                <button 
+                                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                    className={`flex items-center gap-3 px-6 py-3 border rounded-2xl text-xs font-black transition-all w-full sm:w-auto justify-center active:scale-95 uppercase tracking-widest shadow-sm ${Object.keys(advancedFilters).length > 0 ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50'}`}
+                                >
+                                    <Filter size={16} />
+                                    {Object.keys(advancedFilters).length > 0 ? `Filters Active (${Object.keys(advancedFilters).length})` : 'Advanced Filters'}
+                                </button>
+
+                                <AdvancedFilters 
+                                    isOpen={isFilterOpen}
+                                    onClose={() => setIsFilterOpen(false)}
+                                    fields={filterFields}
+                                    currentFilters={advancedFilters}
+                                    onFilter={(f) => { setAdvancedFilters(f); setPagination(prev => ({ ...prev, page: 1 })); }}
+                                    onReset={() => { setAdvancedFilters({}); setPagination(prev => ({ ...prev, page: 1 })); }}
+                                />
+                            </div>
                         </div>
-                    ) : (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/50 border-b border-slate-100">
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Student Identity</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Admission Details</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">SATS Readiness</th>
-                                    {canSeeFees && <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Fee Status</th>}
-                                    <th className="px-8 py-5 text-right"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {filteredStudents.map((student) => {
-                                    const ready = isSatsReady(student);
-                                    return (
-                                        <tr key={student.id} className="group hover:bg-slate-50/50 transition-all cursor-pointer">
-                                            <td className="px-8 py-5">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-400 border-2 border-white shadow-sm overflow-hidden">
-                                                        {student.first_name[0]}{student.last_name[0]}
-                                                    </div>
-                                                    <div>
-                                                        <Link to={`/students/${student.id}`} className="text-base font-black text-slate-800 hover:text-primary transition-colors block leading-none mb-1.5">
-                                                            {student.first_name} {student.last_name}
-                                                        </Link>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{student.gender}</span>
-                                                            <div className="w-1 h-1 rounded-full bg-slate-200" />
-                                                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">{student.blood_group || 'O+'}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                <p className="text-sm font-black text-slate-700 font-mono tracking-tight mb-1">{student.admission_no}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Registered: {new Date(student.created_at as any).toLocaleDateString()}</p>
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                <div className="flex flex-col gap-1.5">
-                                                    {ready ? (
-                                                        <span className="inline-flex items-center gap-1.5 w-fit px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">
-                                                            <CheckCircle2 size={12} />
-                                                            Ready to Sync
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1.5 w-fit px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 border border-rose-100">
-                                                            <AlertCircle size={12} />
-                                                            Data Missing
-                                                        </span>
-                                                    )}
-                                                    {!ready && (
-                                                        <p className="text-[8px] font-bold text-rose-400 uppercase tracking-tight italic">Missing: {
-                                                            [!student.mother_tongue && 'Tongue', !student.nationality && 'Nationality', !student.address && 'Address'].filter(Boolean).join(', ')
-                                                        }</p>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            {canSeeFees && (
-                                                <td className="px-8 py-5">
-                                                    <div className="flex items-center gap-2">
-                                                        {student.id % 3 === 0 ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">
-                                                                <CheckCircle2 size={12} />
-                                                                Paid
-                                                            </span>
-                                                        ) : student.id % 3 === 1 ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100">
-                                                                <ClockIcon size={12} />
-                                                                Pending
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 border border-rose-100">
-                                                                <AlertCircle size={12} />
-                                                                Overdue
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            )}
-                                            <td className="px-8 py-5 text-right">
-                                                <Link to={`/students/${student.id}`} className="inline-flex items-center gap-2 p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all opacity-0 group-hover:opacity-100 shadow-sm">
-                                                    <ChevronRight size={18} />
-                                                </Link>
-                                            </td>
+
+                        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
+                            {loading ? (
+                                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                    <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">Updating Records...</p>
+                                </div>
+                            ) : filteredStudents.length === 0 ? (
+                                <div className="p-20 flex flex-col items-center justify-center text-center">
+                                    <div className="w-20 h-20 rounded-[2rem] bg-slate-50 flex items-center justify-center text-slate-300 mb-6 border border-slate-100">
+                                        <GraduationCap size={40} />
+                                    </div>
+                                    <h3 className="text-xl font-black text-slate-800 mb-2">{showAuditOnly ? 'No Compliance Gaps!' : 'No Students Found'}</h3>
+                                    <p className="text-slate-500 max-w-sm mb-8 font-medium">
+                                        {showAuditOnly ? 'All students in this view have complete profiles ready for government portal synchronization.' : 'Your directory is currently empty.'}
+                                    </p>
+                                </div>
+                            ) : (
+                                <table className="w-full text-left border-collapse min-w-[800px]">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Student Identity</th>
+                                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Admission Details</th>
+                                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">SATS Readiness</th>
+                                            {canSeeFees && <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Fee Status</th>}
+                                            <th className="px-8 py-5 text-right"></th>
                                         </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    )}
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {filteredStudents.map((student) => {
+                                            const ready = isSatsReady(student);
+                                            return (
+                                                <tr key={student.id} className="group hover:bg-slate-50/50 transition-all cursor-pointer">
+                                                    <td className="px-8 py-5">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-400 border-2 border-white shadow-sm overflow-hidden">
+                                                                {student.avatar_url ? <img src={student.avatar_url} className="w-full h-full object-cover" /> : `${student.first_name[0]}${student.last_name?.[0]}`}
+                                                            </div>
+                                                            <div>
+                                                                <Link to={`/students/${student.id}`} className="text-base font-black text-slate-800 hover:text-primary transition-colors block leading-none mb-1.5">
+                                                                    {student.first_name} {student.last_name}
+                                                                </Link>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{student.gender}</span>
+                                                                    <div className="w-1 h-1 rounded-full bg-slate-200" />
+                                                                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">{student.blood_group || 'O+'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <p className="text-sm font-black text-slate-700 font-mono tracking-tight mb-1">{student.admission_no}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Registered: {new Date(student.created_at as any).toLocaleDateString()}</p>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <div className="flex flex-col gap-1.5">
+                                                            {ready ? (
+                                                                <span className="inline-flex items-center gap-1.5 w-fit px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                                    <CheckCircle2 size={12} />
+                                                                    Ready to Sync
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1.5 w-fit px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 border border-rose-100">
+                                                                    <AlertCircle size={12} />
+                                                                    Data Missing
+                                                                </span>
+                                                            )}
+                                                            {!ready && (
+                                                                <p className="text-[8px] font-bold text-rose-400 uppercase tracking-tight italic">Missing: {
+                                                                    [!student.mother_tongue && 'Tongue', !student.nationality && 'Nationality', !student.address && 'Address'].filter(Boolean).join(', ')
+                                                                }</p>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    {canSeeFees && (
+                                                        <td className="px-8 py-5">
+                                                            <div className="flex items-center gap-2">
+                                                                {student.id % 3 === 0 ? (
+                                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                                        <CheckCircle2 size={12} />
+                                                                        Paid
+                                                                    </span>
+                                                                ) : student.id % 3 === 1 ? (
+                                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100">
+                                                                        <ClockIcon size={12} />
+                                                                        Pending
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 border border-rose-100">
+                                                                        <AlertCircle size={12} />
+                                                                        Overdue
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    )}
+                                                    <td className="px-8 py-5 text-right">
+                                                        <Link to={`/students/${student.id}`} className="inline-flex items-center gap-2 p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all opacity-0 group-hover:opacity-100 shadow-sm">
+                                                            <ChevronRight size={18} />
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+
+                        {/* Pagination Controls */}
+                        {pagination.pages > 1 && (
+                            <div className="p-6 border-t border-slate-50 bg-slate-50/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    Showing <span className="text-slate-900">{students.length}</span> of <span className="text-slate-900">{pagination.total}</span> Records
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        disabled={pagination.page === 1}
+                                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                                        className="p-2 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 transition-all shadow-sm"
+                                    >
+                                        <ChevronRight size={18} className="rotate-180" />
+                                    </button>
+                                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[200px] sm:max-w-none">
+                                        {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(p => (
+                                            <button
+                                                key={p}
+                                                onClick={() => setPagination(prev => ({ ...prev, page: p }))}
+                                                className={`w-10 h-10 rounded-xl text-xs font-black transition-all flex-shrink-0 ${pagination.page === p ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' : 'bg-white border border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                        disabled={pagination.page === pagination.pages}
+                                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                                        className="p-2 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 transition-all shadow-sm"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

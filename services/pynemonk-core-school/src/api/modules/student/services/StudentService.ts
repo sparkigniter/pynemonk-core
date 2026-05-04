@@ -85,12 +85,12 @@ export default class StudentService {
         return this.studentHelper.findByUserId(tenantId, userId);
     }
 
-    public async listStudents(tenantId: number, filters: any, scope: any): Promise<any> {
+    public async listStudents(tenantId: number, filters: any): Promise<any> {
         if (!filters.academic_year_id && !filters.classroom_id) {
             const currentYear = await this.academicYearHelper.findCurrent(tenantId);
             filters.academic_year_id = currentYear?.id;
         }
-        return this.studentHelper.listStudents(tenantId, filters, scope);
+        return this.studentHelper.listStudents(tenantId, filters);
     }
 
     public async addDocument(tenantId: number, studentId: number, data: any): Promise<any> {

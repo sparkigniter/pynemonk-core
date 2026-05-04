@@ -4,30 +4,69 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
     Plus, Search, Filter,
     Mail, Phone, BookOpen, UserPlus,
-    Calendar, ShieldCheck, X
+    Calendar, ShieldCheck, X, ChevronRight
 } from 'lucide-react';
 import * as staffApi from '../../api/staff.api';
-import { ComboBox } from '../../components/ui/ComboBox';
+import AdvancedFilters from '../../components/ui/AdvancedFilters';
+import type { FilterField } from '../../components/ui/AdvancedFilters';
 
 export default function Teachers() {
     const [staff, setStaff] = useState<staffApi.Staff[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { can } = useAuth();
 
     // Search & Pagination state
     const [search, setSearch] = useState('');
     const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 });
     const [selectedStaff, setSelectedStaff] = useState<staffApi.Staff | null>(null);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [advancedFilters, setAdvancedFilters] = useState<any>({});
 
-    const canRegister = user?.permissions?.includes('staff:write');
+    const filterFields: FilterField[] = [
+        { 
+            id: 'status', 
+            label: 'Status', 
+            type: 'select', 
+            options: [
+                { value: 'active', label: 'Active' },
+                { value: 'on_leave', label: 'On Leave' },
+                { value: 'inactive', label: 'Inactive' }
+            ]
+        },
+        { 
+            id: 'gender', 
+            label: 'Gender', 
+            type: 'select', 
+            options: [
+                { value: 'Male', label: 'Male' },
+                { value: 'Female', label: 'Female' },
+                { value: 'Other', label: 'Other' }
+            ]
+        },
+        { id: 'designation', label: 'Designation', type: 'text', placeholder: 'e.g. Teacher' },
+        { 
+            id: 'blood_group', 
+            label: 'Blood Group', 
+            type: 'select', 
+            options: [
+                { value: 'A+', label: 'A+' }, { value: 'A-', label: 'A-' },
+                { value: 'B+', label: 'B+' }, { value: 'B-', label: 'B-' },
+                { value: 'AB+', label: 'AB+' }, { value: 'AB-', label: 'AB-' },
+                { value: 'O+', label: 'O+' }, { value: 'O-', label: 'O-' }
+            ]
+        },
+        { id: 'nationality', label: 'Nationality', type: 'text', placeholder: 'e.g. Indian' }
+    ];
+
+    const canRegister = can('staff:write');
 
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchStaff();
         }, 300); // Simple debounce
         return () => clearTimeout(timer);
-    }, [search, pagination.page]);
+    }, [search, pagination.page, advancedFilters]);
 
     const fetchStaff = async () => {
         setLoading(true);
@@ -35,7 +74,8 @@ export default function Teachers() {
             const response = await staffApi.getStaffList({
                 search,
                 page: pagination.page,
-                limit: pagination.limit
+                limit: pagination.limit,
+                ...advancedFilters
             });
             setStaff(response.data);
             setPagination(response.pagination);
@@ -108,21 +148,24 @@ export default function Teachers() {
                     />
                 </div>
                 <div className="flex gap-3 w-full lg:w-auto">
-                    <ComboBox
-                        value="All Departments"
-                        onChange={() => { }}
-                        options={[
-                            { value: 'All Departments', label: 'All Departments' },
-                            { value: 'Mathematics', label: 'Mathematics' },
-                            { value: 'Science', label: 'Science' },
-                            { value: 'Administration', label: 'Administration' },
-                        ]}
-                        className="flex-1 lg:w-56"
-                    />
-                    <button className="flex items-center gap-2 px-4 py-3 border border-slate-100 rounded-2xl text-sm text-slate-600 hover:bg-slate-50 font-bold transition-colors">
-                        <Filter size={18} />
-                        Filters
-                    </button>
+                    <div className="relative w-full lg:w-auto">
+                        <button 
+                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                            className={`flex items-center gap-2 px-6 py-3 border rounded-2xl text-sm font-bold transition-all w-full lg:w-auto justify-center active:scale-95 shadow-sm ${Object.keys(advancedFilters).length > 0 ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50'}`}
+                        >
+                            <Filter size={18} />
+                            {Object.keys(advancedFilters).length > 0 ? `Filters Active (${Object.keys(advancedFilters).length})` : 'Filters'}
+                        </button>
+
+                        <AdvancedFilters 
+                            isOpen={isFilterOpen}
+                            onClose={() => setIsFilterOpen(false)}
+                            fields={filterFields}
+                            currentFilters={advancedFilters}
+                            onFilter={(f) => { setAdvancedFilters(f); setPagination(prev => ({ ...prev, page: 1 })); }}
+                            onReset={() => { setAdvancedFilters({}); setPagination(prev => ({ ...prev, page: 1 })); }}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -237,18 +280,65 @@ export default function Teachers() {
                     ))}
                 </div>
             )}
+
+            {/* Pagination Controls */}
+            {pagination.pages > 1 && (
+                <div className="card p-6 flex items-center justify-between border-slate-100 bg-white/50 backdrop-blur-md">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Showing <span className="text-slate-900 font-bold">{staff.length}</span> of <span className="text-slate-900 font-bold">{pagination.total}</span> Staff Members
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            disabled={pagination.page === 1}
+                            onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                            className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 transition-all shadow-sm hover:border-slate-200"
+                        >
+                            <ChevronRight size={18} className="rotate-180" />
+                        </button>
+                        <div className="flex items-center gap-1.5">
+                            {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(p => (
+                                <button
+                                    key={p}
+                                    onClick={() => setPagination(prev => ({ ...prev, page: p }))}
+                                    className={`w-10 h-10 rounded-xl text-xs font-black transition-all ${pagination.page === p ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' : 'bg-white border border-slate-100 text-slate-400 hover:border-slate-300'}`}
+                                >
+                                    {p}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            disabled={pagination.page === pagination.pages}
+                            onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                            className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-slate-900 disabled:opacity-30 transition-all shadow-sm hover:border-slate-200"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Teacher Profile Modal */}
             {selectedStaff && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-end">
                     <div className="h-full w-full max-w-2xl bg-slate-50 shadow-2xl animate-in slide-in-from-right duration-500 overflow-y-auto">
                         <div className="sticky top-0 z-10 bg-white border-b border-slate-100 p-6 flex justify-between items-center">
                             <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Teacher Profile</h2>
-                            <button
-                                onClick={() => setSelectedStaff(null)}
-                                className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-900"
-                            >
-                                <X size={24} />
-                            </button>
+                            <div className="flex items-center gap-4">
+                                {can('staff:write') && (
+                                    <button
+                                        onClick={() => navigate(`/teachers/edit/${selectedStaff.id}`)}
+                                        className="px-4 py-2 bg-theme-primary text-white text-xs font-black uppercase rounded-xl shadow-lg shadow-theme-primary/20 hover:opacity-90 transition-all active:scale-95"
+                                    >
+                                        Modify Profile
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setSelectedStaff(null)}
+                                    className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-900"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="p-8 space-y-8">

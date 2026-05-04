@@ -30,6 +30,11 @@ class ClientScopeHelper {
         const res = await this.db.query(query, values);
         return res.rows;
      }
+
+    public async removeClientScope(clientId: number, scopeId: number): Promise<void> {
+        const query = `DELETE FROM auth.client_scope WHERE client_id = $1 AND scope_id = $2`;
+        await this.db.query(query, [clientId, scopeId]);
+    }
 }
 
 export default ClientScopeHelper;

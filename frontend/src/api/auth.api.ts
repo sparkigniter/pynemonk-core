@@ -127,6 +127,53 @@ export interface OauthScope {
     description: string;
 }
 
+export interface OauthRole {
+    id: number;
+    name: string;
+    slug: string;
+    description: string;
+    is_system: boolean;
+}
+
+export interface RoleScope {
+    id: number;
+    role_id: number;
+    scope_id: number;
+    granted: boolean;
+    scope_value: string;
+}
+
+export async function getRoles(token: string): Promise<OauthRole[]> {
+    const res = await fetch(`${BASE_URL}/api/v1/oauth2/role`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const json = await res.json();
+    return json.data ?? json;
+}
+
+export async function getRoleScopes(token: string): Promise<RoleScope[]> {
+    const res = await fetch(`${BASE_URL}/api/v1/oauth2/role-scope`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const json = await res.json();
+    return json.data ?? json;
+}
+
+export async function assignRoleScope(token: string, roleId: number, scopeId: number): Promise<void> {
+    await post<void>('/api/v1/oauth2/role-scope', { role_id: roleId, scope_id: scopeId }, token);
+}
+
+export async function removeRoleScope(token: string, roleId: number, scopeId: number, clientId?: string): Promise<void> {
+    let url = `${BASE_URL}/api/v1/oauth2/role-scope/${roleId}/${scopeId}`;
+    if (clientId) url += `?clientId=${clientId}`;
+    
+    const res = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to remove scope');
+}
+
 export async function getClients(token: string): Promise<OauthClient[]> {
     const res = await fetch(`${BASE_URL}/api/v1/oauth2/client`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -159,6 +206,22 @@ export async function createScope(token: string, payload: any): Promise<OauthSco
     return post<OauthScope>('/api/v1/oauth2/scope', payload, token);
 }
 
+export async function createRole(token: string, payload: { name: string, slug: string, description: string, tenant_id?: number }): Promise<OauthRole> {
+    return post<OauthRole>('/api/v1/oauth2/role', payload, token);
+}
+
 export async function assignClientScope(token: string, clientId: number, scopeId: number): Promise<void> {
     await post<void>('/api/v1/oauth2/client-scope', { client_id: clientId, scope_id: scopeId }, token);
+}
+
+export async function syncRoleTemplate(token: string, roleId: number, clientId?: string): Promise<any> {
+    return post<any>(`/api/v1/oauth2/role/${roleId}/sync-template`, { clientId }, token);
+}
+
+export async function bulkGrantRoleScopes(token: string, roleId: number, clientId?: string): Promise<any> {
+    return post<any>('/api/v1/oauth2/role-scope/bulk-grant', { roleId, clientId }, token);
+}
+
+export async function bulkRevokeRoleScopes(token: string, roleId: number, clientId?: string): Promise<any> {
+    return post<any>('/api/v1/oauth2/role-scope/bulk-revoke', { roleId, clientId }, token);
 }

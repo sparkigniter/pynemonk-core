@@ -14,6 +14,12 @@ export default class StaffHelper extends BaseModel {
             limit?: number;
             search?: string;
             status?: string;
+            gender?: string;
+            designation?: string;
+            blood_group?: string;
+            religion?: string;
+            nationality?: string;
+            ids?: number[];
         } = {},
     ) {
         const page = Math.max(1, filters.page || 1);
@@ -63,6 +69,42 @@ export default class StaffHelper extends BaseModel {
         if (filters.status) {
             query += ` AND s.status = $${paramIndex}`;
             values.push(filters.status);
+            paramIndex++;
+        }
+
+        if (filters.gender) {
+            query += ` AND s.gender = $${paramIndex}`;
+            values.push(filters.gender);
+            paramIndex++;
+        }
+
+        if (filters.designation) {
+            query += ` AND s.designation ILIKE $${paramIndex}`;
+            values.push(`%${filters.designation}%`);
+            paramIndex++;
+        }
+
+        if (filters.blood_group) {
+            query += ` AND s.blood_group = $${paramIndex}`;
+            values.push(filters.blood_group);
+            paramIndex++;
+        }
+
+        if (filters.religion) {
+            query += ` AND s.religion = $${paramIndex}`;
+            values.push(filters.religion);
+            paramIndex++;
+        }
+
+        if (filters.nationality) {
+            query += ` AND s.nationality = $${paramIndex}`;
+            values.push(filters.nationality);
+            paramIndex++;
+        }
+
+        if (filters.ids) {
+            query += ` AND s.id = ANY($${paramIndex})`;
+            values.push(filters.ids);
             paramIndex++;
         }
 

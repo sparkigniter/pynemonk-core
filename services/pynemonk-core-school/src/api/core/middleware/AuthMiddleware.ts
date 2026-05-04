@@ -6,6 +6,7 @@ export interface UserContext {
     userId: number;
     tenantId: number;
     roles: string[];
+    permissions: string[];
     email: string;
     [key: string]: any;
 }
@@ -42,6 +43,7 @@ export class AuthMiddleware {
                 userId: decoded.sub || decoded.userId || decoded.id,
                 tenantId: decoded.tenant_id || decoded.tenantId || decoded.tid,
                 roles: decoded.roles || [],
+                permissions: typeof decoded.scope === "string" ? decoded.scope.split(" ") : [],
                 email: decoded.email,
             };
 
@@ -72,6 +74,32 @@ export class AuthMiddleware {
                 return res
                     .status(403)
                     .json({ success: false, message: "Forbidden: Insufficient permissions" });
+            }
+
+            next();
+        };
+    }
+
+    /**
+     * Middleware factory that requires the user to have at least one of the specified permissions (scopes).
+     */
+    public authorizePermission(requiredPermissions: string[]) {
+        return (req: Request, res: Response, next: NextFunction) => {
+            const user = (req as AuthenticatedRequest).user;
+            if (!user) {
+                return res
+                    .status(401)
+                    .json({ success: false, message: "Unauthorized: No user context found" });
+            }
+
+            const hasPermission = requiredPermissions.some((p) => user.permissions.includes(p));
+            if (!hasPermission) {
+                return res.status(403).json({
+                    success: false,
+                    message: `Forbidden: Insufficient permissions. Requires one of: ${requiredPermissions.join(
+                        ", ",
+                    )}`,
+                });
             }
 
             next();

@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import fs from 'fs';
+
 // Setup __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,9 +13,13 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, '../../../../apps/pynemonk-monolith/.env') });
 
+// Detect if running inside Docker
+const isDocker = fs.existsSync('/.dockerenv');
+
 const pool = new Pool({
     user: process.env.PGUSER || 'postgres',
-    host: process.env.PGHOST === 'postgres' ? 'localhost' : (process.env.PGHOST || 'localhost'),
+    // Inside Docker, force 'postgres' hostname to avoid localhost/127.0.0.1 conflicts from .env
+    host: isDocker ? 'postgres' : (process.env.PGHOST || 'localhost'),
     database: process.env.PGDATABASE || 'pynemonk_core',
     password: process.env.PGPASSWORD || 'password',
     port: parseInt(process.env.PGPORT || '5432'),
@@ -56,6 +62,7 @@ async function cleanup(client: any, tenantId: number) {
     await client.query('DELETE FROM school.staff WHERE tenant_id = $1', [tenantId]);
     await client.query('DELETE FROM school.subject WHERE tenant_id = $1', [tenantId]);
     await client.query('DELETE FROM school.grade WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM school.settings WHERE tenant_id = $1', [tenantId]);
 }
 
 async function createUser(client: any, tenantId: number, email: string, roleId: number) {
@@ -115,13 +122,35 @@ async function seed() {
         const ayId = ayRes.rows[0].id;
         
         // 1.2 Ensure School Settings exist
-        const settingsRes = await client.query('SELECT 1 FROM school.settings WHERE tenant_id = $1', [tenantId]);
+        const settingsRes = await client.query("SELECT 1 FROM school.settings WHERE tenant_id = $1 AND key = 'attendance_mode'", [tenantId]);
         if (settingsRes.rows.length === 0) {
-            console.log('⚙️ Initializing school settings...');
+            console.log('⚙️ Initializing school settings (attendance_mode)...');
             await client.query(`
-                INSERT INTO school.settings (tenant_id, attendance_mode)
-                VALUES ($1, 'DAILY')
+                INSERT INTO school.settings (tenant_id, key, value)
+                VALUES ($1, 'attendance_mode', 'DAILY')
             `, [tenantId]);
+        }
+
+        // 1.3 Ensure Default Periods exist (Required for Timetable Auto-Gen)
+        const periodCheck = await client.query('SELECT 1 FROM school.period_config WHERE tenant_id = $1 LIMIT 1', [tenantId]);
+        if (periodCheck.rows.length === 0) {
+            console.log('⏰ Initializing default school periods...');
+            const defaultPeriods = [
+                { name: 'Period 1', start: '08:00', end: '09:00', is_break: false },
+                { name: 'Period 2', start: '09:00', end: '10:00', is_break: false },
+                { name: 'Breakfast', start: '10:00', end: '10:30', is_break: true },
+                { name: 'Period 3', start: '10:30', end: '11:30', is_break: false },
+                { name: 'Period 4', start: '11:30', end: '12:30', is_break: false },
+                { name: 'Lunch', start: '12:30', end: '13:30', is_break: true },
+                { name: 'Period 5', start: '13:30', end: '14:30', is_break: false },
+                { name: 'Period 6', start: '14:30', end: '15:30', is_break: false }
+            ];
+            for (const p of defaultPeriods) {
+                await client.query(
+                    'INSERT INTO school.period_config (tenant_id, name, start_time, end_time, is_break) VALUES ($1, $2, $3, $4, $5)',
+                    [tenantId, p.name, p.start, p.end, p.is_break]
+                );
+            }
         }
 
         // 1.5 Ensure Roles exist

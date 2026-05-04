@@ -51,7 +51,7 @@ const AttendanceChart: React.FC<AttendanceChartProps> = ({ data = [] }) => {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 font-black text-xs">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black text-xs">
                         94%
                     </div>
                     <div>

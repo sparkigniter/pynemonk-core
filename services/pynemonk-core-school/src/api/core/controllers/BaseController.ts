@@ -25,6 +25,10 @@ class BaseController {
         return ApiResponseHandler.badrequest(res, message);
     }
 
+    public forbidden(res: express.Response, message?: string): express.Response {
+        return ApiResponseHandler.forbidden(res, message);
+    }
+
     public internalservererror(res: express.Response, message?: string): express.Response {
         const jsonRes: JSON = ApiResponseHandler.jsonResponse({
             message: message ?? "Internal Server Error",

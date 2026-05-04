@@ -8,11 +8,9 @@ interface SubjectData {
 }
 
 const subjects: SubjectData[] = [
-    { subject: 'Mathematics', score: 87, color: '#6366f1', gradient: 'linear-gradient(90deg, #6366f1, #8b5cf6)' },
-    { subject: 'Science', score: 92, color: '#10b981', gradient: 'linear-gradient(90deg, #10b981, #34d399)' },
-    { subject: 'English', score: 78, color: '#f59e0b', gradient: 'linear-gradient(90deg, #f59e0b, #fbbf24)' },
-    { subject: 'Social Studies', score: 84, color: '#0ea5e9', gradient: 'linear-gradient(90deg, #0ea5e9, #38bdf8)' },
-    { subject: 'Computer Science', score: 95, color: '#8b5cf6', gradient: 'linear-gradient(90deg, #8b5cf6, #a78bfa)' },
+    { subject: 'Mathematics', score: 87, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
+    { subject: 'Science', score: 92, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
+    { subject: 'English', score: 78, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
     { subject: 'Social Studies', score: 84, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
     { subject: 'Computer Science', score: 95, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
 ];

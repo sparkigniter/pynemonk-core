@@ -14,10 +14,12 @@ import type { Classroom } from '../../api/classroom.api';
 import Modal from '../../components/ui/Modal';
 import { ComboBox } from '../../components/ui/ComboBox';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Classrooms() {
     const { notify } = useNotification();
     const { isYearClosed } = useAcademics();
+    const { can } = useAuth();
     
     // Data States
     const [grades, setGrades] = useState<Grade[]>([]);
@@ -44,7 +46,8 @@ export default function Classrooms() {
 
     const fetchInitialData = useCallback(async () => {
         try {
-            const gradesData = await getGrades();
+            const response = await getGrades();
+            const gradesData = response.data;
             setGrades(gradesData);
             if (gradesData.length > 0 && !selectedGradeId) {
                 setSelectedGradeId(gradesData[0].id);
@@ -139,7 +142,7 @@ export default function Classrooms() {
             {/* Grade Sidebar Rail */}
             <div className="w-80 bg-white border-r border-slate-200 flex flex-col">
                 <div className="p-8 border-b border-slate-100">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Grades & Levels</h3>
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Grades</h3>
                     <div className="relative group">
                         <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input 
@@ -189,23 +192,25 @@ export default function Classrooms() {
                                     <Building2 size={24} />
                                 </div>
                                 <h1 className="text-3xl font-black text-slate-900 tracking-tight font-heading">
-                                    {selectedGrade?.name || 'Classroom Directory'}
+                                    {selectedGrade?.name || 'Classroom List'}
                                 </h1>
                             </div>
-                            <p className="text-slate-400 font-medium tracking-tight">Managing learning spaces for this level.</p>
+                            <p className="text-slate-400 font-medium tracking-tight">Manage classrooms for this grade.</p>
                         </div>
 
-                        <button
-                            onClick={() => {
-                                setFormData(prev => ({ ...prev, grade_id: selectedGradeId || 0 }));
-                                setIsModalOpen(true);
-                            }}
-                            disabled={isYearClosed()}
-                            className="bg-theme-primary text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl shadow-theme-primary/20 flex items-center gap-3 active:scale-95 disabled:opacity-30"
-                        >
-                            <Plus size={18} />
-                            New Classroom
-                        </button>
+                        {can('class:write') && (
+                            <button
+                                onClick={() => {
+                                    setFormData(prev => ({ ...prev, grade_id: selectedGradeId || 0 }));
+                                    setIsModalOpen(true);
+                                }}
+                                disabled={isYearClosed()}
+                                className="bg-theme-primary text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl shadow-theme-primary/20 flex items-center gap-3 active:scale-95 disabled:opacity-30"
+                            >
+                                <Plus size={18} />
+                                Add Classroom
+                            </button>
+                        )}
                     </div>
 
                     {/* Stats Rail */}
@@ -217,7 +222,7 @@ export default function Classrooms() {
                                 </div>
                                 <div>
                                     <h4 className="text-2xl font-black text-slate-900 leading-none mb-1">{stats.total}</h4>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Classrooms</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Classes</p>
                                 </div>
                             </div>
                         </div>
@@ -289,13 +294,17 @@ export default function Classrooms() {
                                                     <School size={28} />
                                                 </div>
                                                 <div className="flex gap-1">
-                                                    <button 
-                                                        onClick={() => handleEdit(classroom)}
-                                                        className="p-2 text-slate-300 hover:text-theme-primary transition-colors"
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                    <button className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={16} /></button>
+                                                    {can('class:write') && (
+                                                        <>
+                                                            <button 
+                                                                onClick={() => handleEdit(classroom)}
+                                                                className="p-2 text-slate-300 hover:text-theme-primary transition-colors"
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            <button className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={16} /></button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -311,13 +320,15 @@ export default function Classrooms() {
                                                 </div>
                                             ) : (
                                                 <button 
-                                                    onClick={() => handleEdit(classroom)}
-                                                    className="w-full p-4 bg-amber-50 rounded-2xl border border-amber-200 text-left hover:bg-amber-100 transition-all group/btn"
+                                                    onClick={() => can('class:write') && handleEdit(classroom)}
+                                                    className={`w-full p-4 bg-amber-50 rounded-2xl border border-amber-200 text-left transition-all group/btn ${can('class:write') ? 'hover:bg-amber-100 cursor-pointer' : 'cursor-default'}`}
                                                 >
                                                     <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-1 flex items-center gap-1">
-                                                        <AlertCircle size={10} /> Needs Assignment
+                                                        <AlertCircle size={10} /> {can('class:write') ? 'Needs Assignment' : 'No Teacher Assigned'}
                                                     </p>
-                                                    <p className="text-xs font-bold text-amber-700 group-hover/btn:underline">Assign Class Teacher</p>
+                                                    <p className={`text-xs font-bold text-amber-700 ${can('class:write') ? 'group-hover/btn:underline' : ''}`}>
+                                                        {can('class:write') ? 'Assign Class Teacher' : 'Waiting for Administrator'}
+                                                    </p>
                                                 </button>
                                             )}
 
@@ -343,15 +354,17 @@ export default function Classrooms() {
                                     </div>
                                     <h3 className="text-2xl font-black text-slate-800 tracking-tight">No Classrooms Found</h3>
                                     <p className="text-slate-400 font-medium mt-2 max-w-xs text-sm uppercase tracking-tight">Ready to expand? Setup your first classroom for this grade.</p>
-                                    <button
-                                        onClick={() => {
-                                            setFormData(prev => ({ ...prev, grade_id: selectedGradeId || 0 }));
-                                            setIsModalOpen(true);
-                                        }}
-                                        className="mt-8 bg-theme-primary text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-theme-primary/20 hover:scale-105 active:scale-95 transition-all"
-                                    >
-                                        Create First Classroom
-                                    </button>
+                                    {can('class:write') && (
+                                        <button
+                                            onClick={() => {
+                                                setFormData(prev => ({ ...prev, grade_id: selectedGradeId || 0 }));
+                                                setIsModalOpen(true);
+                                            }}
+                                            className="mt-8 bg-theme-primary text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-theme-primary/20 hover:scale-105 active:scale-95 transition-all"
+                                        >
+                                            Create First Classroom
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
@@ -386,7 +399,7 @@ export default function Classrooms() {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={editingId ? "Update Classroom Config" : "Establish New Classroom"}
+                title={editingId ? "Update Class Details" : "Add New Class"}
                 size="md"
             >
                 <form onSubmit={handleSave} className="p-8 space-y-6 pb-32">
@@ -401,7 +414,7 @@ export default function Classrooms() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Space Name</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Class Name</label>
                                 <input
                                     required
                                     placeholder="e.g. 10A"
@@ -423,7 +436,7 @@ export default function Classrooms() {
                         </div>
 
                         <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Student Capacity</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Max Students</label>
                             <input
                                 type="number"
                                 placeholder="40"
@@ -456,7 +469,7 @@ export default function Classrooms() {
                             disabled={isSaving}
                             className="flex-[2] px-8 py-4 bg-theme-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 shadow-xl shadow-theme-primary/20 active:scale-95 transition-all disabled:opacity-50"
                         >
-                            {isSaving ? <Loader2 size={18} className="animate-spin mx-auto" /> : "Verify & Create"}
+                            {isSaving ? <Loader2 size={18} className="animate-spin mx-auto" /> : "Save Class"}
                         </button>
                     </div>
                 </form>

@@ -5,14 +5,38 @@ import {
     AlertCircle, User, BookOpen, Calculator,
     ShieldCheck, Search
 } from 'lucide-react';
-import { examApi } from '../../api/exam.api';
-import type { Exam, ExamPaper } from '../../api/exam.api';
+import { examApi, type Exam, type ExamPaper } from '../../api/exam.api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const PAGE_SIZE = 20;
 
 export default function MarksEntry() {
     const { id, paperId } = useParams<{ id: string; paperId: string }>();
     const navigate = useNavigate();
+    const { can } = useAuth();
+    
+    const canWrite = can('mark:write') || can('exam:write');
+    const canRead = can('exam:read') || canWrite;
+
+    if (!canRead) {
+        return (
+            <div className="h-[80vh] flex flex-col items-center justify-center gap-6 text-center px-4">
+                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-rose-500/10 transform -rotate-12">
+                    <ShieldCheck size={40} />
+                </div>
+                <div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Access Denied</h2>
+                    <p className="text-slate-400 font-medium mt-2 max-w-sm">You do not have the required permissions to access the evaluation portal.</p>
+                </div>
+                <button 
+                    onClick={() => navigate('/exams')}
+                    className="mt-4 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                >
+                    Return to Mission Control
+                </button>
+            </div>
+        );
+    }
     
     const [exam, setExam] = useState<Exam | null>(null);
     const [paper, setPaper] = useState<ExamPaper | null>(null);
@@ -171,14 +195,16 @@ export default function MarksEntry() {
                         <p className="text-xl font-black text-slate-900">{paper?.max_marks}</p>
                     </div>
                     <div className="w-px h-10 bg-slate-200"></div>
-                    <button 
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="btn-primary px-8 flex items-center gap-2 py-4"
-                    >
-                        {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                        Save Progress
-                    </button>
+                    {canWrite && (
+                        <button 
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="btn-primary px-8 flex items-center gap-2 py-4"
+                        >
+                            {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                            Save Progress
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -287,7 +313,7 @@ export default function MarksEntry() {
                                     </td>
                                     <td className="px-8 py-5">
                                         <button 
-                                            disabled={isExcluded}
+                                            disabled={isExcluded || !canWrite}
                                             onClick={() => toggleAbsent(student.student_id)}
                                             className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all
                                                 ${studentMarks.isAbsent 
@@ -302,7 +328,7 @@ export default function MarksEntry() {
                                             <Calculator size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within/input:text-primary" />
                                             <input 
                                                 type="number"
-                                                disabled={isExcluded || studentMarks.isAbsent}
+                                                disabled={isExcluded || studentMarks.isAbsent || !canWrite}
                                                 value={studentMarks.score}
                                                 onChange={(e) => handleMarkChange(student.student_id, e.target.value)}
                                                 className={`w-full pl-10 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50 font-black text-sm outline-none transition-all

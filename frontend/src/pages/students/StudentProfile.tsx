@@ -15,7 +15,7 @@ import * as integrationApi from '../../api/integration.api';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function StudentProfile() {
-    const { user } = useAuth();
+    const { user, can } = useAuth();
     const { id } = useParams<{ id: string }>();
     const [student, setStudent] = useState<any>(null);
     const [grades, setGrades] = useState<gradeApi.Grade[]>([]);
@@ -42,13 +42,13 @@ export default function StudentProfile() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [studentData, gradesData, integrationsData] = await Promise.all([
+                const [studentData, gradeRes, integrationsData] = await Promise.all([
                     studentApi.getStudentProfile(parseInt(id!)),
                     gradeApi.getGrades(),
                     integrationApi.getAvailableIntegrations()
                 ]);
                 setStudent(studentData);
-                setGrades(gradesData.sort((a, b) => a.sequence_order - b.sequence_order));
+                setGrades(gradeRes.data.sort((a, b) => a.sequence_order - b.sequence_order));
                 setIntegrations(integrationsData.filter(i => i.isEnabled));
             } catch (err) {
                 console.error('Failed to fetch profile data', err);
@@ -75,12 +75,20 @@ export default function StudentProfile() {
 
     if (!student) return <div className="p-8 text-center font-bold text-slate-400">Student not found</div>;
 
+    const canReadFull = can('student:read');
+    
     const tabs = [
         { id: 'journey', label: 'Academic Journey', icon: TrendingUp },
         { id: 'timeline', label: 'Log & History', icon: Activity },
-        { id: 'documents', label: 'Vault / Documents', icon: FileText },
-        { id: 'family', label: 'Family & Guardians', icon: Users },
     ];
+
+    // Only show documents and family for users with full student access
+    if (canReadFull || (student.documents && student.documents.length > 0)) {
+        tabs.push({ id: 'documents', label: 'Vault / Documents', icon: FileText });
+    }
+    if (canReadFull || (student.guardians && student.guardians.length > 0)) {
+        tabs.push({ id: 'family', label: 'Family & Guardians', icon: Users });
+    }
 
     return (
         <div className="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -100,7 +108,7 @@ export default function StudentProfile() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    {integrations.find(i => i.slug === 'karnataka-sats') && (
+                    {integrations.find(i => i.slug === 'karnataka-sats') && can('settings:write') && (
                         <button 
                             onClick={handleSATSExport}
                             disabled={syncing}
@@ -110,8 +118,12 @@ export default function StudentProfile() {
                             {syncing ? 'Syncing...' : 'Sync to SATS'}
                         </button>
                     )}
-                    <button className="bg-white text-slate-600 px-6 py-3 rounded-2xl text-xs font-black hover:bg-slate-50 transition-all shadow-sm border border-slate-100 active:scale-95">Edit Profile</button>
-                    <button className="bg-slate-900 text-white px-6 py-3 rounded-2xl text-xs font-black hover:opacity-90 transition-all shadow-xl active:scale-95">Generate ID Card</button>
+                    {can('student:write') && (
+                        <>
+                            <button className="bg-white text-slate-600 px-6 py-3 rounded-2xl text-xs font-black hover:bg-slate-50 transition-all shadow-sm border border-slate-100 active:scale-95">Edit Profile</button>
+                            <button className="bg-slate-900 text-white px-6 py-3 rounded-2xl text-xs font-black hover:opacity-90 transition-all shadow-xl active:scale-95">Generate ID Card</button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -142,22 +154,30 @@ export default function StudentProfile() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-slate-50">
-                            <div className="p-4 bg-slate-50 rounded-2xl">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Blood Group</p>
-                                <p className="text-sm font-black text-rose-500">{student.blood_group || 'N/A'}</p>
-                            </div>
-                            <div className="p-4 bg-slate-50 rounded-2xl">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Religion</p>
-                                <p className="text-sm font-black text-slate-900">{student.religion || 'N/A'}</p>
-                            </div>
-                            <div className="p-4 bg-slate-50 rounded-2xl">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Nationality</p>
-                                <p className="text-sm font-black text-slate-900">{student.nationality || 'N/A'}</p>
-                            </div>
-                            <div className="p-4 bg-slate-50 rounded-2xl">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Mother Tongue</p>
-                                <p className="text-sm font-black text-slate-900">{student.mother_tongue || 'N/A'}</p>
-                            </div>
+                            {(canReadFull || student.blood_group) && (
+                                <div className="p-4 bg-slate-50 rounded-2xl">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Blood Group</p>
+                                    <p className="text-sm font-black text-rose-500">{student.blood_group || 'N/A'}</p>
+                                </div>
+                            )}
+                            {(canReadFull || student.religion) && (
+                                <div className="p-4 bg-slate-50 rounded-2xl">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Religion</p>
+                                    <p className="text-sm font-black text-slate-900">{student.religion || 'N/A'}</p>
+                                </div>
+                            )}
+                            {(canReadFull || student.nationality) && (
+                                <div className="p-4 bg-slate-50 rounded-2xl">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Nationality</p>
+                                    <p className="text-sm font-black text-slate-900">{student.nationality || 'N/A'}</p>
+                                </div>
+                            )}
+                            {(canReadFull || student.mother_tongue) && (
+                                <div className="p-4 bg-slate-50 rounded-2xl">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Mother Tongue</p>
+                                    <p className="text-sm font-black text-slate-900">{student.mother_tongue || 'N/A'}</p>
+                                </div>
+                            )}
                             <div className="p-4 bg-slate-50 rounded-2xl col-span-2">
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Gender</p>
                                 <p className="text-sm font-black text-slate-900 capitalize">{student.gender || 'N/A'}</p>
@@ -174,20 +194,24 @@ export default function StudentProfile() {
                         </div>
 
                         <div className="mt-8 space-y-4">
-                            <div className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors">
-                                <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary"><Phone size={18} /></div>
-                                <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mobile</p>
-                                    <p className="text-sm font-bold text-slate-700">{student.phone || 'N/A'}</p>
+                            {(canReadFull || student.phone) && (
+                                <div className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors">
+                                    <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary"><Phone size={18} /></div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mobile</p>
+                                        <p className="text-sm font-bold text-slate-700">{student.phone || 'N/A'}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors">
-                                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500"><Calendar size={18} /></div>
-                                <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Birth Date</p>
-                                    <p className="text-sm font-bold text-slate-700">{student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : 'N/A'}</p>
+                            )}
+                            {(canReadFull || student.date_of_birth) && (
+                                <div className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500"><Calendar size={18} /></div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Birth Date</p>
+                                        <p className="text-sm font-bold text-slate-700">{student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : 'N/A'}</p>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
 

@@ -48,10 +48,10 @@ export class AttendanceService {
 
         // 2. Attendance Mode & Validation
         const settingsRes = await this.db.query(
-            'SELECT attendance_mode FROM school.settings WHERE tenant_id = $1',
+            "SELECT value FROM school.settings WHERE tenant_id = $1 AND key = 'attendance_mode' AND is_deleted = FALSE",
             [tenantId]
         );
-        const mode = settingsRes.rows[0]?.attendance_mode || 'DAILY';
+        const mode = settingsRes.rows[0]?.value || 'DAILY';
 
         if (mode === 'DAILY') {
             const classRes = await this.db.query(

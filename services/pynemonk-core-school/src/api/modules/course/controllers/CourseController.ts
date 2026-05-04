@@ -1,11 +1,12 @@
 import { Response } from "express";
 import { injectable, inject } from "tsyringe";
-import BaseController from "../../../core/controllers/BaseController.js";
+import ResourceController from "../../../core/controllers/ResourceController.js";
 import CourseService from "../services/CourseService.js";
 import { AuthenticatedRequest } from "../../../core/middleware/AuthMiddleware.js";
+import { AccessLevel } from "../../../core/helpers/DataScopeHelper.js";
 
 @injectable()
-export default class CourseController extends BaseController {
+export default class CourseController extends ResourceController {
     constructor(@inject(CourseService) private courseService: CourseService) {
         super();
     }
@@ -13,13 +14,18 @@ export default class CourseController extends BaseController {
     public list = async (req: AuthenticatedRequest, res: Response) => {
         try {
             const tenantId = this.getTenantId(req);
+            const scope = await this.getScope(req);
             const { page, limit, search } = req.query;
 
-            const filters = {
+            const filters: any = {
                 page: page ? parseInt(page as string, 10) : 1,
                 limit: limit ? parseInt(limit as string, 10) : 10,
                 search: search as string,
             };
+
+            // Courses are usually school-wide, but we might want to restrict view if needed.
+            // For now, let's keep it open or restrict to ASSIGNED if there's a mapping.
+            // Since courses are often global, we'll keep them visible but restrict modifications.
 
             const courses = await this.courseService.getCourseList(tenantId, filters);
             return this.ok(res, "Courses retrieved successfully", courses);
@@ -42,6 +48,11 @@ export default class CourseController extends BaseController {
 
     public create = async (req: AuthenticatedRequest, res: Response) => {
         try {
+            const scope = await this.getScope(req);
+            if (scope.accessLevel !== AccessLevel.FULL) {
+                return this.forbidden(res, "Only administrators can create courses");
+            }
+
             const tenantId = this.getTenantId(req);
             const course = await this.courseService.addCourse(tenantId, req.body);
             return this.ok(res, "Course created successfully", course);
@@ -52,6 +63,11 @@ export default class CourseController extends BaseController {
 
     public update = async (req: AuthenticatedRequest, res: Response) => {
         try {
+            const scope = await this.getScope(req);
+            if (scope.accessLevel !== AccessLevel.FULL) {
+                return this.forbidden(res, "Only administrators can update course details");
+            }
+
             const tenantId = this.getTenantId(req);
             const id = parseInt(req.params.id);
             const course = await this.courseService.updateCourse(tenantId, id, req.body);
@@ -63,6 +79,11 @@ export default class CourseController extends BaseController {
 
     public delete = async (req: AuthenticatedRequest, res: Response) => {
         try {
+            const scope = await this.getScope(req);
+            if (scope.accessLevel !== AccessLevel.FULL) {
+                return this.forbidden(res, "Only administrators can delete courses");
+            }
+
             const tenantId = this.getTenantId(req);
             const id = parseInt(req.params.id);
             await this.courseService.removeCourse(tenantId, id);

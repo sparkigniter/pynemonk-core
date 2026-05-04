@@ -34,6 +34,8 @@ interface AuthContextType {
     login: (email: string, password: string, schoolSlug?: string) => Promise<authApi.LoginResult>;
     logout: () => Promise<void>;
     refreshTenants: () => Promise<void>;
+    can: (permission: string) => boolean;
+    accessToken: string | null;
 }
 
 // ── Storage helpers ──────────────────────────────────────────────────────────
@@ -95,6 +97,8 @@ const AuthContext = createContext<AuthContextType>({
     login: async () => { return {} as any; },
     logout: async () => { },
     refreshTenants: async () => { },
+    can: () => false,
+    accessToken: null,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -200,6 +204,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(null);
     }, [session]);
 
+    const can = useCallback((permission: string) => {
+        if (!session?.user?.permissions) return false;
+        // Support exact match or prefix match (e.g., 'exam' matches 'exam:write')
+        return session.user.permissions.some(p => p === permission || p.startsWith(`${permission}:`));
+    }, [session]);
+
     return (
         <AuthContext.Provider value={{
             user: session?.user ?? null,
@@ -210,6 +220,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             login,
             logout,
             refreshTenants,
+            can,
+            accessToken: session?.accessToken ?? null,
         }}>
             {children}
         </AuthContext.Provider>

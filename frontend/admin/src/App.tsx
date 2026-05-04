@@ -27,7 +27,6 @@ function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="schools" element={<Schools />} />
           <Route path="clients" element={<OAuthClients />} />
-          <Route path="roles" element={<div>Role Management (Coming Soon)</div>} />
         </Route>
       </Routes>
     </Router>

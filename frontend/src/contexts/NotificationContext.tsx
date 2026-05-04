@@ -56,37 +56,41 @@ const ICON_MAP = {
     success: <CheckCircle2 className="w-5 h-5 text-emerald-500" />,
     error: <XCircle className="w-5 h-5 text-rose-500" />,
     warning: <AlertCircle className="w-5 h-5 text-amber-500" />,
-    info: <Info className="w-5 h-5 text-blue-500" />,
+    info: <Info className="w-5 h-5 text-theme-primary" />,
 };
 
 const BG_MAP = {
-    success: 'border-emerald-100 bg-white/90',
-    error: 'border-rose-100 bg-white/90',
-    warning: 'border-amber-100 bg-white/90',
-    info: 'border-blue-100 bg-white/90',
+    success: 'border-emerald-100 bg-white/95 shadow-emerald-500/10',
+    error: 'border-rose-100 bg-white/95 shadow-rose-500/10',
+    warning: 'border-amber-100 bg-white/95 shadow-amber-500/10',
+    info: 'border-theme-primary/10 bg-white/95 shadow-theme-primary/10',
 };
 
 const NotificationItem: React.FC<{ notification: Notification; onRemove: (id: string) => void }> = ({ notification, onRemove }) => {
     return (
         <div 
             className={`
-                pointer-events-auto flex items-start gap-3 p-4 rounded-2xl border shadow-2xl shadow-slate-200/50 backdrop-blur-md animate-fade-in-up 
+                pointer-events-auto flex items-start gap-4 p-5 rounded-[2rem] border shadow-2xl backdrop-blur-xl animate-fade-in-up 
                 ${BG_MAP[notification.type]}
             `}
             role="alert"
         >
-            <div className="mt-0.5 flex-shrink-0">
+            <div className={`mt-0.5 flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
+                notification.type === 'success' ? 'bg-emerald-50' : 
+                notification.type === 'error' ? 'bg-rose-50' : 
+                notification.type === 'warning' ? 'bg-amber-50' : 
+                'bg-theme-primary/5'}`}>
                 {ICON_MAP[notification.type]}
             </div>
-            <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-slate-800">{notification.message}</h4>
+            <div className="flex-1 min-w-0 pt-0.5">
+                <h4 className="text-sm font-black text-slate-800 tracking-tight">{notification.message}</h4>
                 {notification.description && (
-                    <p className="mt-1 text-xs text-slate-500 leading-relaxed">{notification.description}</p>
+                    <p className="mt-1 text-[11px] font-medium text-slate-500 leading-relaxed">{notification.description}</p>
                 )}
             </div>
             <button 
                 onClick={() => onRemove(notification.id)}
-                className="flex-shrink-0 p-1 rounded-lg hover:bg-slate-100 transition-colors text-slate-400"
+                className="flex-shrink-0 p-2 rounded-xl hover:bg-slate-50 transition-colors text-slate-300 hover:text-slate-600"
             >
                 <X className="w-4 h-4" />
             </button>

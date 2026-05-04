@@ -10,15 +10,18 @@ import {
     ChevronLeft,
     ChevronRight,
     Trash2,
-    Edit3
+    Edit3,
+    BookCheck
 } from 'lucide-react';
 import { teacherNoteApi, type TeacherNote } from '../../api/teacher-note.api';
+import { useNavigate } from 'react-router-dom';
 import { getClassrooms, type Classroom } from '../../api/classroom.api';
 import { getSubjectList, type Subject } from '../../api/subject.api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { format, addDays, subDays } from 'date-fns';
 
 export default function TeacherDiary() {
+    const navigate = useNavigate();
     const { notify } = useNotification();
     const [notes, setNotes] = useState<TeacherNote[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -105,6 +108,24 @@ export default function TeacherDiary() {
         } catch (err) {
             notify('error', 'Error', 'Failed to delete note');
         }
+    };
+
+    const handlePromoteToHomework = (note: TeacherNote) => {
+        if (!note.classroom_id || !note.subject_id) {
+            notify('warning', 'Context Missing', 'Please set a Class and Subject for this note before promoting.');
+            return;
+        }
+
+        navigate('/homework/new', {
+            state: {
+                preFill: {
+                    title: `Homework: ${note.subject_name || 'Assignment'}`,
+                    description: note.content,
+                    classroom_id: note.classroom_id,
+                    subject_id: note.subject_id
+                }
+            }
+        });
     };
 
     return (
@@ -214,6 +235,13 @@ export default function TeacherDiary() {
                                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                                         <button className="p-2 text-slate-400 hover:text-slate-900 transition-all">
                                             <Edit3 size={16} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handlePromoteToHomework(note)}
+                                            className="p-2 text-slate-400 hover:text-indigo-600 transition-all"
+                                            title="Promote to Homework"
+                                        >
+                                            <BookCheck size={16} />
                                         </button>
                                         <button 
                                             onClick={() => deleteNote(note.id)}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
     DollarSign, TrendingUp, TrendingDown, CreditCard, 
     Download, Plus, Search, Filter, MoreVertical, CheckCircle2,
@@ -21,6 +22,7 @@ const recentInvoices = [
 ];
 
 export default function Finance() {
+    const { can } = useAuth();
     const [activeTab, setActiveTab] = useState<'overview' | 'invoices' | 'expenses' | 'settings'>('overview');
 
     return (
@@ -32,32 +34,38 @@ export default function Finance() {
                     <p className="text-slate-500 text-sm mt-1">Manage fees, track expenses, and view financial reports.</p>
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors shadow-sm font-medium text-sm">
-                        <Download size={16} />
-                        Export Report
-                    </button>
-                    <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-theme-primary text-white rounded-xl hover:bg-theme-primary/90 transition-colors shadow-sm font-medium text-sm">
-                        <Plus size={16} />
-                        New Invoice
-                    </button>
+                    {can('report:export') && (
+                        <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors shadow-sm font-medium text-sm">
+                            <Download size={16} />
+                            Export Report
+                        </button>
+                    )}
+                    {can('fee:write') && (
+                        <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-theme-primary text-white rounded-xl hover:bg-theme-primary/90 transition-colors shadow-sm font-medium text-sm">
+                            <Plus size={16} />
+                            New Invoice
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Tabs */}
             <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/60 shadow-sm w-max">
-                {(['overview', 'invoices', 'expenses', 'settings'] as const).map(tab => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
-                            activeTab === tab 
-                            ? 'bg-slate-100 text-slate-800 shadow-sm' 
-                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                        }`}
-                    >
-                        {tab}
-                    </button>
-                ))}
+                {(['overview', 'invoices', 'expenses', 'settings'] as const)
+                    .filter(tab => tab !== 'settings' || can('fee:write'))
+                    .map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
+                                activeTab === tab 
+                                ? 'bg-slate-100 text-slate-800 shadow-sm' 
+                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                            }`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
             </div>
 
             {activeTab === 'overview' && (
@@ -215,9 +223,11 @@ export default function Finance() {
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 mb-2">Full Invoice Management</h3>
                     <p className="text-slate-500 max-w-sm mb-6">Create, send, and track fee invoices for all students across different categories.</p>
-                    <button className="px-5 py-2.5 bg-theme-primary text-white rounded-xl font-medium hover:bg-theme-primary/90">
-                        Create First Invoice
-                    </button>
+                    {can('fee:write') && (
+                        <button className="px-5 py-2.5 bg-theme-primary text-white rounded-xl font-medium hover:bg-theme-primary/90">
+                            Create First Invoice
+                        </button>
+                    )}
                 </div>
             )}
         </div>

@@ -51,8 +51,13 @@ export const examApi = {
   createTerm: (data: Partial<ExamTerm>) =>
     post<ExamTerm>('/school/exams/terms', data),
 
-  getExams: (academicYearId?: number) =>
-    get<Exam[]>(`/school/exams${academicYearId ? `?academic_year_id=${academicYearId}` : ''}`),
+  getExams: (academicYearId?: number, classroomId?: number) => {
+    const params = new URLSearchParams();
+    if (academicYearId) params.append('academic_year_id', academicYearId.toString());
+    if (classroomId) params.append('classroom_id', classroomId.toString());
+    const query = params.toString();
+    return get<Exam[]>(`/school/exams${query ? `?${query}` : ''}`);
+  },
 
   createExam: (data: Partial<Exam>) =>
     post<Exam>('/school/exams', data),

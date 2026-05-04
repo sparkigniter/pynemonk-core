@@ -17,7 +17,7 @@ export default class RolloverController extends BaseController {
 
     public async createYear(req: Request, res: Response) {
         try {
-            const tenantId = (req as any).user.tenant_id;
+            const tenantId = (req as any).user.tenantId;
             const year = await this.academicYearHelper.create(tenantId, req.body);
             return this.ok(res, "Academic year created", year);
         } catch (error: any) {
@@ -27,7 +27,7 @@ export default class RolloverController extends BaseController {
 
     public async getYears(req: Request, res: Response) {
         try {
-            const tenantId = (req as any).user.tenant_id;
+            const tenantId = (req as any).user.tenantId;
             const result = await this.db.query("SELECT * FROM school.academic_year WHERE tenant_id = $1 AND is_deleted = FALSE ORDER BY start_date DESC", [tenantId]);
             return this.ok(res, "Academic years retrieved", result.rows);
         } catch (error: any) {
@@ -37,7 +37,7 @@ export default class RolloverController extends BaseController {
 
     public async preview(req: Request, res: Response) {
         try {
-            const tenantId = (req as any).user.tenant_id;
+            const tenantId = (req as any).user.tenantId;
             const sourceYearId = parseInt(req.query.source_year_id as string);
             const preview = await this.rolloverService.getRolloverPreview(tenantId, sourceYearId);
             return this.ok(res, "Rollover preview retrieved", preview);
@@ -48,7 +48,7 @@ export default class RolloverController extends BaseController {
 
     public async execute(req: Request, res: Response) {
         try {
-            const tenantId = (req as any).user.tenant_id;
+            const tenantId = (req as any).user.tenantId;
             const result = await this.rolloverService.executeRollover(tenantId, req.body);
             return this.ok(res, "Rollover executed successfully", result);
         } catch (error: any) {

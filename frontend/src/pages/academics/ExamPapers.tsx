@@ -22,10 +22,33 @@ import type { Exam } from '../../api/exam.api';
 import type { Subject } from '../../api/subject.api';
 import type { Staff } from '../../api/staff.api';
 
+import { useAuth } from '../../contexts/AuthContext';
+
 export default function ExamPapers() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { notify } = useNotification();
+    const { can } = useAuth();
+
+    if (!can('exam:write')) {
+        return (
+            <div className="h-[80vh] flex flex-col items-center justify-center gap-6 text-center px-4">
+                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-rose-500/10 transform rotate-6">
+                    <ShieldAlert size={40} />
+                </div>
+                <div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Schedule Locked</h2>
+                    <p className="text-slate-400 font-medium mt-2 max-w-sm">Modification of the examination schedule requires administrative write privileges.</p>
+                </div>
+                <button 
+                    onClick={() => navigate(`/exams/${id}/overview`)}
+                    className="mt-4 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                >
+                    Back to Overview
+                </button>
+            </div>
+        );
+    }
 
     const [exam, setExam] = useState<Exam | null>(null);
     const [papers, setPapers] = useState<any[]>([]);

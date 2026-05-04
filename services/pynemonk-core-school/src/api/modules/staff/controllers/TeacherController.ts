@@ -10,11 +10,14 @@ export default class TeacherController {
 
     public async getDashboard(req: Request, res: Response): Promise<void> {
         try {
-            const userId = parseInt((req as any).user.sub);
-            console.log(`[TeacherController] Fetching dashboard for UserID: ${userId}`);
+            const user = (req as any).user;
+            const userId = user.userId;
+            const tenantId = user.tenantId;
             
-            const stats = await this.teacherHelper.getTeacherDashboardStats(userId);
-            const assignments = await this.teacherHelper.getTeacherAssignments(userId);
+            console.log(`[TeacherController] Fetching dashboard for UserID: ${userId}, TenantID: ${tenantId}`);
+            
+            const stats = await this.teacherHelper.getTeacherDashboardStats(userId, tenantId);
+            const assignments = await this.teacherHelper.getTeacherAssignments(userId, tenantId);
             
             console.log(`[TeacherController] Found ${assignments.length} assignments for UserID: ${userId}`);
             
@@ -45,7 +48,7 @@ export default class TeacherController {
 
     public async getTimetable(req: Request, res: Response): Promise<void> {
         try {
-            const userId = parseInt((req as any).user.sub);
+            const userId = (req as any).user.userId;
             const timetable = await this.teacherHelper.getTeacherTimetable(userId);
             res.json({ success: true, data: timetable });
         } catch (error: any) {
@@ -55,7 +58,7 @@ export default class TeacherController {
 
     public async getExams(req: Request, res: Response): Promise<void> {
         try {
-            const userId = parseInt((req as any).user.sub);
+            const userId = (req as any).user.userId;
             const exams = await this.teacherHelper.getTeacherExams(userId);
             res.json({ success: true, data: exams });
         } catch (error: any) {

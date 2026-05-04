@@ -29,6 +29,7 @@ import type { Subject, Assignment } from '../../api/subject.api';
 import { getGrades } from '../../api/grade.api';
 import type { Grade } from '../../api/grade.api';
 import { academicsApi } from '../../api/academics.api';
+import { useAuth } from '../../contexts/AuthContext';
 
 // ── Components ───────────────────────────────────────────────────────────────
 
@@ -39,7 +40,8 @@ const DraggableResource = ({
     subtitle,
     color,
     icon: Icon,
-    onClick
+    onClick,
+    canWrite
 }: {
     id: string;
     type: 'subject' | 'teacher';
@@ -48,10 +50,12 @@ const DraggableResource = ({
     color: string;
     icon: any;
     onClick?: () => void;
+    canWrite?: boolean;
 }) => {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id,
-        data: { type, name, resourceId: id.split('-').pop() }
+        data: { type, name, resourceId: id.split('-').pop() },
+        disabled: id.includes('suggestion') ? false : !canWrite
     });
 
     const style = transform ? {
@@ -93,18 +97,21 @@ const DraggableEntry = ({
     entry,
     onDelete,
     onToggleSticky,
-    onClick
+    onClick,
+    canWrite
 }: {
     entry: TimetableEntry;
     onDelete: (id: number) => void;
     onToggleSticky: (id: number, current: boolean) => void;
     onClick: (entry: TimetableEntry) => void;
+    canWrite?: boolean;
 }) => {
     const isDraft = entry.id! < 0;
     const isSticky = (entry as any).is_sticky;
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: `entry-${entry.id!}`,
-        data: { type: 'entry', entry }
+        data: { type: 'entry', entry },
+        disabled: !canWrite
     });
 
     const style = transform ? {
@@ -149,7 +156,7 @@ const DraggableEntry = ({
                     <p className={`text-[12px] font-extrabold truncate uppercase tracking-tight leading-tight ${isDraft ? 'text-primary' : 'text-slate-900'}`}>
                         {entry.subject_name}
                     </p>
-                    {!isDraft && (
+                    {!isDraft && canWrite && (
                         <button
                             onPointerDown={(e) => { e.stopPropagation(); onToggleSticky(entry.id!, !!isSticky); }}
                             className={`p-1 rounded-md transition-all ${isSticky ? 'text-amber-500 bg-amber-50' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'}`}
@@ -176,12 +183,14 @@ const DraggableEntry = ({
                         {entry.start_time.slice(0, 5)}
                     </span>
                 </div>
-                <button
-                    onPointerDown={(e) => { e.stopPropagation(); entry.id && onDelete(entry.id); }}
-                    className={`p-1.5 transition-all rounded-xl ${isDraft ? 'text-primary/40 hover:text-rose-500 hover:bg-rose-50' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}
-                >
-                    <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {canWrite && (
+                    <button
+                        onPointerDown={(e) => { e.stopPropagation(); entry.id && onDelete(entry.id); }}
+                        className={`p-1.5 transition-all rounded-xl ${isDraft ? 'text-primary/40 hover:text-rose-500 hover:bg-rose-50' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                )}
             </div>
 
             {isSticky && (
@@ -253,6 +262,8 @@ const TIME_SLOTS = Array.from({ length: 9 }, (_, i) => {
 
 const Timetable: React.FC = () => {
     const { notify } = useNotification();
+    const { can } = useAuth();
+    const canWrite = can('timetable:write');
     const [grades, setGrades] = useState<Grade[]>([]);
     const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
     const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -283,13 +294,13 @@ const Timetable: React.FC = () => {
 
     const loadInitialData = async () => {
         try {
-            const [gradesData, staffData, yearsData, breaksData] = await Promise.all([
+            const [gradeRes, staffData, yearsData, breaksData] = await Promise.all([
                 getGrades(),
                 getStaffList({ limit: 100 }),
                 academicsApi.getYears(),
                 TimetableApi.getBreaks()
             ]);
-            setGrades(gradesData);
+            setGrades(gradeRes.data);
             setStaff(staffData.data);
             setBreaks(breaksData);
             if (yearsData && yearsData.length > 0) {
@@ -573,7 +584,7 @@ const Timetable: React.FC = () => {
                                 <Calendar className="w-8 h-8 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Academic Scheduler</h1>
+                                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Weekly Class Schedule</h1>
                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] mt-1 flex items-center gap-2">
                                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                     Dynamic Resource Optimization
@@ -591,16 +602,21 @@ const Timetable: React.FC = () => {
                             <div className="h-10 w-px bg-slate-100 mx-2 hidden md:block" />
 
                             <div className="flex items-center gap-2">
-                                <button onClick={() => setIsBreakModalOpen(true)} className="p-3 bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all shadow-sm" title="Break Settings">
-                                    <Clock className="w-5 h-5" />
-                                </button>
+                                {canWrite && (
+                                    <button onClick={() => setIsBreakModalOpen(true)} className="p-3 bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all shadow-sm" title="Break Settings">
+                                        <Clock className="w-5 h-5" />
+                                    </button>
+                                )}
 
-                                <button onClick={handleAutoGenerate} disabled={!selectedClassroom || isGenerating} className="bg-amber-500 text-white px-8 py-3.5 rounded-[1.5rem] text-xs font-black hover:bg-amber-600 flex items-center gap-3 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all active:scale-95">
-                                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                                    Auto-Optimize
-                                </button>
+                                {canWrite && (
+                                    <button onClick={handleAutoGenerate} disabled={!selectedClassroom || isGenerating} className="bg-amber-500 text-white px-8 py-3.5 rounded-[1.5rem] text-xs font-black hover:bg-amber-600 flex items-center gap-3 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all active:scale-95">
+                                        {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                                        Auto-Optimize
+                                    </button>
+                                )}
 
                                 {(() => {
+                                    if (!canWrite) return null;
                                     const hasUnfinalized = entries.some(e => !(e as any).is_sticky);
                                     if (!isDirty && !hasUnfinalized) return null;
                                     
@@ -620,109 +636,114 @@ const Timetable: React.FC = () => {
                     </header>
 
                     <div className="flex flex-col lg:flex-row gap-8">
-                        <aside className="lg:w-[320px] space-y-6">
-                            {selectedSlot && (
-                                <div className="bg-white rounded-[2rem] border-2 border-slate-900 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-6 animate-in slide-in-from-left duration-500 overflow-hidden relative">
-                                    {/* Decorative Accent */}
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+                        {canWrite && (
+                            <aside className="lg:w-[320px] space-y-6">
+                                {selectedSlot && (
+                                    <div className="bg-white rounded-[2rem] border-2 border-slate-900 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-6 animate-in slide-in-from-left duration-500 overflow-hidden relative">
+                                        {/* Decorative Accent */}
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-2xl" />
 
-                                    <div className="flex justify-between items-center mb-6 relative z-10">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-slate-900 p-2 rounded-xl text-white shadow-lg">
-                                                <Sparkles size={18} />
+                                        <div className="flex justify-between items-center mb-6 relative z-10">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-slate-900 p-2 rounded-xl text-white shadow-lg">
+                                                    <Sparkles size={18} />
+                                                </div>
+                                                <div>
+                                                    <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest leading-none">Slot Insights</h2>
+                                                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-[0.1em]">
+                                                        {DAYS.find(d => d.id === selectedSlot.day)?.fullName} • {selectedSlot.time}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest leading-none">Slot Insights</h2>
-                                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-[0.1em]">
-                                                    {DAYS.find(d => d.id === selectedSlot.day)?.fullName} • {selectedSlot.time}
+                                            <button onClick={() => setSelectedSlot(null)} className="p-2 hover:bg-slate-50 rounded-xl text-slate-300 hover:text-rose-500 transition-all">
+                                                <X size={18} />
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-4 relative z-10">
+                                            <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Available Faculty</p>
+                                                <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[8px] font-black uppercase">Collision Free</span>
+                                            </div>
+                                            <div className="space-y-1 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                                {staff.filter(s => !globalSchedule.some(entry => 
+                                                    Number(entry.teacher_id) === Number(s.id) && 
+                                                    Number(entry.day_of_week) === selectedSlot.day && 
+                                                    entry.start_time.startsWith(selectedSlot.time.split(':')[0]) &&
+                                                    Number(entry.classroom_id) !== Number(selectedClassroom)
+                                                )).map(s => (
+                                                    <DraggableResource 
+                                                        key={`suggestion-${s.id}`} 
+                                                        id={`suggestion-${s.id}`} 
+                                                        type="teacher" 
+                                                        name={`${s.first_name} ${s.last_name}`} 
+                                                        color="bg-emerald-500/5 text-emerald-600" 
+                                                        icon={User} 
+                                                        onClick={() => setHighlightedTeacherId(s.id)}
+                                                        canWrite={canWrite}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                <p className="text-[10px] font-medium text-slate-500 leading-relaxed text-center italic">
+                                                    Select a teacher to highlight their availability across the entire week, or drag them into the slot to assign.
                                                 </p>
                                             </div>
                                         </div>
-                                        <button onClick={() => setSelectedSlot(null)} className="p-2 hover:bg-slate-50 rounded-xl text-slate-300 hover:text-rose-500 transition-all">
-                                            <X size={18} />
-                                        </button>
                                     </div>
+                                )}
 
-                                    <div className="space-y-4 relative z-10">
-                                        <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Available Faculty</p>
-                                            <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[8px] font-black uppercase">Collision Free</span>
-                                        </div>
-                                        <div className="space-y-1 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                            {staff.filter(s => !globalSchedule.some(entry => 
-                                                Number(entry.teacher_id) === Number(s.id) && 
-                                                Number(entry.day_of_week) === selectedSlot.day && 
-                                                entry.start_time.startsWith(selectedSlot.time.split(':')[0]) &&
-                                                Number(entry.classroom_id) !== Number(selectedClassroom)
-                                            )).map(s => (
+                                <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6">
+                                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">Subject Matrix</h2>
+                                    <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {subjects.map(s => {
+                                            const assignment = assignments.find(a => Number(a.subject_id) === Number(s.id));
+                                            return (
                                                 <DraggableResource 
-                                                    key={`suggestion-${s.id}`} 
-                                                    id={`suggestion-${s.id}`} 
+                                                    key={`subject-${s.id}`} 
+                                                    id={`subject-${s.id}`} 
+                                                    type="subject" 
+                                                    name={s.name} 
+                                                    subtitle={assignment ? assignment.teacher_name : 'No Teacher'}
+                                                    color="bg-primary/5 text-primary" 
+                                                    icon={Clock} 
+                                                    canWrite={canWrite}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6">
+                                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">Teacher Faculty</h2>
+                                    <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {staff.map(s => {
+                                            const teacherAssignments = assignments.filter(a => Number(a.staff_id) === Number(s.id));
+                                            const subjectsList = teacherAssignments.map(a => a.subject_name).join(', ') || 'Unassigned';
+                                            
+                                            return (
+                                                <DraggableResource 
+                                                    key={`teacher-${s.id}`} 
+                                                    id={`teacher-${s.id}`} 
                                                     type="teacher" 
                                                     name={`${s.first_name} ${s.last_name}`} 
-                                                    color="bg-emerald-500/5 text-emerald-600" 
+                                                    subtitle={subjectsList}
+                                                    color="bg-amber-500/5 text-amber-600" 
                                                     icon={User} 
-                                                    onClick={() => setHighlightedTeacherId(s.id)}
+                                                    canWrite={canWrite}
+                                                    onClick={() => {
+                                                        // Highlight logic will be handled via state
+                                                        setHighlightedTeacherId(s.id);
+                                                    }}
                                                 />
-                                            ))}
-                                        </div>
-                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                            <p className="text-[10px] font-medium text-slate-500 leading-relaxed text-center italic">
-                                                Select a teacher to highlight their availability across the entire week, or drag them into the slot to assign.
-                                            </p>
-                                        </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
-                            )}
+                            </aside>
+                        )}
 
-                            <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6">
-                                <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">Subject Matrix</h2>
-                                <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {subjects.map(s => {
-                                        const assignment = assignments.find(a => Number(a.subject_id) === Number(s.id));
-                                        return (
-                                            <DraggableResource 
-                                                key={`subject-${s.id}`} 
-                                                id={`subject-${s.id}`} 
-                                                type="subject" 
-                                                name={s.name} 
-                                                subtitle={assignment ? assignment.teacher_name : 'No Teacher'}
-                                                color="bg-primary/5 text-primary" 
-                                                icon={Clock} 
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6">
-                                <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">Teacher Faculty</h2>
-                                <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {staff.map(s => {
-                                        const teacherAssignments = assignments.filter(a => Number(a.staff_id) === Number(s.id));
-                                        const subjectsList = teacherAssignments.map(a => a.subject_name).join(', ') || 'Unassigned';
-                                        
-                                        return (
-                                            <DraggableResource 
-                                                key={`teacher-${s.id}`} 
-                                                id={`teacher-${s.id}`} 
-                                                type="teacher" 
-                                                name={`${s.first_name} ${s.last_name}`} 
-                                                subtitle={subjectsList}
-                                                color="bg-amber-500/5 text-amber-600" 
-                                                icon={User} 
-                                                onClick={() => {
-                                                    // Highlight logic will be handled via state
-                                                    setHighlightedTeacherId(s.id);
-                                                }}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </aside>
-
-                        <main className="flex-1">
+                        <main className={`flex-1 ${!canWrite ? 'max-w-7xl mx-auto w-full' : ''}`}>
                             {!selectedClassroom ? (
                                 <div className="bg-white rounded-[3rem] border border-slate-200/60 p-32 text-center">
                                     <Clock className="w-12 h-12 text-primary mx-auto mb-8" />
@@ -782,6 +803,7 @@ const Timetable: React.FC = () => {
                                                                                     onDelete={handleDeleteEntry} 
                                                                                     onToggleSticky={handleToggleSticky}
                                                                                     onClick={setSelectedEntry}
+                                                                                    canWrite={canWrite}
                                                                                 />
                                                                             ))
                                                                         )}

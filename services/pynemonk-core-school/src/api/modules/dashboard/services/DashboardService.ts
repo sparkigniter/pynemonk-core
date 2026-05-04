@@ -21,6 +21,9 @@ export class DashboardService {
                 return this.getTeacherDashboard(tenantId, ayId, userId);
             case 'student':
                 return this.getStudentDashboard(tenantId, ayId, userId);
+            case 'guardian':
+            case 'parent':
+                return this.getParentDashboard(tenantId, ayId, userId);
             default:
                 throw new Error("Invalid role for dashboard");
         }
@@ -31,7 +34,8 @@ export class DashboardService {
             SELECT 
                 (SELECT COUNT(*) FROM school.student WHERE tenant_id = $1 AND is_deleted = FALSE) as total_students,
                 (SELECT COUNT(*) FROM school.staff WHERE tenant_id = $1 AND is_deleted = FALSE) as total_staff,
-                (SELECT COUNT(*) FROM school.classroom WHERE tenant_id = $1 AND academic_year_id = $2 AND is_deleted = FALSE) as total_classrooms
+                (SELECT COUNT(*) FROM school.classroom WHERE tenant_id = $1 AND academic_year_id = $2 AND is_deleted = FALSE) as total_classrooms,
+                (SELECT COUNT(*) FROM school.subject WHERE tenant_id = $1 AND is_deleted = FALSE) as total_subjects
         `, [tenantId, ayId]);
 
         // 2. Attendance Trends (Last 7 Days)
@@ -77,6 +81,23 @@ export class DashboardService {
             ORDER BY g.name
         `, [tenantId, ayId]);
 
+        const staffOnLeave = await this.db.query(`
+            SELECT s.first_name || ' ' || s.last_name as name, sl.leave_type
+            FROM school.staff_leave sl
+            JOIN school.staff s ON sl.staff_id = s.id
+            WHERE sl.tenant_id = $1 AND CURRENT_DATE BETWEEN sl.start_date AND sl.end_date AND sl.status = 'approved'
+        `, [tenantId]);
+
+        const recentAdmissions = await this.db.query(`
+            SELECT s.first_name || ' ' || s.last_name as name, g.name as grade, se.enrollment_date
+            FROM school.student_enrollment se
+            JOIN school.student s ON se.student_id = s.id
+            JOIN school.classroom c ON se.classroom_id = c.id
+            JOIN school.grade g ON c.grade_id = g.id
+            WHERE se.tenant_id = $1 AND se.academic_year_id = $2 AND se.enrollment_date > CURRENT_DATE - INTERVAL '30 days'
+            ORDER BY se.enrollment_date DESC LIMIT 5
+        `, [tenantId, ayId]);
+
         const recentExams = await this.db.query(`
             SELECT name, status, start_date as exam_date, end_date 
             FROM school.exam 
@@ -89,10 +110,11 @@ export class DashboardService {
             stats: stats.rows[0],
             attendanceTrends: attendanceTrends.rows,
             activityStream: activityStream.rows,
-            upcomingExams: recentExams.rows, // Map recent exams to upcomingExams for simplicity in UI
+            upcomingExams: recentExams.rows,
             insights: {
                 gradePerformance: gradePerformance.rows,
-                recentExams: recentExams.rows
+                staffOnLeave: staffOnLeave.rows,
+                recentAdmissions: recentAdmissions.rows
             }
         };
     }
@@ -108,20 +130,132 @@ export class DashboardService {
             WHERE c.class_teacher_id = $1 AND c.academic_year_id = $2 AND c.is_deleted = FALSE
         `, [staffId, ayId]);
 
+        // Fetch Today's Timetable for this teacher
+        const dayOfWeek = new Date().getDay() || 7;
+        const todaySchedule = await this.db.query(`
+            SELECT t.*, c.name as classroom_name, s.name as subject_name, g.name as grade_name,
+                   (SELECT COUNT(*) FROM school.attendance a 
+                    WHERE a.enrollment_id IN (SELECT id FROM school.student_enrollment WHERE classroom_id = t.classroom_id)
+                    AND a.date = CURRENT_DATE) > 0 as attendance_taken
+            FROM school.timetable t
+            JOIN school.classroom c ON t.classroom_id = c.id
+            JOIN school.grade g ON c.grade_id = g.id
+            JOIN school.subject s ON t.subject_id = s.id
+            WHERE t.tenant_id = $1 AND t.teacher_id = $2 AND t.day_of_week = $3 
+              AND t.academic_year_id = $4 AND t.is_deleted = FALSE
+            ORDER BY t.start_time
+        `, [tenantId, staffId, dayOfWeek, ayId]);
+
         const upcomingExams = await this.db.query(`
-            SELECT name, start_date as exam_date, exam_type
-            FROM school.exam
-            WHERE tenant_id = $1 AND academic_year_id = $2 AND start_date >= NOW()
-            ORDER BY start_date ASC LIMIT 5
-        `, [tenantId, ayId]);
+            SELECT e.name, ep.exam_date, s.name as subject_name
+            FROM school.exam_paper ep
+            JOIN school.exam e ON ep.exam_id = e.id
+            JOIN school.subject s ON ep.subject_id = s.id
+            JOIN school.teacher_assignment ta ON s.id = ta.subject_id
+            WHERE ep.tenant_id = $1 AND e.academic_year_id = $2 AND ep.exam_date >= CURRENT_DATE AND ta.staff_id = $3
+            ORDER BY ep.exam_date ASC LIMIT 5
+        `, [tenantId, ayId, staffId]);
+
+        const urgentMarking = await this.db.query(`
+            SELECT e.name as exam_name, s.name as subject_name, ep.exam_date, ep.id as paper_id,
+                   (SELECT COUNT(*) FROM school.exam_student es WHERE es.exam_id = e.id) as total_students,
+                   (SELECT COUNT(*) FROM school.exam_marks em WHERE em.paper_id = ep.id) as marked_students
+            FROM school.exam_paper ep
+            JOIN school.exam e ON ep.exam_id = e.id
+            JOIN school.subject s ON ep.subject_id = s.id
+            JOIN school.teacher_assignment ta ON s.id = ta.subject_id
+            WHERE ep.tenant_id = $1 AND ta.staff_id = $2 AND ep.exam_date < CURRENT_DATE
+            AND (SELECT COUNT(*) FROM school.exam_marks em WHERE em.paper_id = ep.id) < (SELECT COUNT(*) FROM school.exam_student es WHERE es.exam_id = e.id)
+            ORDER BY ep.exam_date DESC LIMIT 3
+        `, [tenantId, staffId]);
+
+        const teacherStats = await this.db.query(`
+            SELECT 
+                (SELECT COUNT(*) FROM school.student_enrollment WHERE classroom_id IN (SELECT id FROM school.classroom WHERE class_teacher_id = $1)) as my_students_count,
+                (SELECT COUNT(*) FROM school.homework WHERE staff_id = $1 AND is_deleted = FALSE) as my_homework_count,
+                (SELECT COUNT(*) FROM school.teacher_assignment WHERE staff_id = $1 AND is_deleted = FALSE) as my_subjects_count
+        `, [staffId]);
+
+        const allAssignments = await this.db.query(`
+            SELECT ta.id, ta.classroom_id, ta.subject_id, c.name as classroom_name, c.section, s.name as subject_name, s.code as subject_code,
+                   (SELECT COUNT(*) FROM school.student_enrollment WHERE classroom_id = ta.classroom_id AND is_deleted = FALSE) as student_count
+            FROM school.teacher_assignment ta
+            JOIN school.classroom c ON ta.classroom_id = c.id
+            JOIN school.subject s ON ta.subject_id = s.id
+            WHERE ta.staff_id = $1 AND ta.academic_year_id = $2 AND ta.is_deleted = FALSE
+        `, [staffId, ayId]);
 
         return {
             type: 'teacher',
             stats: {
                 classCount: myClasses.rows.length,
+                ...teacherStats.rows[0]
             },
             myClasses: myClasses.rows,
-            upcomingExams: upcomingExams.rows
+            todaySchedule: todaySchedule.rows,
+            allAssignments: allAssignments.rows,
+            upcomingExams: upcomingExams.rows,
+            insights: {
+                urgentMarking: urgentMarking.rows
+            }
+        };
+    }
+
+    private async getParentDashboard(tenant_id: number, ayId: number | undefined, userId: number) {
+        const guardianRes = await this.db.query('SELECT id FROM school.guardian WHERE user_id = $1 AND tenant_id = $2', [userId, tenant_id]);
+        const guardianId = guardianRes.rows[0]?.id;
+
+        if (!guardianId) {
+            return {
+                type: 'parent',
+                children: [],
+                stats: { childCount: 0 }
+            };
+        }
+        const children = await this.db.query(`
+            SELECT s.id, s.first_name || ' ' || s.last_name as name, c.name as classroom_name, g.name as grade_name
+            FROM school.student s
+            JOIN school.student_guardian sg ON s.id = sg.student_id
+            JOIN school.student_enrollment se ON s.id = se.student_id
+            JOIN school.classroom c ON se.classroom_id = c.id
+            JOIN school.grade g ON c.grade_id = g.id
+            WHERE sg.guardian_id = $1 AND s.tenant_id = $2 AND se.academic_year_id = $3
+        `, [guardianId, tenant_id, ayId]);
+
+        const childrenPerformance = await this.db.query(`
+            SELECT s.id as student_id, s.first_name || ' ' || s.last_name as student_name,
+                   sub.name as subject_name, ROUND(AVG((em.marks_obtained/ep.max_marks)*100), 1) as score
+            FROM school.student s
+            JOIN school.student_guardian sg ON s.id = sg.student_id
+            JOIN school.exam_marks em ON s.id = em.student_id
+            JOIN school.exam_paper ep ON em.paper_id = ep.id
+            JOIN school.subject sub ON ep.subject_id = sub.id
+            WHERE sg.guardian_id = $1 AND s.tenant_id = $2
+            GROUP BY s.id, s.first_name, s.last_name, sub.name
+        `, [guardianId, tenant_id]);
+
+        const nextExams = await this.db.query(`
+            SELECT s.first_name as student_name, e.name as exam_name, ep.exam_date, sub.name as subject_name
+            FROM school.student s
+            JOIN school.student_guardian sg ON s.id = sg.student_id
+            JOIN school.exam_student es ON s.id = es.student_id
+            JOIN school.exam e ON es.exam_id = e.id
+            JOIN school.exam_paper ep ON e.id = ep.exam_id
+            JOIN school.subject sub ON ep.subject_id = sub.id
+            WHERE sg.guardian_id = $1 AND s.tenant_id = $2 AND ep.exam_date >= CURRENT_DATE
+            ORDER BY ep.exam_date ASC LIMIT 3
+        `, [guardianId, tenant_id]);
+
+        return {
+            type: 'parent',
+            children: children.rows,
+            stats: {
+                childCount: children.rows.length
+            },
+            insights: {
+                performance: childrenPerformance.rows,
+                upcomingExams: nextExams.rows
+            }
         };
     }
 

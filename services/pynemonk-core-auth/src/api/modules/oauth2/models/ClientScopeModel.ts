@@ -36,12 +36,13 @@ class ClientScopeModel extends BaseModel {
         return res;        
     }
 
-    public async getByClientId(clientId: string): Promise<any> {
-        // Implement logic to get scopes associated with a client
+    public async getAll(): Promise<any> {
+        return this.clientScopeHelper.getAllClientScopes();
     }
 
-    public async getByScopeId(scopeId: string): Promise<any> {
-    }      
+    public async delete(clientId: number, scopeId: number): Promise<any> {
+        return this.clientScopeHelper.removeClientScope(clientId, scopeId);
+    }
 }
 
 export default ClientScopeModel;

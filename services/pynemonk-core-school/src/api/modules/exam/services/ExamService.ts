@@ -31,13 +31,13 @@ export class ExamService {
 
     // ─── Exams ───────────────────────────────────────────────────────────────
 
-    public async getExams(tenantId: number, academicYearId?: number) {
+    public async getExams(tenantId: number, academicYearId?: number, examIds?: number[], classroomId?: number) {
         if (!academicYearId) {
             const currentYear = await this.academicYearHelper.findCurrent(tenantId);
             academicYearId = currentYear?.id;
         }
         if (!academicYearId) throw new Error("No active academic year found");
-        return this.examHelper.findAllExams(tenantId, academicYearId);
+        return this.examHelper.findAllExams(tenantId, academicYearId, examIds, classroomId);
     }
 
     public async addExam(tenantId: number, data: any) {

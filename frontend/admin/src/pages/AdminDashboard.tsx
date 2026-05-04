@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
     LayoutDashboard, Globe, Users, GraduationCap, 
-    Activity, Server, ShieldCheck, RefreshCw 
+    Activity, Server, RefreshCw 
 } from 'lucide-react';
 import { getSystemStats } from '../api/system.api';
 

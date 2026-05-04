@@ -207,22 +207,54 @@ export class TimetableService {
             const requirements = await client.query(reqQuery, [academicYearId, classroomId]);
             
             // 3. Get existing occupied slots (Sticky periods + School Breaks)
-            const stickyQuery = `SELECT day_of_week, start_time, end_time FROM school.timetable WHERE classroom_id = $1 AND academic_year_id = $2 AND is_sticky = TRUE AND is_deleted = FALSE`;
+            const stickyQuery = `
+                SELECT t.subject_id, t.teacher_id, t.day_of_week, t.start_time, t.end_time 
+                FROM school.timetable t 
+                WHERE t.classroom_id = $1 AND t.academic_year_id = $2 AND t.is_sticky = TRUE AND t.is_deleted = FALSE`;
             const stickyRes = await client.query(stickyQuery, [classroomId, academicYearId]);
             
-            const breakQuery = `SELECT start_time, end_time, name FROM school.period_config WHERE tenant_id = $1 AND is_break = TRUE AND is_deleted = FALSE`;
-            const breakRes = await client.query(breakQuery, [tenantId]);
+            // 4. Fetch the actual school period structure (No more hardcoded times!)
+            const periodQuery = `
+                SELECT name, start_time, end_time, is_break 
+                FROM school.period_config 
+                WHERE tenant_id = $1 AND is_deleted = FALSE 
+                ORDER BY start_time`;
+            const periods = await client.query(periodQuery, [tenantId]);
+
+            if (periods.rows.length === 0) {
+                throw new Error("No school periods configured. Please set up your school timing periods first.");
+            }
 
             const occupiedSlots = new Set();
-            stickyRes.rows.forEach(r => occupiedSlots.add(`${r.day_of_week}-${r.start_time}`));
-            
-            // Add breaks to occupied slots for EVERY day
             const days = [1, 2, 3, 4, 5];
-            breakRes.rows.forEach(b => {
-                days.forEach(d => occupiedSlots.add(`${d}-${b.start_time}`));
+
+            periods.rows.forEach(p => {
+                if (p.is_break) {
+                    days.forEach(d => occupiedSlots.add(`${d}-${p.start_time}`));
+                }
             });
 
-            // 4. Calculate remaining periods needed
+            stickyRes.rows.forEach(r => occupiedSlots.add(`${r.day_of_week}-${r.start_time}`));
+
+            // 5. CACHE: Fetch all relevant teacher schedules for the week to avoid N+1 queries
+            const teacherIds = [...new Set(requirements.rows.map(r => r.teacher_id).filter(Boolean))];
+            const teacherSchedules = new Map(); // Map<teacherId, Set<"day-start_time">>
+
+            if (teacherIds.length > 0) {
+                const scheduleRes = await client.query(`
+                    SELECT teacher_id, day_of_week, start_time 
+                    FROM school.timetable 
+                    WHERE tenant_id = $1 AND teacher_id = ANY($2) AND is_deleted = FALSE AND academic_year_id = $3`,
+                    [tenantId, teacherIds, academicYearId]
+                );
+                scheduleRes.rows.forEach(s => {
+                    const key = `${s.day_of_week}-${s.start_time}`;
+                    if (!teacherSchedules.has(s.teacher_id)) teacherSchedules.set(s.teacher_id, new Set());
+                    teacherSchedules.get(s.teacher_id).add(key);
+                });
+            }
+
+            // 6. Calculate remaining periods needed
             const workload = requirements.rows.map(r => {
                 const existing = stickyRes.rows.filter(s => (s as any).subject_id === r.subject_id).length;
                 return { ...r, needed: Math.max(0, r.periods_per_week - existing) };
@@ -230,47 +262,42 @@ export class TimetableService {
 
             if (workload.length === 0) {
                 await client.query('ROLLBACK');
-                return { success: false, message: "No subjects with assigned teachers found." };
+                return { success: false, message: "All requirements met by sticky periods or no assignments found." };
             }
 
-            // 5. Define standard slots
-            const times = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00"];
-
-            // 6. Greedy Allocation
+            // 7. Allocation Loop (Optimized with in-memory cache)
             for (const day of days) {
                 const scheduledToday = new Set();
-                // Track subjects already scheduled for this day (including sticky entries)
                 stickyRes.rows
                     .filter(r => r.day_of_week === day)
                     .forEach(r => scheduledToday.add(r.subject_id));
 
-                for (const time of times) {
-                    const slotKey = `${day}-${time}:00`;
+                for (const period of periods.rows) {
+                    if (period.is_break) continue;
+
+                    const slotKey = `${day}-${period.start_time}`;
                     if (occupiedSlots.has(slotKey)) continue;
 
                     for (let i = 0; i < workload.length; i++) {
                         const item = workload[i];
                         if (item.needed <= 0) continue;
-                        
-                        // IMPORTANT: Avoid repetitive subjects for the same day in auto-gen
                         if (scheduledToday.has(item.subject_id)) continue;
-
-                        const endTime = `${(parseInt(time.split(':')[0]) + 1).toString().padStart(2, '0')}:00`;
                         
-                        const teacherBusy = await client.query(`
-                            SELECT 1 FROM school.timetable 
-                            WHERE tenant_id = $1 AND teacher_id = $2 AND day_of_week = $3 AND is_deleted = FALSE 
-                            AND ((start_time, end_time) OVERLAPS ($4::time, $5::time))
-                        `, [tenantId, item.teacher_id, day, time, endTime]);
+                        // Check teacher availability from cache (O(1) lookup instead of O(N) SQL)
+                        const teacherBusy = teacherSchedules.get(item.teacher_id)?.has(slotKey);
 
-                        if (teacherBusy.rows.length === 0) {
+                        if (!teacherBusy) {
                             await client.query(`
                                 INSERT INTO school.timetable (tenant_id, classroom_id, subject_id, teacher_id, academic_year_id, day_of_week, start_time, end_time, is_sticky)
                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE)
-                            `, [tenantId, classroomId, item.subject_id, item.teacher_id, academicYearId, day, time, endTime]);
+                            `, [tenantId, classroomId, item.subject_id, item.teacher_id, academicYearId, day, period.start_time, period.end_time]);
                             
                             item.needed--;
                             scheduledToday.add(item.subject_id);
+                            
+                            // Update cache
+                            if (!teacherSchedules.has(item.teacher_id)) teacherSchedules.set(item.teacher_id, new Set());
+                            teacherSchedules.get(item.teacher_id).add(slotKey);
                             break;
                         }
                     }

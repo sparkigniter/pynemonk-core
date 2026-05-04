@@ -24,15 +24,21 @@ export class GradeService {
         return result.rows[0];
     }
 
-    async getGrades(tenantId: number, academicYearId?: number) {
+    async getGrades(tenantId: number, filters: any = {}) {
+        const page = Math.max(1, filters.page || 1);
+        const limit = Math.max(1, Math.min(100, filters.limit || 100)); // Default to 100 for grades as they are usually few
+        const offset = (page - 1) * limit;
+
+        let academicYearId = filters.academic_year_id;
         if (!academicYearId) {
             const currentYear = await this.academicYearHelper.findCurrent(tenantId);
             academicYearId = currentYear?.id;
         }
 
-        const query = `
+        let query = `
             SELECT 
                 g.*,
+                COUNT(*) OVER() as total_count,
                 (
                     SELECT COUNT(se.id) 
                     FROM school.classroom c 
@@ -57,10 +63,43 @@ export class GradeService {
                 ) as classroom_count
             FROM school.grade g
             WHERE g.tenant_id = $1 AND g.is_deleted = FALSE 
-            ORDER BY g.sequence_order ASC, g.name ASC
         `;
-        const result = await this.db.query(query, [tenantId, academicYearId]);
-        return result.rows;
+
+        const params: any[] = [tenantId, academicYearId];
+        let paramIndex = 3;
+
+        if (filters.gradeIds) {
+            query += ` AND g.id = ANY($${paramIndex})`;
+            params.push(filters.gradeIds);
+            paramIndex++;
+        }
+
+        if (filters.search) {
+            query += ` AND (g.name ILIKE $${paramIndex} OR g.slug ILIKE $${paramIndex})`;
+            params.push(`%${filters.search}%`);
+            paramIndex++;
+        }
+
+        query += ` ORDER BY g.sequence_order ASC, g.name ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        params.push(limit, offset);
+
+        const result = await this.db.query(query, params);
+        
+        const totalCount = result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
+        const grades = result.rows.map((row: any) => {
+            const { total_count, ...data } = row;
+            return data;
+        });
+
+        return {
+            data: grades,
+            pagination: {
+                total: totalCount,
+                page,
+                limit,
+                pages: Math.ceil(totalCount / limit),
+            },
+        };
     }
 
     async updateGrade(tenantId: number, id: number, data: Partial<Grade>) {
