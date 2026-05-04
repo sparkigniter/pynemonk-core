@@ -11,13 +11,16 @@ import {
     ChevronRight,
     FileImage
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { homeworkApi, type Homework } from '../../api/homework.api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { format } from 'date-fns';
 
 export default function HomeworkPage() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const classIdFromUrl = searchParams.get('classId');
+    
     const { notify } = useNotification();
     const [homeworks, setHomeworks] = useState<Homework[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -25,12 +28,14 @@ export default function HomeworkPage() {
 
     useEffect(() => {
         loadHomework();
-    }, []);
+    }, [classIdFromUrl]);
 
     const loadHomework = async () => {
         try {
             setIsLoading(true);
-            const data = await homeworkApi.list({});
+            const filters: any = {};
+            if (classIdFromUrl) filters.classroom_id = parseInt(classIdFromUrl);
+            const data = await homeworkApi.list(filters);
             setHomeworks(data);
         } catch (err) {
             notify('error', 'Error', 'Failed to fetch homeworks');
@@ -105,7 +110,7 @@ export default function HomeworkPage() {
                         Snap Board
                     </button>
                     <button 
-                        onClick={() => navigate('/homework/new')}
+                        onClick={() => navigate(classIdFromUrl ? `/homework/new?classId=${classIdFromUrl}` : '/homework/new')}
                         className="flex items-center justify-center w-14 h-14 bg-indigo-100 text-indigo-600 rounded-[2rem] hover:bg-indigo-200 transition-all shadow-lg shadow-indigo-100"
                     >
                         <Plus size={24} />

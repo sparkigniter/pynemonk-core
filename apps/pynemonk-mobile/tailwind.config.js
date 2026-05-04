@@ -8,16 +8,10 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: '#f0f4ff',
-          100: '#e1e9ff',
-          200: '#c7d6ff',
-          300: '#a3b8ff',
-          400: '#7d91ff',
-          500: '#6366f1', // Primary Indigo
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
+          50: 'var(--brand-50)',
+          100: 'var(--brand-100)',
+          500: 'var(--brand-500)',
+          600: 'var(--brand-600)',
         },
         slate: {
           950: '#020617',

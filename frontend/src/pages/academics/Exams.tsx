@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ClipboardList,
   Calendar,
@@ -43,6 +43,8 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
 
 export default function Exams() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const classIdFromUrl = searchParams.get('classId');
   const { notify } = useNotification();
   const { can } = useAuth();
   const [exams, setExams] = useState<Exam[]>([]);
@@ -53,13 +55,13 @@ export default function Exams() {
   // Forms & UI state
   const [newTerm, setNewTerm] = useState<Partial<ExamTerm>>({ name: '', start_date: '', end_date: '' });
 
-  useEffect(() => { loadInitialData(); }, []);
+  useEffect(() => { loadInitialData(); }, [classIdFromUrl]);
 
   const loadInitialData = async () => {
     try {
       setIsLoading(true);
       const [examsData, termsData] = await Promise.all([
-        examApi.getExams(),
+        examApi.getExams(undefined, classIdFromUrl ? parseInt(classIdFromUrl) : undefined),
         examApi.getTerms()
       ]);
       setExams(examsData);

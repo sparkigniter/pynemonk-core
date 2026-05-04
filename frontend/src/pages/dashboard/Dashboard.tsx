@@ -14,6 +14,7 @@ import { getDashboardData } from '../../api/dashboard.api';
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ComboBox } from '../../components/ui/ComboBox';
+import TeacherDashboard from './components/TeacherDashboard';
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -231,6 +232,10 @@ const Dashboard = () => {
     };
 
     const activeMiniStats = getMiniStats();
+
+    if (data.type === 'teacher') {
+        return <TeacherDashboard data={data} user={user} />;
+    }
 
     return (
         <div className="space-y-10 max-w-[1600px] mx-auto pb-10">

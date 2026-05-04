@@ -130,6 +130,22 @@ export class DashboardService {
             WHERE c.class_teacher_id = $1 AND c.academic_year_id = $2 AND c.is_deleted = FALSE
         `, [staffId, ayId]);
 
+        // Fetch Today's Timetable for this teacher
+        const dayOfWeek = new Date().getDay() || 7;
+        const todaySchedule = await this.db.query(`
+            SELECT t.*, c.name as classroom_name, s.name as subject_name, g.name as grade_name,
+                   (SELECT COUNT(*) FROM school.attendance a 
+                    WHERE a.enrollment_id IN (SELECT id FROM school.student_enrollment WHERE classroom_id = t.classroom_id)
+                    AND a.date = CURRENT_DATE) > 0 as attendance_taken
+            FROM school.timetable t
+            JOIN school.classroom c ON t.classroom_id = c.id
+            JOIN school.grade g ON c.grade_id = g.id
+            JOIN school.subject s ON t.subject_id = s.id
+            WHERE t.tenant_id = $1 AND t.teacher_id = $2 AND t.day_of_week = $3 
+              AND t.academic_year_id = $4 AND t.is_deleted = FALSE
+            ORDER BY t.start_time
+        `, [tenantId, staffId, dayOfWeek, ayId]);
+
         const upcomingExams = await this.db.query(`
             SELECT e.name, ep.exam_date, s.name as subject_name
             FROM school.exam_paper ep
@@ -160,6 +176,15 @@ export class DashboardService {
                 (SELECT COUNT(*) FROM school.teacher_assignment WHERE staff_id = $1 AND is_deleted = FALSE) as my_subjects_count
         `, [staffId]);
 
+        const allAssignments = await this.db.query(`
+            SELECT ta.id, ta.classroom_id, ta.subject_id, c.name as classroom_name, c.section, s.name as subject_name, s.code as subject_code,
+                   (SELECT COUNT(*) FROM school.student_enrollment WHERE classroom_id = ta.classroom_id AND is_deleted = FALSE) as student_count
+            FROM school.teacher_assignment ta
+            JOIN school.classroom c ON ta.classroom_id = c.id
+            JOIN school.subject s ON ta.subject_id = s.id
+            WHERE ta.staff_id = $1 AND ta.academic_year_id = $2 AND ta.is_deleted = FALSE
+        `, [staffId, ayId]);
+
         return {
             type: 'teacher',
             stats: {
@@ -167,6 +192,8 @@ export class DashboardService {
                 ...teacherStats.rows[0]
             },
             myClasses: myClasses.rows,
+            todaySchedule: todaySchedule.rows,
+            allAssignments: allAssignments.rows,
             upcomingExams: upcomingExams.rows,
             insights: {
                 urgentMarking: urgentMarking.rows

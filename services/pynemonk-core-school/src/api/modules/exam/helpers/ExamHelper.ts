@@ -58,18 +58,27 @@ export class ExamHelper extends BaseModel {
         return res.rows[0];
     }
 
-    public async findAllExams(tenantId: number, academicYearId: number, ids?: number[]) {
+    public async findAllExams(tenantId: number, academicYearId: number, ids?: number[], classroomId?: number) {
         let query = `
-            SELECT e.*, et.name as term_name
+            SELECT DISTINCT e.*, et.name as term_name
             FROM school.exam e
             LEFT JOIN school.exam_term et ON e.exam_term_id = et.id
+            LEFT JOIN school.exam_invitation ei ON e.id = ei.exam_id AND ei.is_deleted = FALSE
             WHERE e.tenant_id = $1 AND e.academic_year_id = $2 AND e.is_deleted = FALSE
         `;
         const params: any[] = [tenantId, academicYearId];
+        let paramIndex = 3;
 
         if (ids) {
-            query += ` AND e.id = ANY($3)`;
+            query += ` AND e.id = ANY($${paramIndex})`;
             params.push(ids);
+            paramIndex++;
+        }
+
+        if (classroomId) {
+            query += ` AND (ei.classroom_id = $${paramIndex} OR ei.grade_id = (SELECT grade_id FROM school.classroom WHERE id = $${paramIndex}))`;
+            params.push(classroomId);
+            paramIndex++;
         }
 
         query += ` ORDER BY e.start_date DESC`;

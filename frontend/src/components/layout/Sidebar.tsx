@@ -22,10 +22,23 @@ const navigation = {
         { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, permissions: [] },
     ],
     academic: [
-        { name: 'Grades', path: '/grades', icon: Layers, permissions: ['student.academic:read'] },
-        { name: 'Subjects', path: '/subjects', icon: BookOpen, permissions: ['class:read'] },
-        { name: 'Courses', path: '/courses', icon: BookOpen, permissions: ['class:read'] },
-        { name: 'Classrooms', path: '/classrooms', icon: Building2, permissions: ['class:read'] },
+        { 
+            name: 'My Classes', 
+            path: '/my-classes', 
+            icon: CalendarCheck, 
+            permissions: ['student.academic:read'],
+            roleFilter: 'teacher' 
+        },
+        { 
+            name: 'Grades', 
+            path: '/grades', 
+            icon: Layers, 
+            permissions: ['student.academic:read'],
+            roleFilter: 'admin' 
+        },
+        { name: 'Subjects', path: '/subjects', icon: BookOpen, permissions: ['class:read'], roleFilter: 'admin' },
+        { name: 'Courses', path: '/courses', icon: BookOpen, permissions: ['class:read'], roleFilter: 'admin' },
+        { name: 'Classrooms', path: '/classrooms', icon: Building2, permissions: ['class:read'], roleFilter: 'admin' },
         { name: 'Timetable', path: '/timetable', icon: Clock, permissions: ['timetable:read'] },
         { name: 'Exams', path: '/exams', icon: ClipboardList, permissions: ['exam:read'] },
         { name: 'Teacher Diary', path: '/teacher-diary', icon: StickyNote, permissions: ['teacher_note:read'] },
@@ -111,9 +124,15 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
         );
     };
 
-    const hasPermission = (requiredPermissions?: string[]) => {
-        if (!requiredPermissions || requiredPermissions.length === 0) return true;
-        return requiredPermissions.some((p: string) => can(p));
+    const hasPermission = (item: any) => {
+        if (item.roleFilter) {
+            const isTeacher = user?.roles.includes('teacher');
+            if (item.roleFilter === 'teacher' && !isTeacher) return false;
+            if (item.roleFilter === 'admin' && isTeacher) return false;
+        }
+        
+        if (!item.permissions || item.permissions.length === 0) return true;
+        return item.permissions.some((p: string) => can(p));
     };
 
     const handleSwitch = (slug: string) => {
@@ -122,7 +141,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
     };
 
     const renderNavItem = (item: any, idx: number, isChild = false) => {
-        if (!hasPermission(item.permissions)) return null;
+        if (!hasPermission(item)) return null;
 
         const Icon = item.icon;
         const isExpanded = openMenus.includes(item.name);

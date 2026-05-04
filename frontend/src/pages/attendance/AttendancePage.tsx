@@ -10,11 +10,18 @@ import { ComboBox } from '../../components/ui/ComboBox';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
 
+import { useSearchParams } from 'react-router-dom';
+
 const AttendancePage: React.FC = () => {
     const { notify } = useNotification();
     const { can } = useAuth();
+    const [searchParams] = useSearchParams();
+    const classIdFromUrl = searchParams.get('classId');
+    
     const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-    const [selectedClass, setSelectedClass] = useState<number | null>(null);
+    const [selectedClass, setSelectedClass] = useState<number | null>(
+        classIdFromUrl ? parseInt(classIdFromUrl) : null
+    );
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [roster, setRoster] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -39,7 +46,9 @@ const AttendancePage: React.FC = () => {
         try {
             const res = await getClassrooms({ limit: 100 });
             setClassrooms(res.data);
-            if (res.data.length > 0) setSelectedClass(res.data[0].id);
+            if (res.data.length > 0 && !selectedClass) {
+                setSelectedClass(res.data[0].id);
+            }
         } catch (err) {
             console.error('Failed to load classrooms', err);
         }
@@ -83,7 +92,7 @@ const AttendancePage: React.FC = () => {
         setSaving(true);
         try {
             const records = roster.map(s => ({
-                enrollment_id: s.enrollment_id,
+                student_id: s.student_id,
                 status: s.status
             }));
             await saveAttendance(selectedDate, selectedClass, records);

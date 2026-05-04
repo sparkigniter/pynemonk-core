@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { 
     ChevronLeft, 
     Save, 
@@ -28,6 +28,8 @@ export default function HomeworkForm() {
     const navigate = useNavigate();
     const { id } = useParams();
     const location = useLocation();
+    const [searchParams] = useSearchParams();
+    const classIdFromUrl = searchParams.get('classId');
     const { notify } = useNotification();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,7 +41,7 @@ export default function HomeworkForm() {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        classroom_id: undefined as number | undefined,
+        classroom_id: classIdFromUrl ? parseInt(classIdFromUrl) : undefined as number | undefined,
         subject_id: undefined as number | undefined,
         due_date: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
         max_score: 10,

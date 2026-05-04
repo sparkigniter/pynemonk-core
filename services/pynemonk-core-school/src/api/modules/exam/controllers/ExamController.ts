@@ -14,13 +14,14 @@ export class ExamController extends ResourceController {
             const tenantId = this.getTenantId(req);
             const scope = await this.getScope(req);
             const academicYearId = req.query.academic_year_id ? parseInt(req.query.academic_year_id as string) : undefined;
+            const classroomId = req.query.classroom_id ? parseInt(req.query.classroom_id as string) : undefined;
             
             let examIds: number[] | undefined;
             if (scope.accessLevel !== "FULL") {
                 examIds = scope.examIds;
             }
 
-            const exams = await this.examService.getExams(tenantId, academicYearId, examIds);
+            const exams = await this.examService.getExams(tenantId, academicYearId, examIds, classroomId);
             return this.ok(res, "Exams retrieved", exams);
         } catch (error: any) {
             return this.internalservererror(res, error.message);

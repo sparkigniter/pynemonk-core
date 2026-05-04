@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
 import {
@@ -34,6 +34,7 @@ import {
   FileImage,
   Mic,
   Save,
+  Palette,
   Image as ImageIcon
 } from 'lucide-react'
 
@@ -332,6 +333,29 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
     setView('class_detail')
   }
 
+  const [mobileViewMode, setMobileViewMode] = useState<'class' | 'subject'>(() => {
+    return (localStorage.getItem('mobile_teacher_view_mode') as 'class' | 'subject') || 'class';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('mobile_teacher_view_mode', mobileViewMode);
+  }, [mobileViewMode]);
+
+  const assignmentsBySubject = useMemo(() => {
+    if (!data?.assignments) return [];
+    const groups: Record<string, any> = {};
+    data.assignments.forEach((a: any) => {
+      if (!groups[a.subject_name]) {
+        groups[a.subject_name] = {
+          name: a.subject_name,
+          classes: []
+        };
+      }
+      groups[a.subject_name].classes.push(a);
+    });
+    return Object.values(groups);
+  }, [data]);
+
   const navigateTo = (newView: TeacherView) => {
     setView(newView)
     if (newView === 'calendar') fetchTimetable()
@@ -364,16 +388,18 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
           )}
           <div>
             <p className="text-brand-600 text-[10px] font-black uppercase tracking-[0.2em] mb-1">
-              {view === 'home' ? 'Command Center' : view.toUpperCase()}
+              {view === 'home' ? 'Command Center' : view === 'classes' ? 'My Workload' : view.toUpperCase()}
             </p>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-              {view === 'home' ? 'Hello, Professor' : selectedClass ? selectedClass.classroom_name : view}
+              {view === 'home' ? 'Hello, Professor' : selectedClass && view !== 'classes' ? selectedClass.classroom_name : 'My Workload'}
             </h2>
           </div>
         </div>
-        <button onClick={onLogout} className="w-10 h-10 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 active:scale-90 transition-transform">
-          <LogOut className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+           <button onClick={onLogout} className="w-10 h-10 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 active:scale-90 transition-transform">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
       {/* Main Scrollable Content */}
@@ -396,7 +422,7 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
                   <div className="w-10 h-10 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4"><CalendarDays className="text-emerald-600 w-5 h-5" /></div>
                   <h3 className="text-2xl font-black text-slate-900">{data?.assignments.length || 0}</h3>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total Classes</p>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total Sessions</p>
                 </div>
                 <div className="bg-slate-900 p-6 rounded-[2.5rem] shadow-xl shadow-slate-200 text-left relative overflow-hidden group active:scale-95 transition-all" onClick={() => navigateTo('calendar')}>
                   <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center mb-4 relative z-10"><Clock className="text-white/60 w-5 h-5" /></div>
@@ -411,26 +437,14 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 </div>
               </div>
 
-              {/* Secondary Actions */}
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => navigateTo('calendar')} className="bg-slate-900 p-4 rounded-[2rem] flex items-center justify-center gap-3 text-white">
-                  <CalendarDays className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Full Schedule</span>
-                </button>
-                <button onClick={() => navigateTo('homework')} className="bg-indigo-600 p-4 rounded-[2rem] flex items-center justify-center gap-3 text-white shadow-lg shadow-indigo-200">
-                  <ClipboardCheck className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Homework</span>
-                </button>
-              </div>
-
               {/* Assignments Section */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center px-2">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Assignments</h4>
-                  <button onClick={() => navigateTo('classes')} className="text-brand-600 text-[10px] font-black uppercase">View All</button>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Today's Schedule</h4>
+                  <button onClick={() => navigateTo('classes')} className="text-brand-600 text-[10px] font-black uppercase tracking-widest">Full Workload</button>
                 </div>
                 <div className="space-y-3">
-                  {data?.assignments.slice(0, 2).map((cls, i) => (
+                  {data?.assignments.filter(a => a.is_scheduled_today).slice(0, 3).map((cls, i) => (
                     <div key={i} onClick={() => handleClassClick(cls)} className="bg-white p-5 rounded-[2.5rem] border border-slate-50 shadow-sm flex items-center justify-between group active:scale-95 transition-all">
                       <div className="flex items-center gap-4">
                         <div className="w-14 h-14 bg-slate-900 rounded-[1.5rem] flex items-center justify-center text-white text-lg font-black">{cls.classroom_name}</div>
@@ -446,35 +460,115 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         {cls.can_take_attendance && (
                           <button 
                             onClick={(e) => { e.stopPropagation(); setSelectedClass(cls); setView('attendance'); fetchClassStudents(cls.classroom_id); }}
-                            className="bg-brand-50 text-brand-600 p-2 rounded-xl"
+                            className="bg-brand-50 text-brand-600 p-3 rounded-2xl"
                           >
-                            <CheckCircle2 size={16} />
+                            <CheckCircle2 size={18} />
                           </button>
                         )}
                         <ChevronRight className="text-slate-200 w-5 h-5 group-hover:text-brand-600" />
                       </div>
                     </div>
                   ))}
+                  {data?.assignments.filter(a => a.is_scheduled_today).length === 0 && (
+                     <div className="bg-white p-8 rounded-[2.5rem] text-center border border-slate-50">
+                        <p className="text-slate-300 text-[10px] font-black uppercase tracking-widest">No classes scheduled for you today</p>
+                     </div>
+                  )}
                 </div>
               </div>
             </motion.div>
           )}
 
           {view === 'classes' && (
-            <motion.div key="classes" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="px-6 py-6 space-y-4">
-              {data?.assignments.map((cls, i) => (
-                <div key={i} onClick={() => handleClassClick(cls)} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center gap-5">
-                  <div className="w-16 h-16 bg-brand-50 rounded-3xl flex items-center justify-center text-brand-600 text-xl font-black">{cls.classroom_name}</div>
-                  <div className="flex-1">
-                    <h5 className="text-lg font-bold text-slate-900">{cls.subject_name}</h5>
-                    <div className="flex items-center gap-2">
-                      <p className="text-slate-400 text-xs font-medium">{cls.grade_name} • {cls.is_class_teacher ? 'Class Teacher' : 'Subject Teacher'}</p>
-                      {!cls.is_scheduled_today && <span className="bg-slate-100 text-slate-400 text-[8px] font-black uppercase px-2 py-0.5 rounded-full">Unscheduled</span>}
+            <motion.div key="classes" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="px-6 py-6 space-y-6">
+              {/* View Switcher */}
+              <div className="flex gap-2 p-1 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                <button 
+                  onClick={() => setMobileViewMode('class')}
+                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mobileViewMode === 'class' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                >
+                  By Class
+                </button>
+                <button 
+                  onClick={() => setMobileViewMode('subject')}
+                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mobileViewMode === 'subject' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                >
+                  By Subject
+                </button>
+              </div>
+
+              {mobileViewMode === 'class' ? (
+                <div className="space-y-4">
+                  {data?.assignments.map((cls, i) => (
+                    <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+                      <div className="flex items-center gap-5" onClick={() => handleClassClick(cls)}>
+                        <div className="w-16 h-16 bg-brand-50 rounded-3xl flex items-center justify-center text-brand-600 text-xl font-black">{cls.classroom_name}</div>
+                        <div className="flex-1">
+                          <h5 className="text-lg font-bold text-slate-900">{cls.subject_name}</h5>
+                          <div className="flex items-center gap-2">
+                            <p className="text-slate-400 text-xs font-medium">{cls.grade_name}</p>
+                            {cls.is_class_teacher && <span className="bg-amber-100 text-amber-700 text-[8px] font-black uppercase px-2 py-0.5 rounded-full">Class Teacher</span>}
+                          </div>
+                        </div>
+                        <ChevronRight className="text-slate-200 w-5 h-5" />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        <button 
+                          onClick={() => { setSelectedClass(cls); setView('attendance'); fetchClassStudents(cls.classroom_id); }}
+                          disabled={!cls.can_take_attendance}
+                          className={`py-4 rounded-2xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${cls.can_take_attendance ? 'bg-brand-500 text-white shadow-lg shadow-brand-200 active:scale-95' : 'bg-slate-50 text-slate-300 opacity-60 cursor-not-allowed'}`}
+                        >
+                          <CheckCircle2 size={14} />
+                          Attendance
+                        </button>
+                        <button 
+                          onClick={() => { setSelectedClass(cls); setView('homework_new'); }}
+                          className="py-4 bg-white border border-slate-100 text-slate-500 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:border-brand-500 hover:text-brand-600 transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                          <FileSpreadsheet size={14} />
+                          Homework
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <ChevronRight className="text-slate-200 w-5 h-5" />
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-8">
+                  {assignmentsBySubject.map((subject) => (
+                    <div key={subject.name} className="space-y-3">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">{subject.name}</h4>
+                      <div className="space-y-2">
+                        {subject.classes.map((cls: any, i: number) => (
+                          <div key={i} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                               <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center font-black text-slate-600">{cls.classroom_name}</div>
+                               <div>
+                                  <h6 className="font-bold text-slate-900">{cls.classroom_name} - {cls.section}</h6>
+                                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{cls.grade_name}</p>
+                               </div>
+                            </div>
+                            <div className="flex gap-2">
+                               <button 
+                                  onClick={() => { setSelectedClass(cls); setView('attendance'); fetchClassStudents(cls.classroom_id); }}
+                                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${cls.can_take_attendance ? 'bg-brand-500 text-white shadow-md' : 'bg-slate-50 text-slate-200'}`}
+                               >
+                                  <CheckCircle2 size={16} />
+                               </button>
+                               <button 
+                                  onClick={() => { setSelectedClass(cls); setView('homework_new'); }}
+                                  className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center"
+                               >
+                                  <FileSpreadsheet size={16} />
+                               </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -822,6 +916,39 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                       <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Joining Date</p>
                       <p className="text-sm font-bold text-slate-900">{profile?.joining_date ? new Date(profile.joining_date).toLocaleDateString() : 'August 14, 2024'}</p>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Theme Settings */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 flex items-center gap-2">
+                  <Palette size={12} /> Personalization
+                </h4>
+                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-sm">
+                  <div className="grid grid-cols-5 gap-3">
+                    {[
+                      { id: 'indigo', color: '#4f46e5', label: 'Indigo' },
+                      { id: 'amber', color: '#d97706', label: 'Amber' },
+                      { id: 'emerald', color: '#059669', label: 'Emerald' },
+                      { id: 'ocean', color: '#0284c7', label: 'Ocean' },
+                      { id: 'midnight', color: '#0f172a', label: 'Midnight' }
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => {
+                          localStorage.setItem('pynemonk-theme', t.id);
+                          document.documentElement.setAttribute('data-theme', t.id);
+                        }}
+                        className="flex flex-col items-center gap-2"
+                      >
+                        <div 
+                          className={`w-10 h-10 rounded-xl border-2 transition-all ${document.documentElement.getAttribute('data-theme') === t.id || (!document.documentElement.getAttribute('data-theme') && t.id === 'indigo') ? 'border-slate-900 scale-110 shadow-md' : 'border-transparent'}`}
+                          style={{ backgroundColor: t.color }}
+                        />
+                        <span className="text-[7px] font-black uppercase tracking-tighter text-slate-400">{t.label}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1249,6 +1376,11 @@ const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
 function App() {
   const [role, setRole] = useState<Role | null>(localStorage.getItem('role') as Role)
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'))
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('pynemonk-theme') || 'indigo';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token')
