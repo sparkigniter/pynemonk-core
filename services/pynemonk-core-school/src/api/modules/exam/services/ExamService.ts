@@ -7,7 +7,7 @@ export class ExamService {
     constructor(
         private examHelper: ExamHelper,
         private academicYearHelper: AcademicYearHelper
-    ) {}
+    ) { }
 
     // ─── Terms ───────────────────────────────────────────────────────────────
 
@@ -100,8 +100,8 @@ export class ExamService {
         });
     }
 
-    public async getPaperStudents(tenantId: number, examId: number, paperId: number) {
-        const students = await this.examHelper.getInvitedStudents(tenantId, examId, paperId);
+    public async getPaperStudents(tenantId: number, examId: number, paperId: number, classroomIds?: number[]) {
+        const students = await this.examHelper.getInvitedStudents(tenantId, examId, paperId, classroomIds);
         const marks = await this.examHelper.getMarksByPaper(tenantId, paperId);
 
         // Map marks to students

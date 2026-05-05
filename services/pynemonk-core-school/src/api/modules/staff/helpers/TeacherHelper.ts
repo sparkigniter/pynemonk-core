@@ -79,9 +79,12 @@ export default class TeacherHelper {
                  AND a.date = CURRENT_DATE AND a.status = 'absent'
                  AND a.tenant_id = $2) as absent_today,
                 
-                (SELECT count(*) FROM school.exam_paper ep
-                 JOIN school.teacher_assignment ta ON ep.subject_id = ta.subject_id
-                 WHERE ta.staff_id = (SELECT id FROM teacher_info)
+                (SELECT count(DISTINCT ep.id) FROM school.exam_paper ep
+                 JOIN school.exam e ON ep.exam_id = e.id
+                 JOIN school.exam_invitation ei ON e.id = ei.exam_id
+                 JOIN school.classroom c ON (ei.classroom_id = c.id OR (ei.classroom_id IS NULL AND ei.grade_id = c.grade_id))
+                 LEFT JOIN school.teacher_assignment ta ON (ta.classroom_id = c.id AND (ta.subject_id = ep.subject_id OR ta.subject_id IS NULL))
+                 WHERE (c.class_teacher_id = (SELECT id FROM teacher_info) OR ta.staff_id = (SELECT id FROM teacher_info))
                  AND ep.exam_date >= CURRENT_DATE 
                  AND ep.exam_date <= CURRENT_DATE + INTERVAL '7 days'
                  AND ep.tenant_id = $2) as upcoming_exams,
@@ -140,15 +143,18 @@ export default class TeacherHelper {
      */
     public async getTeacherExams(userId: number): Promise<any[]> {
         const res = await this.db.query(
-            `SELECT ep.*, e.name as exam_name, s.name as subject_name, c.name as classroom_name
+            `SELECT DISTINCT ep.id, ep.exam_id, ep.subject_id, ep.exam_date, 
+                    e.name as exam_name, s.name as subject_name, c.name as classroom_name
              FROM school.exam_paper ep
              JOIN school.exam e ON ep.exam_id = e.id
              JOIN school.subject s ON ep.subject_id = s.id
              JOIN school.exam_invitation ei ON e.id = ei.exam_id
-             JOIN school.classroom c ON ei.classroom_id = c.id
-             JOIN school.teacher_assignment ta ON (ta.subject_id = s.id AND ta.classroom_id = c.id)
-             JOIN school.staff st ON ta.staff_id = st.id
-             WHERE st.user_id = $1 AND ep.is_deleted = FALSE
+             JOIN school.classroom c ON (ei.classroom_id = c.id OR (ei.classroom_id IS NULL AND ei.grade_id = c.grade_id))
+             JOIN school.staff st ON st.user_id = $1
+             LEFT JOIN school.teacher_assignment ta ON (ta.staff_id = st.id AND ta.classroom_id = c.id AND (ta.subject_id = s.id OR ta.subject_id IS NULL))
+             WHERE st.is_deleted = FALSE 
+               AND ep.is_deleted = FALSE
+               AND (c.class_teacher_id = st.id OR ta.id IS NOT NULL)
              ORDER BY ep.exam_date ASC`,
             [userId]
         );

@@ -15,7 +15,7 @@ export class ExamController extends ResourceController {
             const scope = await this.getScope(req);
             const academicYearId = req.query.academic_year_id ? parseInt(req.query.academic_year_id as string) : undefined;
             const classroomId = req.query.classroom_id ? parseInt(req.query.classroom_id as string) : undefined;
-            
+
             let examIds: number[] | undefined;
             if (scope.accessLevel !== "FULL") {
                 examIds = scope.examIds;
@@ -125,7 +125,14 @@ export class ExamController extends ResourceController {
             const tenantId = (req as any).user.tenantId;
             const examId = parseInt(req.params.id);
             const paperId = parseInt(req.params.paperId);
-            const data = await this.examService.getPaperStudents(tenantId, examId, paperId);
+            const scope = await this.getScope(req);
+            
+            let classroomIds: number[] | undefined;
+            if (scope.accessLevel !== "FULL") {
+                classroomIds = scope.classroomIds;
+            }
+
+            const data = await this.examService.getPaperStudents(tenantId, examId, paperId, classroomIds);
             return this.ok(res, "Paper students retrieved", data);
         } catch (error: any) {
             return this.internalservererror(res, error.message);

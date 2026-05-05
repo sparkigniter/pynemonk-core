@@ -30,6 +30,13 @@ const navigation = {
             roleFilter: 'teacher' 
         },
         { 
+            name: 'My Timetable', 
+            path: '/my-timetable', 
+            icon: Clock, 
+            permissions: ['student.academic:read'],
+            roleFilter: 'teacher' 
+        },
+        { 
             name: 'Grades', 
             path: '/grades', 
             icon: Layers, 

@@ -35,6 +35,7 @@ import Homework from './pages/academics/Homework';
 import HomeworkForm from './pages/academics/HomeworkForm';
 import Integrations from './pages/admin/Integrations';
 import IAM from './pages/admin/IAM';
+import TeacherTimetable from './pages/academics/TeacherTimetable';
 
 export default function App() {
   return (
@@ -65,6 +66,7 @@ export default function App() {
           <Route path="teachers/register" element={<StaffRegistration />} />
           <Route path="grades" element={<Grades />} />
           <Route path="my-classes" element={<MyClasses />} />
+          <Route path="my-timetable" element={<TeacherTimetable />} />
           <Route path="attendance" element={<Attendance />} />
           <Route path="subjects" element={<Subjects />} />
           <Route path="finance" element={<Finance />} />

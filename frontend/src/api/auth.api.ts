@@ -166,7 +166,7 @@ export async function assignRoleScope(token: string, roleId: number, scopeId: nu
 export async function removeRoleScope(token: string, roleId: number, scopeId: number, clientId?: string): Promise<void> {
     let url = `${BASE_URL}/api/v1/oauth2/role-scope/${roleId}/${scopeId}`;
     if (clientId) url += `?clientId=${clientId}`;
-    
+
     const res = await fetch(url, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }

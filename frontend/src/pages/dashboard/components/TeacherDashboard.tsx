@@ -180,7 +180,12 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ data, user }) => {
                     <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
                         <div className="flex items-center justify-between mb-8">
                             <h3 className="text-xl font-black text-slate-800 tracking-tight">Today's Timeline</h3>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Actionable Schedule</p>
+                            <button 
+                                onClick={() => navigate('/my-timetable')}
+                                className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-2"
+                            >
+                                View Full Timetable <ChevronRight size={14} />
+                            </button>
                         </div>
 
                         <div className="space-y-6 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-px before:bg-slate-100">

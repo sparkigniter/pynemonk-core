@@ -17,10 +17,10 @@ export class ExamHelper extends BaseModel {
             RETURNING *
         `;
         const values = [
-            data.tenant_id, 
-            data.academic_year_id, 
-            data.name, 
-            data.start_date || null, 
+            data.tenant_id,
+            data.academic_year_id,
+            data.name,
+            data.start_date || null,
             data.end_date || null
         ];
         const res = await this.db.query(query, values);
@@ -212,11 +212,18 @@ export class ExamHelper extends BaseModel {
         return res.rows;
     }
 
-    public async getInvitedStudents(tenantId: number, examId: number, paperId?: number) {
+    public async getInvitedStudents(tenantId: number, examId: number, paperId?: number, classroomIds?: number[]) {
+        console.log(`[ExamHelper] getInvitedStudents - tenant: ${tenantId}, exam: ${examId}, paper: ${paperId}, classrooms: ${classroomIds || 'ALL'}`);
+        
         // If paperId is provided, we filter by the subject associated with that paper
         let subjectFilter = '';
         if (paperId) {
             subjectFilter = `AND (ei.subject_id IS NULL OR ei.subject_id = (SELECT subject_id FROM school.exam_paper WHERE id = ${paperId}))`;
+        }
+
+        let scopeFilter = '';
+        if (classroomIds && classroomIds.length > 0) {
+            scopeFilter = `AND c.id = ANY($3)`;
         }
 
         const query = `
@@ -227,7 +234,7 @@ export class ExamHelper extends BaseModel {
             )
             SELECT DISTINCT
                 s.id as student_id, s.first_name, s.last_name, s.admission_no,
-                c.name as classroom_name, c.section as classroom_section,
+                c.id as classroom_id, c.name as classroom_name, c.section as classroom_section,
                 COALESCE(es.is_excluded, FALSE) as is_excluded,
                 es.exclusion_reason
             FROM school.student s
@@ -240,8 +247,12 @@ export class ExamHelper extends BaseModel {
                 OR
                 c.id IN (SELECT classroom_id FROM invited_entities WHERE classroom_id IS NOT NULL)
             )
+            ${scopeFilter}
         `;
-        const res = await this.db.query(query, [tenantId, examId]);
+        const values = classroomIds && classroomIds.length > 0 ? [tenantId, examId, classroomIds] : [tenantId, examId];
+        const res = await this.db.query(query, values);
+        
+        console.log(`[ExamHelper] getInvitedStudents - Found ${res.rows.length} students`);
         return res.rows;
     }
 
@@ -318,7 +329,7 @@ export class ExamHelper extends BaseModel {
 
         const res = await this.db.query(query, params);
         const totalCount = res.rows.length > 0 ? parseInt(res.rows[0].total_count) : 0;
-        
+
         return {
             data: res.rows.map(({ total_count, ...rest }) => rest),
             pagination: {
@@ -349,9 +360,10 @@ export class ExamHelper extends BaseModel {
 
     public async getMarksByPaper(tenantId: number, paperId: number) {
         const query = `
-            SELECT em.*, u.full_name as evaluator_name
+            SELECT em.*, CONCAT(up.first_name, ' ', up.last_name) as evaluator_name
             FROM school.exam_marks em
-            LEFT JOIN auth.users u ON em.created_by = u.id
+            LEFT JOIN auth.user u ON em.created_by = u.id
+            LEFT JOIN auth.user_profile up ON u.id = up.user_id
             WHERE em.tenant_id = $1 AND em.paper_id = $2
         `;
         const res = await this.db.query(query, [tenantId, paperId]);
@@ -391,12 +403,12 @@ export class ExamHelper extends BaseModel {
             RETURNING *
         `;
         const values = [
-            tenantId, 
-            id, 
-            data.exam_term_id, 
-            data.name, 
-            data.exam_type, 
-            data.start_date, 
+            tenantId,
+            id,
+            data.exam_term_id,
+            data.name,
+            data.exam_type,
+            data.start_date,
             data.end_date
         ];
         const res = await this.db.query(query, values);
