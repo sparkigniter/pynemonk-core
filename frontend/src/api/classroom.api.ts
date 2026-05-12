@@ -11,6 +11,7 @@ export interface Classroom {
     class_teacher_id?: number | null;
     teacher_first_name?: string;
     teacher_last_name?: string;
+    student_count?: number;
 }
 
 export async function getClassrooms(params?: {

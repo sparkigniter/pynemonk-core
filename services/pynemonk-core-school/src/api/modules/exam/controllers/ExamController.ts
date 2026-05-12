@@ -16,6 +16,10 @@ export class ExamController extends ResourceController {
             const academicYearId = req.query.academic_year_id ? parseInt(req.query.academic_year_id as string) : undefined;
             const classroomId = req.query.classroom_id ? parseInt(req.query.classroom_id as string) : undefined;
 
+            if (classroomId && !scope.hasClassroom(classroomId)) {
+                return this.forbidden(res, "You do not have access to this classroom");
+            }
+
             let examIds: number[] | undefined;
             if (scope.accessLevel !== "FULL") {
                 examIds = scope.examIds;
@@ -127,6 +131,14 @@ export class ExamController extends ResourceController {
             const paperId = parseInt(req.params.paperId);
             const scope = await this.getScope(req);
             
+            if (!scope.hasExam(examId)) {
+                return this.forbidden(res, "You do not have access to this exam");
+            }
+
+            if (!scope.hasPaper(paperId)) {
+                return this.forbidden(res, "You do not have access to this exam paper");
+            }
+
             let classroomIds: number[] | undefined;
             if (scope.accessLevel !== "FULL") {
                 classroomIds = scope.classroomIds;
@@ -145,6 +157,16 @@ export class ExamController extends ResourceController {
             const userId = (req as any).user.userId;
             const examId = parseInt(req.params.id);
             const paperId = parseInt(req.params.paperId);
+            const scope = await this.getScope(req);
+
+            if (!scope.hasExam(examId)) {
+                return this.forbidden(res, "You do not have access to this exam");
+            }
+
+            if (!scope.hasPaper(paperId)) {
+                return this.forbidden(res, "You do not have permission to enter marks for this paper");
+            }
+
             const result = await this.examService.saveMarks(tenantId, examId, paperId, req.body, userId);
             return this.ok(res, "Marks saved successfully", result);
         } catch (error: any) {
@@ -189,6 +211,52 @@ export class ExamController extends ResourceController {
             };
             const result = await this.examService.getPaginatedStudents(tenantId, examId, filters);
             return this.ok(res, "Invited students retrieved", result);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
+
+    public async getExamResults(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenantId;
+            const id = parseInt(req.params.id);
+            const data = await this.examService.getExamResults(tenantId, id);
+            return this.ok(res, "Exam results retrieved", data);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
+
+    public async getStats(req: Request, res: Response) {
+        try {
+            const tenantId = this.getTenantId(req);
+            const userId = (req as any).user.userId;
+            const scope = await this.getScope(req);
+            
+            let examIds: number[] | undefined;
+            if (scope.accessLevel !== "FULL") {
+                examIds = scope.examIds;
+            }
+
+            const stats = await this.examService.getDashboardStats(tenantId, userId, examIds);
+            return this.ok(res, "Exam stats retrieved", stats);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
+
+    public async getStudentPerformance(req: Request, res: Response) {
+        try {
+            const tenantId = this.getTenantId(req);
+            const studentId = parseInt(req.params.studentId);
+            const scope = await this.getScope(req);
+
+            if (scope.accessLevel !== "FULL" && !scope.hasStudent(studentId)) {
+                return this.forbidden(res, "You do not have access to this student's performance data");
+            }
+
+            const performance = await this.examService.getStudentPerformance(tenantId, studentId);
+            return this.ok(res, "Student performance retrieved", performance);
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }

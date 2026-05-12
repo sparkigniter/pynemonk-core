@@ -52,7 +52,7 @@ class OauthClientHelper {
   }
 
   public async getClientById(clientId: string) {
-    const res = await this.db.query(`SELECT id, name, description, client_id, client_secret, is_active, created_at, updated_at FROM auth.client WHERE client_id = $1`, [clientId]);
+    const res = await this.db.query(`SELECT id, name, description, client_id, client_secret, is_active, is_internal, created_at, updated_at FROM auth.client WHERE client_id = $1`, [clientId]);
     return res.rows[0];
   }
 
@@ -92,7 +92,11 @@ class OauthClientHelper {
     // 1. SuperAdmin Override: system_admin is allowed everywhere
     if (roleSlugs.includes('system_admin')) return true;
 
-    // 2. Client-Role Tagging: check if any roles are explicitly restricted
+    // 2. Internal Client Override: Web/Mobile apps are open to all roles by default
+    const client = await this.getClientById(clientId);
+    if (client && client.is_internal) return true;
+
+    // 3. Client-Role Tagging: check if any roles are explicitly restricted
     const allowedRoles = await this.getClientRoles(clientId);
     if (allowedRoles.length === 0) return true; // Open if no restrictions defined
     

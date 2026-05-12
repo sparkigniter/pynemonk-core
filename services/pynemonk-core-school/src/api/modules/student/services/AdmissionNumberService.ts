@@ -10,22 +10,19 @@ export class AdmissionNumberService {
         try {
             await client.query('BEGIN');
 
-            // 1. Get current settings and sequence
+            // 1. Get format and sequence from key-value settings
             const settingsRes = await client.query(
-                `SELECT admission_number_format, next_admission_seq FROM school.settings WHERE tenant_id = $1`,
+                `SELECT key, value FROM school.settings WHERE tenant_id = $1 AND key IN ('admission_number_format', 'next_admission_seq')`,
                 [tenantId]
             );
 
             let format = 'ADM-{YEAR}-{SEQ}';
             let seq = 1;
 
-            if (settingsRes.rows.length > 0) {
-                format = settingsRes.rows[0].admission_number_format;
-                seq = settingsRes.rows[0].next_admission_seq;
-            } else {
-                // Initialize settings if missing
-                await client.query(`INSERT INTO school.settings (tenant_id) VALUES ($1)`, [tenantId]);
-            }
+            settingsRes.rows.forEach(row => {
+                if (row.key === 'admission_number_format') format = row.value;
+                if (row.key === 'next_admission_seq') seq = parseInt(row.value, 10);
+            });
 
             // 2. Generate the number
             const now = new Date();
@@ -38,11 +35,24 @@ export class AdmissionNumberService {
                 .replace('{MONTH}', month)
                 .replace('{SEQ}', paddedSeq);
 
-            // 3. Increment for next time
+            // 3. Increment and update the sequence key
             await client.query(
-                `UPDATE school.settings SET next_admission_seq = next_admission_seq + 1, updated_at = NOW() WHERE tenant_id = $1`,
-                [tenantId]
+                `INSERT INTO school.settings (tenant_id, key, value)
+                 VALUES ($1, 'next_admission_seq', $2)
+                 ON CONFLICT (tenant_id, key) DO UPDATE 
+                 SET value = (EXCLUDED.value::int + 1)::text, updated_at = NOW()`,
+                [tenantId, (seq + 1).toString()]
             );
+
+            // Ensure format exists if it didn't
+            if (!settingsRes.rows.find(r => r.key === 'admission_number_format')) {
+                await client.query(
+                    `INSERT INTO school.settings (tenant_id, key, value)
+                     VALUES ($1, 'admission_number_format', $2)
+                     ON CONFLICT DO NOTHING`,
+                    [tenantId, format]
+                );
+            }
 
             await client.query('COMMIT');
             return admissionNo;
@@ -56,21 +66,27 @@ export class AdmissionNumberService {
 
     async getSettings(tenantId: number) {
         const res = await this.pool.query(
-            `SELECT * FROM school.settings WHERE tenant_id = $1`,
+            `SELECT key, value FROM school.settings WHERE tenant_id = $1`,
             [tenantId]
         );
-        return res.rows[0] || { admission_number_format: 'ADM-{YEAR}-{SEQ}' };
+        const settings: any = {};
+        res.rows.forEach(row => {
+            settings[row.key] = row.value;
+        });
+        return {
+            admission_number_format: settings.admission_number_format || 'ADM-{YEAR}-{SEQ}',
+            next_admission_seq: parseInt(settings.next_admission_seq || '1', 10)
+        };
     }
 
     async updateSettings(tenantId: number, settings: { admission_number_format?: string }) {
-        const query = `
-            INSERT INTO school.settings (tenant_id, admission_number_format)
-            VALUES ($1, $2)
-            ON CONFLICT (tenant_id) DO UPDATE 
-            SET admission_number_format = EXCLUDED.admission_number_format, updated_at = NOW()
-            RETURNING *
-        `;
-        const res = await this.pool.query(query, [tenantId, settings.admission_number_format]);
-        return res.rows[0];
+        if (settings.admission_number_format) {
+            await this.pool.query(`
+                INSERT INTO school.settings (tenant_id, key, value)
+                VALUES ($1, 'admission_number_format', $2)
+                ON CONFLICT (tenant_id, key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+            `, [tenantId, settings.admission_number_format]);
+        }
+        return this.getSettings(tenantId);
     }
 }

@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import {
     BookOpen, Users, Plus, Search, Filter,
-    ChevronRight, Calendar, Loader2, GraduationCap
+    Calendar, Loader2, GraduationCap,
+    Sparkles,
+    FileText,
+    ArrowUpRight
 } from 'lucide-react';
 import * as courseApi from '../../api/course.api';
 import Modal from '../../components/ui/Modal';
@@ -62,137 +65,154 @@ export default function Courses() {
         }
     };
 
-    const colors = ['blue', 'indigo', 'amber', 'emerald', 'rose', 'purple'];
+    const colors = ['bg-primary', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-sky-500', 'bg-violet-500'];
 
     return (
-        <div className="space-y-6 animate-fade-in-up">
+        <div className="p-8 space-y-8 max-w-[1600px] mx-auto animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 font-heading tracking-tight">Courses & Curriculum</h1>
-                    <p className="text-slate-500 text-sm mt-1">Manage classes, syllabi, and academic schedules.</p>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="flex items-center gap-6">
+                    <div className="bg-surface-dark p-4 rounded-3xl shadow-xl shadow-theme/10">
+                        <GraduationCap className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-bold text-[var(--text-main)] tracking-tight">Curriculum Central</h1>
+                        <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mt-1 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            Academic Standards & Course Orchestration
+                        </p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
+
+                <div className="flex flex-wrap items-center gap-3">
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-theme-primary text-white rounded-xl hover:bg-theme-primary/90 transition-colors shadow-sm font-medium text-sm"
+                        className="btn-primary flex items-center gap-2 !px-6 !py-3"
                     >
-                        <Plus size={16} />
-                        New Course
+                        <Plus size={18} />
+                        Architect New Course
                     </button>
                 </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="card p-4 flex items-center gap-4 bg-gradient-to-r from-blue-50 to-white">
-                    <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-                        <BookOpen size={24} />
+            {/* Insight Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                    { label: 'Active Courses', value: courses.length, icon: BookOpen, color: 'text-indigo-600', bg: 'bg-primary/5', sub: 'Institutional Programs' },
+                    { label: 'Total Enrollments', value: '1,284', icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50', sub: 'Cross-functional Reach' },
+                    { label: 'Academic Period', value: '2024-25', icon: Calendar, color: 'text-amber-600', bg: 'bg-amber-50', sub: 'Current Active Term' },
+                ].map((stat, i) => (
+                    <div key={i} className="premium-card p-6 flex items-center gap-6 group">
+                        <div className={`p-4 rounded-2xl ${stat.bg} ${stat.color} shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+                            <stat.icon size={24} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">{stat.label}</p>
+                            <h3 className="text-2xl font-bold text-[var(--text-main)] tracking-tight">{stat.value}</h3>
+                            <p className="text-[10px] font-medium text-[var(--text-muted)] mt-1">{stat.sub}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-sm font-medium text-slate-500">Total Courses</p>
-                        <h3 className="text-2xl font-bold text-slate-800 font-heading">{courses.length}</h3>
-                    </div>
-                </div>
-                <div className="card p-4 flex items-center gap-4 bg-gradient-to-r from-emerald-50 to-white">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
-                        <Users size={24} />
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-slate-500">Active Enrollments</p>
-                        <h3 className="text-2xl font-bold text-slate-800 font-heading">0</h3>
-                    </div>
-                </div>
-                <div className="card p-4 flex items-center gap-4 bg-gradient-to-r from-purple-50 to-white">
-                    <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                        <Calendar size={24} />
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-slate-500">Current Term</p>
-                        <h3 className="text-xl font-bold text-slate-800 font-heading">Academic 2026</h3>
-                    </div>
-                </div>
+                ))}
             </div>
 
-            {/* Main Content */}
-            <div className="card delay-200">
-                <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
-                    <div className="flex gap-2 w-full sm:w-auto">
-                        <div className="relative flex-1 sm:w-64">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            {/* Filter & Listing */}
+            <div className="space-y-6">
+                <div className="flex flex-col xl:flex-row justify-between items-center gap-6 bg-[var(--card-bg)] p-3 rounded-[2.5rem] shadow-sm border border-[var(--card-border)]/60">
+                    <div className="flex items-center gap-4 w-full">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                             <input
                                 type="text"
-                                placeholder="Search courses..."
-                                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50"
+                                placeholder="Filter curriculum by name, code or faculty..."
+                                className="input-field-modern !pl-12 !py-3.5 !text-xs !bg-slate-50/50 !border-transparent focus:!bg-[var(--card-bg)] focus:!border-[var(--card-border)] w-full"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
                         </div>
-                        <button className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 font-medium hidden sm:flex items-center gap-2">
-                            <Filter size={16} />
-                            Filter
+                        <button className="btn-dark !p-3.5 shadow-lg shadow-theme/10">
+                            <Filter size={20} />
                         </button>
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="premium-card overflow-hidden">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20 gap-4">
-                            <Loader2 size={40} className="text-theme-primary animate-spin" />
-                            <p className="text-slate-500 font-medium">Loading courses...</p>
+                        <div className="flex flex-col items-center justify-center py-24 gap-6">
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+                                <Loader2 size={48} className="text-primary animate-spin relative z-10" />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm font-bold text-[var(--text-main)] tracking-tight">Accessing Curriculum Database</p>
+                                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mt-1">Syncing pedagogical resources...</p>
+                            </div>
                         </div>
                     ) : courses.length === 0 ? (
-                        <div className="p-20 flex flex-col items-center justify-center text-center">
-                            <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 mb-4">
-                                <GraduationCap size={32} />
+                        <div className="py-32 flex flex-col items-center justify-center text-center px-8">
+                            <div className="w-24 h-24 rounded-[2.5rem] bg-slate-50 flex items-center justify-center text-slate-200 mb-8 border border-[var(--card-border)]">
+                                <FileText size={40} />
                             </div>
-                            <h3 className="text-lg font-bold text-slate-800 mb-1">Curriculum is empty</h3>
-                            <p className="text-slate-500 max-w-sm mb-6">Create your first course to start defining your school's academic programs.</p>
+                            <h3 className="text-2xl font-bold text-[var(--text-main)] tracking-tight">Curriculum Matrix Empty</h3>
+                            <p className="text-[var(--text-muted)] text-sm font-medium mt-2 max-w-sm">Define your institution's academic architecture by creating your first standardized course.</p>
                             <button
                                 onClick={() => setIsModalOpen(true)}
-                                className="btn-primary"
+                                className="btn-primary mt-10 !px-10"
                             >
-                                Create First Course
+                                <Plus size={18} />
+                                Initialize First Course
                             </button>
                         </div>
                     ) : (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/80">
-                                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Course Name</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Code</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Created</th>
-                                    <th className="px-6 py-4"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {courses.map((course, i) => (
-                                    <tr key={course.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white uppercase bg-${colors[i % colors.length]}-500 shadow-sm`}>
-                                                    {course.name[0]}
-                                                </div>
-                                                <div className="text-sm font-bold text-slate-800">{course.name}</div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-mono text-slate-600">
-                                            {course.code}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-slate-500 truncate max-w-xs">
-                                            {course.description}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-slate-500">
-                                            {new Date(course.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <ChevronRight size={18} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1" />
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse min-w-[1000px]">
+                                <thead>
+                                    <tr className="bg-slate-50/50 border-b border-[var(--card-border)]">
+                                        <th className="px-8 py-5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Pedagogical Unit</th>
+                                        <th className="px-8 py-5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Course Code</th>
+                                        <th className="px-8 py-5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Structural Overview</th>
+                                        <th className="px-8 py-5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Entry Date</th>
+                                        <th className="px-8 py-5 w-16"></th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {courses.map((course, i) => (
+                                        <tr key={course.id} className="hover:bg-slate-50/30 transition-all group cursor-pointer border-b border-slate-50">
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white shadow-lg ${colors[i % colors.length]}`}>
+                                                        {course.name[0]}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-bold text-[var(--text-main)] group-hover:text-primary transition-colors leading-tight">{course.name}</div>
+                                                        <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-tight mt-1">Core Requirement</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <span className="text-xs font-bold text-[var(--text-main)] bg-slate-100 px-3 py-1.5 rounded-lg border border-[var(--card-border)]/60 font-mono">
+                                                    {course.code}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <p className="text-xs text-[var(--text-muted)] font-medium line-clamp-1 max-w-xs">
+                                                    {course.description || 'No specialized description provided for this academic unit.'}
+                                                </p>
+                                            </td>
+                                            <td className="px-8 py-6 text-xs font-bold text-[var(--text-muted)] uppercase">
+                                                {new Date(course.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            </td>
+                                            <td className="px-8 py-6 text-right">
+                                                <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-0 translate-x-2">
+                                                    <button className="p-2.5 bg-[var(--card-bg)] text-[var(--text-muted)] hover:text-primary rounded-xl shadow-sm border border-[var(--card-border)]">
+                                                        <ArrowUpRight size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
             </div>
@@ -201,57 +221,65 @@ export default function Courses() {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title="Create New Course"
+                title="Architect Academic Course"
             >
-                <form onSubmit={handleAddCourse} className="space-y-4">
+                <form onSubmit={handleAddCourse} className="p-2 space-y-6">
                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Course Name</label>
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest px-1">Institutional Name</label>
                         <input
                             required
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-theme-primary transition-all focus:ring-4 focus:ring-primary/10"
+                            className="input-field-modern"
                             value={formData.name}
                             onChange={e => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="Advanced Mathematics"
+                            placeholder="e.g. Advanced Quantum Mechanics"
                         />
                     </div>
 
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Course Code</label>
-                        <input
-                            required
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono outline-none focus:border-theme-primary transition-all focus:ring-4 focus:ring-primary/10"
-                            value={formData.code}
-                            onChange={e => setFormData({ ...formData, code: e.target.value })}
-                            placeholder="MAT-301"
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest px-1">Registry Code</label>
+                            <input
+                                required
+                                className="input-field-modern font-mono"
+                                value={formData.code}
+                                onChange={e => setFormData({ ...formData, code: e.target.value })}
+                                placeholder="e.g. PHY-402"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest px-1">Academic Level</label>
+                            <div className="h-11 px-4 flex items-center bg-slate-50 border border-[var(--card-border)] rounded-xl text-xs font-bold text-[var(--text-muted)] cursor-not-allowed">
+                                Level 4 (Auto-assigned)
+                            </div>
+                        </div>
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Description</label>
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest px-1">Pedagogical Objectives</label>
                         <textarea
-                            rows={3}
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-theme-primary transition-all focus:ring-4 focus:ring-primary/10 resize-none"
+                            rows={4}
+                            className="input-field-modern !py-3 resize-none"
                             value={formData.description}
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
-                            placeholder="Brief overview of course objectives..."
+                            placeholder="Define the core competencies and learning outcomes..."
                         />
                     </div>
 
-                    <div className="pt-4 flex gap-3">
+                    <div className="pt-4 flex gap-4">
                         <button
                             type="button"
                             onClick={() => setIsModalOpen(false)}
-                            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                            className="btn-ghost flex-1 !py-3.5"
                         >
-                            Cancel
+                            Abort
                         </button>
                         <button
                             type="submit"
                             disabled={isSaving}
-                            className="flex-1 px-4 py-2.5 rounded-xl bg-theme-primary text-white text-sm font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+                            className="btn-primary flex-1 !py-3.5"
                         >
-                            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                            Create Course
+                            {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                            Finalize Architecture
                         </button>
                     </div>
                 </form>

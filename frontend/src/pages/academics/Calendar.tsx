@@ -81,7 +81,7 @@ const Calendar: React.FC = () => {
           title: t.subject_name,
           subtitle: `${t.classroom_name} • ${t.teacher_name || 'Staff'}`,
           type: 'class',
-          color: 'bg-indigo-50 text-indigo-700 border-indigo-100 ring-indigo-500/10',
+          color: 'bg-primary/5 text-indigo-700 border-indigo-100 ring-indigo-500/10',
           icon: <Clock size={12} />
         });
       });
@@ -198,35 +198,35 @@ const Calendar: React.FC = () => {
   return (
     <div className="p-8 space-y-6 min-h-screen bg-slate-50/50">
       {/* Top Navigation & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-[var(--card-bg)] p-6 rounded-[2rem] border border-[var(--card-border)] shadow-sm">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-primary/10 rounded-2xl text-primary">
             {isLoading ? <Loader2 size={24} className="animate-spin" /> : <CalendarIcon size={24} />}
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-black text-[var(--text-main)] tracking-tight">
               {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
             </h1>
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Global Academic Calendar</p>
+            <p className="text-[var(--text-muted)] text-xs font-bold uppercase tracking-widest">Global Academic Calendar</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-primary transition-colors" size={16} />
             <input
               type="text"
               placeholder="Search events..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 pr-4 py-2.5 bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary rounded-xl text-sm font-medium transition-all w-64"
+              className="pl-11 pr-4 py-2.5 bg-slate-50 border-transparent focus:bg-[var(--card-bg)] focus:ring-2 focus:ring-primary/20 focus:border-primary rounded-xl text-sm font-medium transition-all w-64"
             />
           </div>
 
-          <div className="flex items-center bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+          <div className="flex items-center bg-slate-50 p-1.5 rounded-xl border border-[var(--card-border)]">
             <button
               onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}
-              className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-slate-500"
+              className="p-2 hover:bg-[var(--card-bg)] hover:shadow-sm rounded-lg transition-all text-[var(--text-muted)]"
             >
               <ChevronLeft size={18} />
             </button>
@@ -238,14 +238,14 @@ const Calendar: React.FC = () => {
             </button>
             <button
               onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}
-              className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-slate-500"
+              className="p-2 hover:bg-[var(--card-bg)] hover:shadow-sm rounded-lg transition-all text-[var(--text-muted)]"
             >
               <ChevronRight size={18} />
             </button>
           </div>
 
           {isAdmin && (
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10">
+            <button className="flex items-center gap-2 px-5 py-2.5 bg-surface-dark text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-theme/10">
               <Plus size={18} />
               <span>Create</span>
             </button>
@@ -256,10 +256,10 @@ const Calendar: React.FC = () => {
       <div className="grid grid-cols-12 gap-8">
         {/* Main Calendar Grid */}
         <div className="col-span-12 lg:col-span-9 space-y-6">
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden">
-            <div className="grid grid-cols-7 bg-slate-50/50 border-b border-slate-100">
+          <div className="bg-[var(--card-bg)] rounded-[2.5rem] border border-[var(--card-border)] shadow-xl shadow-slate-200/40 overflow-hidden">
+            <div className="grid grid-cols-7 bg-slate-50/50 border-b border-[var(--card-border)]">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                <div key={day} className="py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                <div key={day} className="py-4 text-center text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">
                   {day}
                 </div>
               ))}
@@ -284,7 +284,7 @@ const Calendar: React.FC = () => {
                     <div className="flex items-center justify-between mb-2">
                       <span className={`
                         text-xs font-black w-7 h-7 flex items-center justify-center rounded-full transition-all
-                        ${isToday ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-110' : 'text-slate-400 group-hover:text-slate-600'}
+                        ${isToday ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-110' : 'text-[var(--text-muted)] group-hover:text-slate-600'}
                       `}>
                         {day.date.getDate()}
                       </span>
@@ -329,9 +329,9 @@ const Calendar: React.FC = () => {
         {/* Sidebar */}
         <div className="col-span-12 lg:col-span-3 space-y-6">
           {/* Filters Card */}
-          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+          <div className="bg-[var(--card-bg)] p-6 rounded-[2rem] border border-[var(--card-border)] shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest flex items-center gap-2">
                 <Filter size={14} />
                 Filters
               </h3>
@@ -339,7 +339,7 @@ const Calendar: React.FC = () => {
 
             <div className="space-y-3">
               {[
-                { id: 'class', label: 'Regular Classes', color: 'bg-indigo-500' },
+                { id: 'class', label: 'Regular Classes', color: 'bg-primary' },
                 { id: 'exam', label: 'Examinations', color: 'bg-purple-500' },
                 { id: 'birthday', label: 'Birthdays', color: 'bg-rose-500' },
                 { id: 'event', label: 'School Events', color: 'bg-emerald-500' }
@@ -350,27 +350,27 @@ const Calendar: React.FC = () => {
                   className={`
                     w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-sm font-bold
                     ${activeFilters.includes(filter.id)
-                      ? 'bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-900/10 translate-x-1'
-                      : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'}
+                      ? 'bg-surface-dark border-surface-dark text-white shadow-lg shadow-theme/10 translate-x-1'
+                      : 'bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-muted)] hover:border-[var(--card-border)]'}
                   `}
                 >
-                  <div className={`w-2 h-2 rounded-full ${activeFilters.includes(filter.id) ? 'bg-white' : filter.color}`} />
+                  <div className={`w-2 h-2 rounded-full ${activeFilters.includes(filter.id) ? 'bg-[var(--card-bg)]' : filter.color}`} />
                   {filter.label}
-                  {activeFilters.includes(filter.id) && <div className="ml-auto w-1 h-1 bg-white rounded-full" />}
+                  {activeFilters.includes(filter.id) && <div className="ml-auto w-1 h-1 bg-[var(--card-bg)] rounded-full" />}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Quick Info / Day Details */}
-          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm min-h-[300px]">
+          <div className="bg-[var(--card-bg)] p-6 rounded-[2rem] border border-[var(--card-border)] shadow-sm min-h-[300px]">
             {selectedDay ? (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-slate-900 font-black text-lg mb-1">
+                  <h3 className="text-[var(--text-main)] font-black text-lg mb-1">
                     {selectedDay.toLocaleDateString('default', { day: 'numeric', month: 'long' })}
                   </h3>
-                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                  <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest">
                     {selectedDay.toLocaleDateString('default', { weekday: 'long' })}
                   </p>
                 </div>
@@ -380,7 +380,7 @@ const Calendar: React.FC = () => {
                     getDayEvents(selectedDay).map((event, idx) => (
                       <div key={idx} className="group cursor-pointer">
                         <div className={`flex items-start gap-4 p-4 rounded-2xl border transition-all hover:shadow-md hover:-translate-y-0.5 ${event.color}`}>
-                          <div className="p-2 bg-white/50 rounded-xl">
+                          <div className="p-2 bg-[var(--card-bg)]/50 rounded-xl">
                             {event.icon}
                           </div>
                           <div className="min-w-0 flex-1">
@@ -388,7 +388,7 @@ const Calendar: React.FC = () => {
                             <p className="text-[10px] opacity-70 font-bold uppercase tracking-tight truncate">{event.subtitle}</p>
                             {event.start_time && (
                               <p className="text-[10px] mt-2 font-black flex items-center gap-1.5">
-                                <div className="p-1 bg-white/50 rounded-md">
+                                <div className="p-1 bg-[var(--card-bg)]/50 rounded-md">
                                   <Clock size={10} />
                                 </div>
                                 {event.start_time.substring(0, 5)} - {event.end_time.substring(0, 5)}
@@ -399,7 +399,7 @@ const Calendar: React.FC = () => {
                       </div>
                     ))
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400 opacity-50">
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-[var(--text-muted)] opacity-50">
                       <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                         <CalendarIcon size={20} />
                       </div>
@@ -413,8 +413,8 @@ const Calendar: React.FC = () => {
                 <div className="w-16 h-16 bg-slate-50 rounded-[1.5rem] flex items-center justify-center mb-6 text-slate-300">
                   <CalendarIcon size={32} />
                 </div>
-                <p className="text-slate-900 font-black mb-2">Select a date</p>
-                <p className="text-slate-400 text-xs font-medium px-4">Click any day on the calendar to view its full schedule and events.</p>
+                <p className="text-[var(--text-main)] font-black mb-2">Select a date</p>
+                <p className="text-[var(--text-muted)] text-xs font-medium px-4">Click any day on the calendar to view its full schedule and events.</p>
               </div>
             )}
           </div>

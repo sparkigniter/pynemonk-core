@@ -70,23 +70,23 @@ export default function StaffRegistration() {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate('/teachers')}
-                        className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm"
+                        className="p-3 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-slate-300 transition-all shadow-sm"
                     >
                         <ArrowLeft size={20} />
                     </button>
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <Sparkles size={16} className="text-theme-primary" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Human Resources</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Human Resources</span>
                         </div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none">Register New Staff</h1>
+                        <h1 className="text-4xl font-black text-[var(--text-main)] tracking-tight leading-none">Register New Staff</h1>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-3">
                     <div className="text-right hidden md:block">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Progress</p>
-                        <p className="text-sm font-bold text-slate-900">{sections.findIndex(s => s.id === activeSection) + 1} / {sections.length} Sections</p>
+                        <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Progress</p>
+                        <p className="text-sm font-bold text-[var(--text-main)]">{sections.findIndex(s => s.id === activeSection) + 1} / {sections.length} Sections</p>
                     </div>
                     <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div
@@ -99,7 +99,7 @@ export default function StaffRegistration() {
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
                 {/* Navigation Sidebar */}
-                <div className="lg:sticky lg:top-8 space-y-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50">
+                <div className="lg:sticky lg:top-8 space-y-3 bg-[var(--card-bg)] p-4 rounded-[2rem] border border-[var(--card-border)] shadow-xl shadow-slate-200/50">
                     {sections.map((sec, i) => {
                         const Icon = sec.icon;
                         const isActive = activeSection === sec.id;
@@ -111,16 +111,16 @@ export default function StaffRegistration() {
                                 onClick={() => setActiveSection(sec.id)}
                                 className={`w-full group flex items-start gap-4 p-4 rounded-2xl transition-all duration-300 text-left
                                     ${isActive
-                                        ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 scale-[1.02]'
+                                        ? 'bg-surface-dark text-white shadow-xl shadow-theme/20 scale-[1.02]'
                                         : 'hover:bg-slate-50'}`}
                             >
                                 <div className={`mt-0.5 p-2 rounded-xl transition-colors
-                                    ${isActive ? 'bg-white/10 text-white' : isPast ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-slate-400'}`}>
+                                    ${isActive ? 'bg-[var(--card-bg)]/10 text-white' : isPast ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-[var(--text-muted)]'}`}>
                                     {isPast ? <CheckCircle2 size={16} /> : <Icon size={16} />}
                                 </div>
                                 <div className="min-w-0">
                                     <p className={`text-sm font-black tracking-tight ${isActive ? 'text-white' : 'text-slate-700'}`}>{sec.label}</p>
-                                    <p className={`text-[10px] font-medium truncate ${isActive ? 'text-white/60' : 'text-slate-400'}`}>{sec.description}</p>
+                                    <p className={`text-[10px] font-medium truncate ${isActive ? 'text-white/60' : 'text-[var(--text-muted)]'}`}>{sec.description}</p>
                                 </div>
                             </button>
                         );
@@ -129,7 +129,7 @@ export default function StaffRegistration() {
 
                 {/* Form Content */}
                 <div className="lg:col-span-3">
-                    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 overflow-hidden">
+                    <div className="bg-[var(--card-bg)] rounded-[2.5rem] border border-[var(--card-border)] shadow-2xl shadow-slate-200/40 overflow-hidden">
                         <div className="p-10">
                             {activeSection === 'identity' && (
                                 <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-400">
@@ -138,21 +138,21 @@ export default function StaffRegistration() {
                                             <User size={32} />
                                         </div>
                                         <div>
-                                            <h4 className="text-2xl font-black text-slate-900 tracking-tight">Basic Information</h4>
-                                            <p className="text-slate-400 font-medium">Please provide the legal name and personal details of the staff member.</p>
+                                            <h4 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Basic Information</h4>
+                                            <p className="text-[var(--text-muted)] font-medium">Please provide the legal name and personal details of the staff member.</p>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-8">
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">First Name *</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">First Name *</label>
                                             <div className="relative">
                                                 <User size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-theme-primary transition-colors" />
                                                 <input required className="input-field-premium pl-14" value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} placeholder="e.g. John" />
                                             </div>
                                         </div>
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Last Name *</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Last Name *</label>
                                             <div className="relative">
                                                 <User size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-theme-primary transition-colors" />
                                                 <input required className="input-field-premium pl-14" value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} placeholder="e.g. Doe" />
@@ -172,7 +172,7 @@ export default function StaffRegistration() {
                                             ]}
                                         />
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Date of Birth</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Date of Birth</label>
                                             <div className="relative">
                                                 <Calendar size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-theme-primary transition-colors" />
                                                 <input type="date" className="input-field-premium pl-14" value={formData.date_of_birth} onChange={e => setFormData({ ...formData, date_of_birth: e.target.value })} />
@@ -182,11 +182,11 @@ export default function StaffRegistration() {
 
                                     <div className="grid grid-cols-3 gap-8">
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Blood Group</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Blood Group</label>
                                             <input className="input-field-premium" value={formData.blood_group} onChange={e => setFormData({ ...formData, blood_group: e.target.value })} placeholder="O+" />
                                         </div>
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Nationality</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Nationality</label>
                                             <input className="input-field-premium" value={formData.nationality} onChange={e => setFormData({ ...formData, nationality: e.target.value })} />
                                         </div>
                                         <ComboBox
@@ -211,21 +211,21 @@ export default function StaffRegistration() {
                                             <BookOpen size={32} />
                                         </div>
                                         <div>
-                                            <h4 className="text-2xl font-black text-slate-900 tracking-tight">Professional Credentials</h4>
-                                            <p className="text-slate-400 font-medium">Information regarding their role and academic qualifications.</p>
+                                            <h4 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Professional Credentials</h4>
+                                            <p className="text-[var(--text-muted)] font-medium">Information regarding their role and academic qualifications.</p>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-8">
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Employee Code *</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Employee Code *</label>
                                             <div className="relative">
                                                 <ShieldCheck size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-theme-primary transition-colors" />
                                                 <input required className="input-field-premium pl-14" value={formData.employee_code} onChange={e => setFormData({ ...formData, employee_code: e.target.value })} placeholder="e.g. EMP102" />
                                             </div>
                                         </div>
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Designation *</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Designation *</label>
                                             <div className="relative">
                                                 <Star size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-theme-primary transition-colors" />
                                                 <input required className="input-field-premium pl-14" value={formData.designation} onChange={e => setFormData({ ...formData, designation: e.target.value })} placeholder="e.g. Senior Teacher" />
@@ -235,22 +235,22 @@ export default function StaffRegistration() {
 
                                     <div className="grid grid-cols-2 gap-8">
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Qualification</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Qualification</label>
                                             <input className="input-field-premium" value={formData.qualification} onChange={e => setFormData({ ...formData, qualification: e.target.value })} placeholder="e.g. M.Sc, B.Ed" />
                                         </div>
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Specialization</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Specialization</label>
                                             <input className="input-field-premium" value={formData.specialization} onChange={e => setFormData({ ...formData, specialization: e.target.value })} placeholder="e.g. Mathematics" />
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-8">
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Years of Experience</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Years of Experience</label>
                                             <input type="number" className="input-field-premium" value={formData.experience_years} onChange={e => setFormData({ ...formData, experience_years: parseInt(e.target.value) })} />
                                         </div>
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Date of Joining</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Date of Joining</label>
                                             <input type="date" className="input-field-premium" value={formData.joining_date} onChange={e => setFormData({ ...formData, joining_date: e.target.value })} />
                                         </div>
                                     </div>
@@ -264,21 +264,21 @@ export default function StaffRegistration() {
                                             <Mail size={32} />
                                         </div>
                                         <div>
-                                            <h4 className="text-2xl font-black text-slate-900 tracking-tight">Communication Details</h4>
-                                            <p className="text-slate-400 font-medium">How to reach the staff member and emergency protocols.</p>
+                                            <h4 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Communication Details</h4>
+                                            <p className="text-[var(--text-muted)] font-medium">How to reach the staff member and emergency protocols.</p>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-8">
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Official Email *</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Official Email *</label>
                                             <div className="relative">
                                                 <Mail size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-theme-primary transition-colors" />
                                                 <input required type="email" className="input-field-premium pl-14" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="staff@school.com" />
                                             </div>
                                         </div>
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Phone Number *</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Phone Number *</label>
                                             <div className="relative">
                                                 <Phone size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-theme-primary transition-colors" />
                                                 <input required className="input-field-premium pl-14" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="+1..." />
@@ -287,21 +287,21 @@ export default function StaffRegistration() {
                                     </div>
 
                                     <div className="space-y-3 group">
-                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Residential Address</label>
+                                        <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Residential Address</label>
                                         <div className="relative">
                                             <MapPin size={18} className="absolute left-5 top-5 text-slate-300 group-focus-within:text-theme-primary transition-colors" />
                                             <textarea rows={4} className="input-field-premium pl-14 py-4" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} placeholder="Full residential address..."></textarea>
                                         </div>
                                     </div>
 
-                                    <div className="bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100 space-y-6">
+                                    <div className="bg-slate-50/50 p-8 rounded-[2rem] border border-[var(--card-border)] space-y-6">
                                         <div className="flex items-center gap-3">
                                             <ShieldCheck size={20} className="text-theme-primary" />
                                             <h5 className="text-sm font-black text-slate-800 uppercase tracking-widest">Emergency Contact</h5>
                                         </div>
                                         <div className="grid grid-cols-2 gap-8">
-                                            <input className="input-field-premium bg-white shadow-sm" value={formData.emergency_contact_name} onChange={e => setFormData({ ...formData, emergency_contact_name: e.target.value })} placeholder="Contact Person Name" />
-                                            <input className="input-field-premium bg-white shadow-sm" value={formData.emergency_contact_phone} onChange={e => setFormData({ ...formData, emergency_contact_phone: e.target.value })} placeholder="Contact Person Phone" />
+                                            <input className="input-field-premium bg-[var(--card-bg)] shadow-sm" value={formData.emergency_contact_name} onChange={e => setFormData({ ...formData, emergency_contact_name: e.target.value })} placeholder="Contact Person Name" />
+                                            <input className="input-field-premium bg-[var(--card-bg)] shadow-sm" value={formData.emergency_contact_phone} onChange={e => setFormData({ ...formData, emergency_contact_phone: e.target.value })} placeholder="Contact Person Phone" />
                                         </div>
                                     </div>
                                 </div>
@@ -314,41 +314,41 @@ export default function StaffRegistration() {
                                             <CreditCard size={32} />
                                         </div>
                                         <div>
-                                            <h4 className="text-2xl font-black text-slate-900 tracking-tight">Finance & Identity</h4>
-                                            <p className="text-slate-400 font-medium">Payroll configuration and official government identification.</p>
+                                            <h4 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Finance & Identity</h4>
+                                            <p className="text-[var(--text-muted)] font-medium">Payroll configuration and official government identification.</p>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-8">
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Aadhaar (National ID)</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Aadhaar (National ID)</label>
                                             <input className="input-field-premium" value={formData.aadhaar_number} onChange={e => setFormData({ ...formData, aadhaar_number: e.target.value })} placeholder="1234 5678 9012" />
                                         </div>
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">PAN Card</label>
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">PAN Card</label>
                                             <input className="input-field-premium" value={formData.pan_number} onChange={e => setFormData({ ...formData, pan_number: e.target.value })} placeholder="ABCDE1234F" />
                                         </div>
                                     </div>
 
-                                    <div className="p-10 border-2 border-dashed border-slate-100 rounded-[2.5rem] space-y-8 bg-slate-50/20">
+                                    <div className="p-10 border-2 border-dashed border-[var(--card-border)] rounded-[2.5rem] space-y-8 bg-slate-50/20">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-400">
+                                            <div className="w-10 h-10 rounded-xl bg-[var(--card-bg)] shadow-sm flex items-center justify-center text-[var(--text-muted)]">
                                                 <CreditCard size={20} />
                                             </div>
                                             <h5 className="text-sm font-black text-slate-800 uppercase tracking-widest">Bank Account Details</h5>
                                         </div>
                                         <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Bank Name</label>
-                                            <input className="input-field-premium bg-white shadow-sm" value={formData.bank_name} onChange={e => setFormData({ ...formData, bank_name: e.target.value })} placeholder="e.g. Chase Bank, HDFC, etc." />
+                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Bank Name</label>
+                                            <input className="input-field-premium bg-[var(--card-bg)] shadow-sm" value={formData.bank_name} onChange={e => setFormData({ ...formData, bank_name: e.target.value })} placeholder="e.g. Chase Bank, HDFC, etc." />
                                         </div>
                                         <div className="grid grid-cols-2 gap-8">
                                             <div className="space-y-3 group">
-                                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Account Number</label>
-                                                <input className="input-field-premium bg-white shadow-sm font-mono" value={formData.bank_account_no} onChange={e => setFormData({ ...formData, bank_account_no: e.target.value })} placeholder="0000 0000 0000" />
+                                                <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Account Number</label>
+                                                <input className="input-field-premium bg-[var(--card-bg)] shadow-sm font-mono" value={formData.bank_account_no} onChange={e => setFormData({ ...formData, bank_account_no: e.target.value })} placeholder="0000 0000 0000" />
                                             </div>
                                             <div className="space-y-3 group">
-                                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">IFSC / Swift Code</label>
-                                                <input className="input-field-premium bg-white shadow-sm font-mono" value={formData.ifsc_code} onChange={e => setFormData({ ...formData, ifsc_code: e.target.value })} placeholder="SWIFT123" />
+                                                <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">IFSC / Swift Code</label>
+                                                <input className="input-field-premium bg-[var(--card-bg)] shadow-sm font-mono" value={formData.ifsc_code} onChange={e => setFormData({ ...formData, ifsc_code: e.target.value })} placeholder="SWIFT123" />
                                             </div>
                                         </div>
                                     </div>
@@ -360,7 +360,7 @@ export default function StaffRegistration() {
                                 <button
                                     type="button"
                                     onClick={() => navigate('/teachers')}
-                                    className="px-10 py-5 rounded-[1.5rem] border border-slate-200 text-sm font-black text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all active:scale-95"
+                                    className="px-10 py-5 rounded-[1.5rem] border border-[var(--card-border)] text-sm font-black text-[var(--text-muted)] hover:bg-slate-50 hover:text-slate-600 transition-all active:scale-95"
                                 >
                                     Cancel
                                 </button>
@@ -374,7 +374,7 @@ export default function StaffRegistration() {
                                                 setActiveSection(sections[currentIndex - 1].id);
                                                 window.scrollTo(0, 0);
                                             }}
-                                            className="px-10 py-5 rounded-[1.5rem] border border-slate-200 text-sm font-black text-slate-600 hover:bg-slate-50 transition-all active:scale-95"
+                                            className="px-10 py-5 rounded-[1.5rem] border border-[var(--card-border)] text-sm font-black text-slate-600 hover:bg-slate-50 transition-all active:scale-95"
                                         >
                                             Back
                                         </button>

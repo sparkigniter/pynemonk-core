@@ -34,4 +34,14 @@ export default class FeeCategoryHelper {
         );
         return res.rows[0];
     }
+
+    public async listInstallments(tenantId: number): Promise<any[]> {
+        const res = await this.db.query(
+            `SELECT * FROM accounting.fee_installment
+             WHERE tenant_id = $1 AND is_deleted = false
+             ORDER BY due_date ASC`,
+            [tenantId]
+        );
+        return res.rows;
+    }
 }

@@ -29,7 +29,7 @@ class AuthService {
         const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
 
         // persist user
-        const user = await this.userHelper.createUser(data.email, data.role_id);
+        const user = await this.userHelper.createUser(data.email, data.role_id, data.tenant_id);
 
         // persist credential
         await this.userHelper.createCredential(user.id, passwordHash);

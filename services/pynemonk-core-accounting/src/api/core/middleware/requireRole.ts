@@ -10,7 +10,9 @@ import pool from "../../../db/pg-pool.js";
 export function requireRole(allowedRoles?: string[], opts?: { minTier?: number }) {
     return async (req: e.Request, res: e.Response, next: e.NextFunction): Promise<void> => {
         const user = (req as any).user;
+        console.log(`[requireRole] Validating user: ${user?.email}, role_id: ${user?.role_id}`);
         if (!user || !user.role_id) {
+            console.error(`[requireRole] Access Denied: User or role_id missing from token. User: ${JSON.stringify(user)}`);
             res.status(403).json({ success: false, message: "Access denied. No role found." });
             return;
         }

@@ -22,4 +22,9 @@ router.post("/save", apiRateLimiter, sensitiveRateLimiter, requireAuth, requireP
     return controller.saveAttendance(req, res);
 });
 
+router.get("/stats/:studentId", apiRateLimiter, requireAuth, requirePermission(["student.attendance:read", "self.academic:read", "child.academic:read"]), (req, res) => {
+    const controller = container.resolve(AttendanceController);
+    return controller.getStudentStats(req, res);
+});
+
 export default router;

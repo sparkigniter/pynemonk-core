@@ -25,4 +25,8 @@ export default class FeeCategoryService {
     public async list(tenantId: number): Promise<any[]> {
         return this.feeCategoryHelper.list(tenantId);
     }
+
+    public async listInstallments(tenantId: number): Promise<any[]> {
+        return this.feeCategoryHelper.listInstallments(tenantId);
+    }
 }

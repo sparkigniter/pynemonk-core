@@ -9,9 +9,9 @@ export default class FeePaymentController extends BaseController {
         super();
     }
 
-    public async list(req: Request, res: Response) {
+    public async list(req: any, res: Response) {
         try {
-            const tenantId = (req as any).user.tenant_id;
+            const tenantId = req.user.tenantId;
             const payments = await this.feePaymentService.getPayments(tenantId);
             return this.ok(res, "Payments retrieved", payments);
         } catch (error: any) {
@@ -19,9 +19,9 @@ export default class FeePaymentController extends BaseController {
         }
     }
 
-    public async get(req: Request, res: Response) {
+    public async get(req: any, res: Response) {
         try {
-            const tenantId = (req as any).user.tenant_id;
+            const tenantId = req.user.tenantId;
             const id = parseInt(req.params.id);
             const payment = await this.feePaymentService.getPaymentById(tenantId, id);
             if (!payment) return this.notfound(res, "Payment not found");
@@ -31,23 +31,26 @@ export default class FeePaymentController extends BaseController {
         }
     }
 
-    public async create(req: Request, res: Response) {
+    public async create(req: any, res: Response) {
         try {
-            const tenantId = (req as any).user.tenant_id;
-            const userId = (req as any).user.id;
-            const payment = await this.feePaymentService.recordPayment(tenantId, { ...req.body, received_by: userId });
+            const tenantId = req.user.tenantId;
+            const userId = req.user.userId;
+            const payment = await this.feePaymentService.recordPayment(tenantId, userId, req.body);
             return this.ok(res, "Payment recorded successfully", payment);
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }
     }
 
-    public async delete(req: Request, res: Response) {
+    public async delete(req: any, res: Response) {
         try {
-            const tenantId = (req as any).user.tenant_id;
+            const tenantId = req.user.tenantId;
+            const userId = req.user.userId;
             const id = parseInt(req.params.id);
-            await this.feePaymentService.cancelPayment(tenantId, id);
-            return this.ok(res, "Payment cancelled successfully");
+            const { reason } = req.body;
+            
+            await this.feePaymentService.reversePayment(tenantId, userId, id, reason || "Manual reversal");
+            return this.ok(res, "Payment reversed successfully");
         } catch (error: any) {
             return this.internalservererror(res, error.message);
         }

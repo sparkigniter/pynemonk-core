@@ -9,6 +9,13 @@ export interface Homework {
     description: string;
     due_date: string;
     max_score: number;
+    assignment_type?: 'practice' | 'homework' | 'test' | 'project';
+    submission_type?: 'file' | 'text' | 'both';
+    max_attempts?: number;
+    allow_late?: boolean;
+    auto_close?: boolean;
+    is_graded?: boolean;
+    rubric?: string;
     attachment_url?: string;
     classroom_name?: string;
     subject_name?: string;
@@ -26,6 +33,8 @@ export const homeworkApi = {
     },
 
     create: (data: Partial<Homework>) => post<Homework>('/school/homework', data),
+
+    get: (id: number) => get<Homework>(`/school/homework/${id}`),
 
     update: (id: number, data: Partial<Homework>) => put<Homework>(`/school/homework/${id}`, data),
 

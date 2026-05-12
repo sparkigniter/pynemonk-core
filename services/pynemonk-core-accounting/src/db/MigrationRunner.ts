@@ -47,12 +47,13 @@ export async function runMigrations(pool: Pool): Promise<void> {
             return;
         }
 
-        console.log(`[MigrationRunner:accounting] Using migrations from: ${activeDir}`);
-
         const files = fs
             .readdirSync(activeDir)
             .filter((f) => f.endsWith(".sql"))
             .sort();
+
+        console.log(`[MigrationRunner:accounting] Found ${files.length} migration files in ${activeDir}`);
+
 
         // 3. Apply pending migrations
         for (const file of files) {
@@ -62,7 +63,7 @@ export async function runMigrations(pool: Pool): Promise<void> {
             );
 
             if (rows.length === 0) {
-                console.log(`[MigrationRunner:accounting] Applying migration: ${file}`);
+                console.log(`[MigrationRunner:accounting] APPLYING: ${file} ...`);
                 const sql = fs.readFileSync(path.join(activeDir, file), "utf8");
 
                 await client.query("BEGIN");
@@ -70,16 +71,21 @@ export async function runMigrations(pool: Pool): Promise<void> {
                     await client.query(sql);
                     await client.query("INSERT INTO accounting.migrations (name) VALUES ($1)", [file]);
                     await client.query("COMMIT");
-                    console.log(`[MigrationRunner:accounting] Successfully applied ${file}`);
+                    console.log(`[MigrationRunner:accounting] SUCCESS: ${file}`);
                 } catch (err: any) {
                     await client.query("ROLLBACK");
-                    console.error(`[MigrationRunner:accounting] FAILED to apply ${file}:`, err.message);
-                    throw err; // Stop the sequence on failure
+                    console.error(`[MigrationRunner:accounting] ERROR in ${file}:`, err.message);
+                    console.error(`[MigrationRunner:accounting] SQL Content:`, sql.substring(0, 200) + "...");
+                    throw err;
                 }
+            } else {
+                // Optional: verbose logging for already applied migrations
+                // console.log(`[MigrationRunner:accounting] Skip (already applied): ${file}`);
             }
         }
 
-        console.log("[MigrationRunner:accounting] All migrations are up to date.");
+        console.log("[MigrationRunner:accounting] Done. All migrations applied.");
+
     } catch (error: any) {
         console.error("[MigrationRunner:accounting] Fatal migration error:", error.message);
         throw error;

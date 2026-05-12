@@ -11,7 +11,8 @@
     "dev:auth": "npm run dev --workspace=services/pynemonk-core-auth",
     "build:all": "npm run build --workspace=services/pynemonk-core-auth && npm run build --workspace=apps/pynemonk-monolith",
     "start:monolith": "npm run start --workspace=apps/pynemonk-monolith",
-    "migrate": "npm run migrate --workspace=apps/pynemonk-monolith"
+    "migrate": "npm run migrate --workspace=apps/pynemonk-monolith",
+    "seed": "npm run seed --workspace=apps/pynemonk-monolith"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

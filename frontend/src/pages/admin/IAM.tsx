@@ -240,8 +240,8 @@ export default function IAM() {
     if (isBooting) {
         return (
             <div className="h-[80vh] flex flex-col items-center justify-center gap-6">
-                <div className="w-16 h-16 border-4 border-slate-100 border-t-primary rounded-full animate-spin" />
-                <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-[10px]">Initializing IAM...</p>
+                <div className="w-16 h-16 border-4 border-[var(--card-border)] border-t-primary rounded-full animate-spin" />
+                <p className="text-[var(--text-muted)] font-black uppercase tracking-[0.3em] text-[10px]">Initializing IAM...</p>
             </div>
         );
     }
@@ -249,21 +249,21 @@ export default function IAM() {
     // ── CLIENT LIST VIEW ──────────────────────────────────────────────────────
     if (view === 'CLIENT_LIST') {
         return (
-            <div className="p-8 bg-[#F8FAFC] min-h-[calc(100vh-100px)] rounded-[3rem] border border-slate-200 shadow-2xl flex flex-col gap-10">
+            <div className="p-8 bg-[#F8FAFC] min-h-[calc(100vh-100px)] rounded-[3rem] border border-[var(--card-border)] shadow-2xl flex flex-col gap-10">
                 <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
                         <div className="flex items-center gap-3 mb-3">
                             <div className="p-2 bg-primary/10 text-primary rounded-xl"><AppWindow size={20} /></div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Identity Orchestration</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--text-muted)]">Identity Orchestration</span>
                         </div>
-                        <h1 className="text-5xl font-black text-slate-900 tracking-tight">Select Application</h1>
-                        <p className="text-slate-500 font-semibold mt-2 text-lg">Choose a system to manage its roles and permissions.</p>
+                        <h1 className="text-5xl font-black text-[var(--text-main)] tracking-tight">Select Application</h1>
+                        <p className="text-[var(--text-muted)] font-semibold mt-2 text-lg">Choose a system to manage its roles and permissions.</p>
                     </div>
                     <div className="relative group min-w-[300px]">
                         <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" />
                         <input
                             type="text" placeholder="Search apps..."
-                            className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-primary/5 shadow-sm"
+                            className="w-full pl-14 pr-6 py-4 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-primary/5 shadow-sm"
                             value={clientSearch} onChange={e => setClientSearch(e.target.value)}
                         />
                     </div>
@@ -274,17 +274,17 @@ export default function IAM() {
                         <button
                             key={client.id}
                             onClick={() => enterClient(client.client_id)}
-                            className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl text-left group hover:scale-[1.02] hover:border-primary/20 transition-all duration-300"
+                            className="bg-[var(--card-bg)] p-8 rounded-[2.5rem] border border-[var(--card-border)] shadow-xl text-left group hover:scale-[1.02] hover:border-primary/20 transition-all duration-300"
                         >
-                            <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center font-black text-xl text-slate-400 group-hover:bg-primary group-hover:text-white transition-all duration-300 mb-6">
+                            <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center font-black text-xl text-[var(--text-muted)] group-hover:bg-primary group-hover:text-white transition-all duration-300 mb-6">
                                 {client.name[0]}
                             </div>
-                            <h3 className="text-xl font-black text-slate-900 tracking-tight mb-1">{client.name}</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">{client.client_id}</p>
+                            <h3 className="text-xl font-black text-[var(--text-main)] tracking-tight mb-1">{client.name}</h3>
+                            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-6">{client.client_id}</p>
                             <div className="flex items-center justify-between pt-6 border-t border-slate-50">
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active</span>
+                                    <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Active</span>
                                 </div>
                                 <ArrowRight size={18} className="text-slate-200 group-hover:text-primary group-hover:translate-x-2 transition-all duration-300" />
                             </div>
@@ -297,19 +297,19 @@ export default function IAM() {
 
     // ── CLIENT EDIT VIEW ──────────────────────────────────────────────────────
     return (
-        <div className="p-8 bg-[#F8FAFC] min-h-[calc(100vh-100px)] rounded-[3rem] border border-slate-200 shadow-2xl flex flex-col gap-8">
+        <div className="p-8 bg-[#F8FAFC] min-h-[calc(100vh-100px)] rounded-[3rem] border border-[var(--card-border)] shadow-2xl flex flex-col gap-8">
 
             {/* Header */}
             <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="flex items-center gap-6">
-                    <button onClick={goBack} className="p-4 bg-white border border-slate-200 text-slate-400 rounded-2xl hover:text-slate-900 transition-all active:scale-90 shadow-sm">
+                    <button onClick={goBack} className="p-4 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] rounded-2xl hover:text-[var(--text-main)] transition-all active:scale-90 shadow-sm">
                         <ChevronLeft size={24} />
                     </button>
                     <div>
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Editing Application</span>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4 mt-1">
+                        <h1 className="text-4xl font-black text-[var(--text-main)] tracking-tight flex items-center gap-4 mt-1">
                             {activeClient?.name}
-                            <span className="text-xs font-bold text-slate-300 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 uppercase tracking-widest">
+                            <span className="text-xs font-bold text-slate-300 bg-slate-50 px-3 py-1 rounded-lg border border-[var(--card-border)] uppercase tracking-widest">
                                 {activeClient?.client_id}
                             </span>
                         </h1>
@@ -326,16 +326,16 @@ export default function IAM() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 min-h-0">
 
                 {/* Left: Role List */}
-                <div className="lg:col-span-4 flex flex-col bg-white rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
+                <div className="lg:col-span-4 flex flex-col bg-[var(--card-bg)] rounded-[3rem] border border-[var(--card-border)] shadow-xl overflow-hidden">
                     <div className="p-8 border-b border-slate-50 space-y-4">
-                        <h3 className="text-sm font-black text-slate-900 flex items-center gap-3">
+                        <h3 className="text-sm font-black text-[var(--text-main)] flex items-center gap-3">
                             <Layers size={20} className="text-indigo-500" /> Context Roles
                         </h3>
                         <div className="relative">
                             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                             <input
                                 type="text" placeholder="Search roles..."
-                                className="w-full pl-12 pr-4 py-3 bg-slate-50 rounded-xl font-bold text-xs text-slate-700 outline-none focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all"
+                                className="w-full pl-12 pr-4 py-3 bg-slate-50 rounded-xl font-bold text-xs text-slate-700 outline-none focus:bg-[var(--card-bg)] focus:ring-2 focus:ring-primary/10 transition-all"
                                 value={roleSearch} onChange={e => setRoleSearch(e.target.value)}
                             />
                         </div>
@@ -354,17 +354,17 @@ export default function IAM() {
                                 onClick={() => selectRole(role.id)}
                                 className={`w-full p-5 rounded-2xl flex items-center justify-between transition-all
                                     ${activeRoleId === role.id
-                                        ? 'bg-slate-900 text-white shadow-xl'
-                                        : 'hover:bg-slate-50 text-slate-500'}`}
+                                        ? 'bg-surface-dark text-white shadow-xl'
+                                        : 'hover:bg-slate-50 text-[var(--text-muted)]'}`}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center
-                                        ${activeRoleId === role.id ? 'bg-white/10' : 'bg-slate-100'}`}>
-                                        <Target size={16} className={activeRoleId === role.id ? 'text-indigo-400' : 'text-slate-400'} />
+                                        ${activeRoleId === role.id ? 'bg-[var(--card-bg)]/10' : 'bg-slate-100'}`}>
+                                        <Target size={16} className={activeRoleId === role.id ? 'text-indigo-400' : 'text-[var(--text-muted)]'} />
                                     </div>
                                     <div className="text-left">
                                         <p className={`text-sm font-black ${activeRoleId === role.id ? 'text-white' : 'text-slate-800'}`}>{role.name}</p>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{role.slug}</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{role.slug}</p>
                                     </div>
                                 </div>
                                 {activeRoleId === role.id && <ChevronRight size={18} className="text-primary" />}
@@ -374,14 +374,14 @@ export default function IAM() {
                 </div>
 
                 {/* Right: Scope Manager */}
-                <div className="lg:col-span-8 flex flex-col bg-white rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
+                <div className="lg:col-span-8 flex flex-col bg-[var(--card-bg)] rounded-[3rem] border border-[var(--card-border)] shadow-xl overflow-hidden">
                     <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div>
                             <div className="flex items-center gap-3 mb-1">
                                 <Zap size={22} className="text-amber-500" />
-                                <h2 className="text-xl font-black text-slate-900">Scope Manager</h2>
+                                <h2 className="text-xl font-black text-[var(--text-main)]">Scope Manager</h2>
                             </div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
                                 {activeRole ? <>Editing: <span className="text-indigo-500">{activeRole.name}</span></> : 'Select a role to manage scopes'}
                             </p>
                         </div>
@@ -390,7 +390,7 @@ export default function IAM() {
                             <button
                                 onClick={() => handleBulk('SYNC')}
                                 disabled={isBusy || isLoadingRoleScopes || !activeRoleId}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all shadow-sm active:scale-95 disabled:opacity-40"
+                                className="flex items-center gap-2 px-5 py-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all shadow-sm active:scale-95 disabled:opacity-40"
                             >
                                 <HistoryIcon size={14} /> Sync Definition
                             </button>
@@ -416,8 +416,8 @@ export default function IAM() {
 
                     <div className="flex-1 overflow-y-auto p-8 space-y-10">
                         {/* Persona Presets */}
-                        <div className="bg-slate-50/50 rounded-[2rem] p-6 border border-slate-100">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Business Persona Presets</h4>
+                        <div className="bg-slate-50/50 rounded-[2rem] p-6 border border-[var(--card-border)]">
+                            <h4 className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-4 ml-1">Business Persona Presets</h4>
                             <div className="flex flex-wrap gap-3">
                                 {[
                                     { id: 'PRESET_TEACHER', label: 'Classroom Teacher', icon: UserCheck, color: 'text-sky-600 bg-sky-50' },
@@ -439,7 +439,7 @@ export default function IAM() {
 
                         {isLoadingRoleScopes ? (
                             <div className="flex items-center justify-center h-40 gap-3 text-slate-300">
-                                <div className="w-6 h-6 border-2 border-slate-200 border-t-primary rounded-full animate-spin" />
+                                <div className="w-6 h-6 border-2 border-[var(--card-border)] border-t-primary rounded-full animate-spin" />
                                 <span className="text-xs font-bold">Loading scopes...</span>
                             </div>
                         ) : (
@@ -447,9 +447,9 @@ export default function IAM() {
                                 {Object.entries(groupedScopes).sort(([a], [b]) => a.localeCompare(b)).map(([category, catScopes]) => (
                                     <div key={category} className="space-y-4">
                                         <div className="flex items-center gap-4 px-2">
-                                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">{category}</h3>
+                                            <h3 className="text-xs font-black text-[var(--text-main)] uppercase tracking-[0.2em]">{category}</h3>
                                             <div className="flex-1 h-[1px] bg-slate-100" />
-                                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">{catScopes.length} PERMISSIONS</span>
+                                            <span className="text-[10px] font-bold text-[var(--text-muted)] bg-slate-50 px-2 py-0.5 rounded-full">{catScopes.length} PERMISSIONS</span>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
                                             {catScopes.map(scope => {
@@ -463,18 +463,18 @@ export default function IAM() {
                                                         className={`group p-5 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col gap-3 disabled:cursor-not-allowed
                                                             ${granted
                                                                 ? 'bg-emerald-50/30 border-emerald-400/30 hover:border-emerald-500'
-                                                                : 'bg-white border-slate-100 hover:border-slate-300'}`}
+                                                                : 'bg-[var(--card-bg)] border-[var(--card-border)] hover:border-slate-300'}`}
                                                     >
                                                         <div className="flex items-center justify-between">
                                                             <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest
-                                                                ${granted ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                                                ${granted ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-[var(--text-muted)]'}`}>
                                                                 {scope.value.split(':')[0]}
                                                             </span>
                                                             {granted && <CheckCircle2 size={15} className="text-emerald-500" />}
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors">{scope.value}</p>
-                                                            <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">{scope.description || 'Granular access policy'}</p>
+                                                            <p className="text-sm font-black text-[var(--text-main)] group-hover:text-primary transition-colors">{scope.value}</p>
+                                                            <p className="text-[10px] text-[var(--text-muted)] mt-1 line-clamp-1">{scope.description || 'Granular access policy'}</p>
                                                         </div>
                                                     </button>
                                                 );
@@ -491,35 +491,35 @@ export default function IAM() {
             {/* Create Role Modal */}
             {showCreateRole && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowCreateRole(false)} />
-                    <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden border border-slate-100">
+                    <div className="absolute inset-0 modal-overlay backdrop-blur-md" onClick={() => setShowCreateRole(false)} />
+                    <div className="bg-[var(--card-bg)] w-full max-w-lg rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden border border-[var(--card-border)]">
                         <div className="p-8 border-b border-slate-50 flex items-center justify-between">
                             <div>
-                                <h3 className="text-xl font-black text-slate-900">Create Context Role</h3>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">App: {activeClient?.name}</p>
+                                <h3 className="text-xl font-black text-[var(--text-main)]">Create Context Role</h3>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mt-1">App: {activeClient?.name}</p>
                             </div>
-                            <button onClick={() => setShowCreateRole(false)} className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-slate-900 transition-all">
+                            <button onClick={() => setShowCreateRole(false)} className="p-3 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">
                                 <X size={18} />
                             </button>
                         </div>
                         <div className="p-8 space-y-5">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Role Name</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Role Name</label>
                                 <div className="relative">
                                     <Target size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" />
                                     <input type="text" placeholder="e.g. Senior Faculty"
-                                        className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:bg-white focus:border-primary/20 transition-all"
+                                        className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-[var(--card-border)] rounded-xl font-bold text-slate-700 outline-none focus:bg-[var(--card-bg)] focus:border-primary/20 transition-all"
                                         value={newRole.name}
                                         onChange={e => setNewRole({ ...newRole, name: e.target.value })}
                                     />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Slug Identifier</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Slug Identifier</label>
                                 <div className="relative">
                                     <LockIcon size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" />
                                     <input type="text" placeholder="e.g. senior_teacher"
-                                        className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:bg-white focus:border-primary/20 transition-all"
+                                        className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-[var(--card-border)] rounded-xl font-bold text-slate-700 outline-none focus:bg-[var(--card-bg)] focus:border-primary/20 transition-all"
                                         value={newRole.slug}
                                         onChange={e => setNewRole({ ...newRole, slug: e.target.value.toLowerCase().replace(/ /g, '_') })}
                                     />
@@ -528,7 +528,7 @@ export default function IAM() {
                             <button
                                 onClick={handleCreateRole}
                                 disabled={isBusy || !newRole.name || !newRole.slug}
-                                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                className="w-full py-5 bg-surface-dark text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                             >
                                 {isBusy ? 'Creating...' : 'Deploy New Role'}
                             </button>

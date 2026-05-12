@@ -23,4 +23,8 @@ homeworkRouter.delete("/:id", apiRateLimiter, sensitiveRateLimiter, requireAuth,
     container.resolve(HomeworkController).delete(req, res),
 );
 
+homeworkRouter.get("/:id", apiRateLimiter, requireAuth, requirePermission(["assignment:read"]), (req, res) =>
+    container.resolve(HomeworkController).getById(req, res),
+);
+
 export default homeworkRouter;

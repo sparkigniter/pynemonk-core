@@ -66,8 +66,8 @@ const Login: React.FC = () => {
                                 style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}>
                                 <Building2 size={32} className="text-white" />
                             </div>
-                            <h2 className="text-2xl font-bold text-slate-900 font-heading">Choose your school</h2>
-                            <p className="text-slate-500 text-sm mt-1.5">Multiple schools are associated with your account.</p>
+                            <h2 className="text-2xl font-bold text-[var(--text-main)] font-heading">Choose your school</h2>
+                            <p className="text-[var(--text-muted)] text-sm mt-1.5">Multiple schools are associated with your account.</p>
                         </div>
 
                         <div className="space-y-3">
@@ -75,14 +75,14 @@ const Login: React.FC = () => {
                                 <button
                                     key={t.id}
                                     onClick={() => handleSelectTenant(t.slug)}
-                                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-primary/20 transition-all group"
+                                    className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] shadow-sm hover:shadow-md hover:border-primary/20 transition-all group"
                                 >
                                     <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                                        <School size={20} className="text-slate-400 group-hover:text-primary" />
+                                        <School size={20} className="text-[var(--text-muted)] group-hover:text-primary" />
                                     </div>
                                     <div className="flex-1 text-left">
                                         <p className="font-bold text-slate-800">{t.name}</p>
-                                        <p className="text-xs text-slate-400">ID: {t.slug}</p>
+                                        <p className="text-xs text-[var(--text-muted)]">ID: {t.slug}</p>
                                     </div>
                                     <ArrowRight size={18} className="text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                                 </button>
@@ -96,7 +96,7 @@ const Login: React.FC = () => {
                         </button>
                         <button
                             onClick={() => setStep('LOGIN')}
-                            className="w-full mt-6 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                            className="w-full mt-6 text-sm font-semibold text-[var(--text-muted)] hover:text-slate-800 transition-colors"
                         >
                             Back to login
                         </button>
@@ -124,7 +124,7 @@ const Login: React.FC = () => {
 
                 {/* Logo */}
                 <div className="relative z-10 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-[var(--card-bg)]/20 backdrop-blur-sm flex items-center justify-center">
                         <School size={22} className="text-white" />
                     </div>
                     <span className="text-xl font-bold text-white font-heading tracking-wide">EduERP</span>
@@ -133,7 +133,7 @@ const Login: React.FC = () => {
                 {/* Center copy */}
                 <div className="relative z-10 space-y-6">
                     <div className="space-y-4">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 text-white/80 text-xs font-medium">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--card-bg)]/15 text-white/80 text-xs font-medium">
                             ✦ School Management Platform
                         </div>
                         <h1 className="text-4xl xl:text-5xl font-bold text-white font-heading leading-tight">
@@ -147,7 +147,7 @@ const Login: React.FC = () => {
                     {/* Feature chips */}
                     <div className="flex flex-wrap gap-2">
                         {['Student Management', 'Attendance Tracking', 'Fee Collection', 'Reports & Analytics'].map(f => (
-                            <span key={f} className="px-3 py-1.5 rounded-full bg-white/10 text-white/75 text-sm backdrop-blur-sm border border-white/10">
+                            <span key={f} className="px-3 py-1.5 rounded-full bg-[var(--card-bg)]/10 text-white/75 text-sm backdrop-blur-sm border border-white/10">
                                 {f}
                             </span>
                         ))}
@@ -183,8 +183,8 @@ const Login: React.FC = () => {
 
                     {/* Header */}
                     <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-slate-900 font-heading">Welcome back</h2>
-                        <p className="text-slate-500 text-sm mt-1.5">Sign in to your EduERP account to continue.</p>
+                        <h2 className="text-2xl font-bold text-[var(--text-main)] font-heading">Welcome back</h2>
+                        <p className="text-[var(--text-muted)] text-sm mt-1.5">Sign in to your EduERP account to continue.</p>
                     </div>
 
                     {/* Error banner */}
@@ -205,7 +205,7 @@ const Login: React.FC = () => {
                                 Email address
                             </label>
                             <div className="relative">
-                                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
                                 <input
                                     id="login-email"
                                     type="email"
@@ -213,7 +213,7 @@ const Login: React.FC = () => {
                                     value={email}
                                     onChange={e => setEmail(e.target.value)}
                                     placeholder="admin@eduerp.com"
-                                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--card-border)] text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                         </div>
@@ -232,7 +232,7 @@ const Login: React.FC = () => {
                                 </button>
                             </div>
                             <div className="relative">
-                                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
                                 <input
                                     id="login-password"
                                     type={showPass ? 'text' : 'password'}
@@ -240,13 +240,13 @@ const Login: React.FC = () => {
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-[var(--card-border)] text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                                 <button
                                     type="button"
                                     id="toggle-password"
                                     onClick={() => setShowPass(p => !p)}
-                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors"
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-primary transition-colors"
                                     tabIndex={-1}
                                 >
                                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -306,16 +306,16 @@ const Login: React.FC = () => {
                                         <Sparkles size={9} /> Free Trial
                                     </span>
                                 </div>
-                                <p className="text-xs text-slate-500 truncate">Set up your school in minutes. No credit card required.</p>
+                                <p className="text-xs text-[var(--text-muted)] truncate">Set up your school in minutes. No credit card required.</p>
                             </div>
 
-                            <ArrowRight size={18} className="text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0" />
+                            <ArrowRight size={18} className="text-[var(--text-muted)] group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0" />
                         </Link>
                     </div>
 
                     {/* Demo hint */}
                     <div className="mt-4 flex items-center justify-center gap-1.5">
-                        <span className="text-xs text-slate-400">Demo:</span>
+                        <span className="text-xs text-[var(--text-muted)]">Demo:</span>
                         <button
                             type="button"
                             id="use-demo-credentials"
@@ -328,7 +328,7 @@ const Login: React.FC = () => {
                     </div>
 
                     {/* Footer */}
-                    <p className="text-center text-xs text-slate-400 mt-6">
+                    <p className="text-center text-xs text-[var(--text-muted)] mt-6">
                         © {new Date().getFullYear()} EduERP · All rights reserved
                     </p>
                 </div>

@@ -19,7 +19,7 @@ interface DynamicNavItem {
 }
 const navigation = {
     main: [
-        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, permissions: [] },
+        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, permissions: ['report:read'] },
     ],
     academic: [
         { 
@@ -46,7 +46,7 @@ const navigation = {
         { name: 'Subjects', path: '/subjects', icon: BookOpen, permissions: ['class:read'], roleFilter: 'admin' },
         { name: 'Courses', path: '/courses', icon: BookOpen, permissions: ['class:read'], roleFilter: 'admin' },
         { name: 'Classrooms', path: '/classrooms', icon: Building2, permissions: ['class:read'], roleFilter: 'admin' },
-        { name: 'Timetable', path: '/timetable', icon: Clock, permissions: ['timetable:read'] },
+        { name: 'Timetable', path: '/timetable', icon: Clock, permissions: ['timetable:read'], roleFilter: 'admin' },
         { name: 'Exams', path: '/exams', icon: ClipboardList, permissions: ['exam:read'] },
         { name: 'Teacher Diary', path: '/teacher-diary', icon: StickyNote, permissions: ['teacher_note:read'] },
         { name: 'Homework', path: '/homework', icon: BookCheck, permissions: ['assignment:read'] },
@@ -54,8 +54,7 @@ const navigation = {
     ],
     people: [
         { name: 'Students', path: '/students', icon: GraduationCap, permissions: ['student:read', 'student.directory:read'] },
-        { name: 'Teachers', path: '/teachers', icon: Users, permissions: ['staff:read'] },
-        { name: 'Staff Directory', path: '/staff-directory', icon: Users, permissions: ['staff.directory:read'] },
+        { name: 'Faculty Records', path: '/teachers', icon: Users, permissions: ['staff:read', 'staff.directory:read'] },
         { name: 'Attendance', path: '/attendance', icon: CalendarCheck, permissions: ['student.attendance:read'] },
     ],
     operations: [
@@ -64,15 +63,29 @@ const navigation = {
             icon: Sparkles,
             permissions: ['user:invite', 'student:write', 'staff:write'],
             children: [
-                { name: 'Teachers', path: '/onboarding/teachers', permissions: ['staff:write'] },
-                { name: 'Students', path: '/onboarding/students', permissions: ['student:write'] },
-                { name: 'Workflow', path: '/workflow-builder', permissions: ['settings:write'] },
+                { name: 'Talent Recruitment', path: '/onboarding/teachers', permissions: ['staff:write'] },
+                { name: 'Student Admission', path: '/onboarding/students', permissions: ['student:write'] },
+                { name: 'Workflow Builder', path: '/workflow-builder', permissions: ['settings:write'] },
             ]
         },
-        { name: 'Finance', path: '/finance', icon: DollarSign, permissions: ['fee:read'] },
+        { 
+            name: 'Accounting', 
+            icon: DollarSign, 
+            permissions: ['accounting:read'],
+            children: [
+                { name: 'Workspace Hub', path: '/accounting/hub', permissions: ['fee:read'] },
+                { name: 'Accounts Payable', path: '/accounting/ap', permissions: ['accounting:read'] },
+                { name: 'Accounts Receivable', path: '/finance', permissions: ['fee:read'] },
+                { name: 'General Ledger', path: '/accounting/coa', permissions: ['coa:read'] },
+                { name: 'Banking & Cash', path: '/accounting/banking', permissions: ['accounting:read'] },
+                { name: 'Financial Reports', path: '/accounting/reports', permissions: ['report.financial:read'] },
+                { name: 'Fixed Assets', path: '#', permissions: ['accounting:write'], isPro: true },
+                { name: 'Journal Entries', path: '/accounting/journals', permissions: ['journal:read'] },
+            ]
+        },
         { name: 'Reports', path: '/reports', icon: BarChart2, permissions: ['report:read'] },
         { name: 'Integrations', path: '/integrations', icon: Zap, permissions: ['settings:write'] },
-        { name: 'IAM', path: '/iam', icon: Shield, permissions: ['settings:write'] },
+        { name: 'IAM Settings', path: '/iam', icon: Shield, permissions: ['settings:write'] },
         { name: 'Rollover', path: '/rollover', icon: RefreshCw, permissions: ['settings:write'] },
     ],
 };
@@ -147,7 +160,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
         navigate('/login', { state: { schoolSlug: slug } });
     };
 
-    const renderNavItem = (item: any, idx: number, isChild = false) => {
+    const renderNavItem = (item: any, isChild = false) => {
         if (!hasPermission(item)) return null;
 
         const Icon = item.icon;
@@ -162,29 +175,29 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                         className={`
                             w-full group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
                             ${collapsed ? 'justify-center' : ''}
-                            text-white/55 hover:text-white hover:bg-white/8
+                            text-[var(--sidebar-text)] hover:bg-white/5 hover:text-[var(--sidebar-text-active)]
                         `}
                     >
                         <div
                             className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
-                                text-white/50 group-hover:text-white group-hover:bg-white/10`}
+                                text-slate-500 group-hover:text-[var(--sidebar-text-active)]`}
                         >
-                            <Icon size={17} />
+                            <Icon size={18} />
                         </div>
                         {!collapsed && (
                             <>
-                                <span className="text-sm font-medium flex-1 text-left">{item.name}</span>
+                                <span className="text-[13px] font-medium flex-1 text-left">{item.name}</span>
                                 <ChevronDown
                                     size={14}
-                                    className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                    className={`transition-transform duration-200 opacity-40 ${isExpanded ? 'rotate-180' : ''}`}
                                 />
                             </>
                         )}
                     </button>
 
                     {!collapsed && isExpanded && (
-                        <div className="ml-4 pl-4 border-l border-white/10 space-y-1 animate-slide-down">
-                            {item.children.map((child: any, cIdx: number) => renderNavItem(child, cIdx, true))}
+                        <div className="ml-7 pl-3 border-l border-white/10 space-y-1 mt-1">
+                            {item.children.map((child: any) => renderNavItem(child, true))}
                         </div>
                     )}
                 </div>
@@ -197,41 +210,32 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                 to={item.path}
                 title={collapsed && !isChild ? item.name : undefined}
                 className={({ isActive }) =>
-                    `group flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 relative
+                    `group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
                     ${collapsed && !isChild ? 'justify-center' : ''}
-                    ${isActive ? 'text-white' : 'text-white/55 hover:text-white hover:bg-white/8'}`
+                    ${isActive 
+                        ? 'bg-[var(--sidebar-active)] text-[var(--sidebar-text-active)] font-bold' 
+                        : 'text-[var(--sidebar-text)] hover:bg-white/5 hover:text-[var(--sidebar-text-active)]'}`
                 }
-                style={({ isActive }) => ({
-                    animationDelay: `${idx * 50}ms`,
-                    ...(isActive ? { background: 'var(--sidebar-active)' } : {}),
-                })}
             >
                 {({ isActive }) => (
                     <>
-                        {isActive && !isChild && (
-                            <span
-                                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
-                                style={{ background: 'var(--sidebar-dot)' }}
-                            />
-                        )}
-                        {!isChild && (
-                            <div
-                                className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
-                                    ${isActive ? 'text-white' : 'text-white/50 group-hover:text-white group-hover:bg-white/10'}`}
-                                style={isActive ? { background: 'rgba(255,255,255,0.18)' } : {}}
-                            >
-                                <Icon size={17} />
-                            </div>
-                        )}
+                        <div
+                            className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
+                                ${isActive ? 'text-[var(--sidebar-text-active)]' : 'text-slate-500 group-hover:text-[var(--sidebar-text-active)]'}`}
+                        >
+                            <Icon size={18} />
+                        </div>
                         {(!collapsed || isChild) && (
-                            <>
-                                <span className={`text-sm font-medium flex-1 ${isChild ? 'text-xs opacity-80' : ''}`}>
+                            <div className="flex-1 flex items-center justify-between gap-2 overflow-hidden">
+                                <span className={`text-[13px] truncate ${isChild ? 'text-[12px] opacity-80' : ''}`}>
                                     {item.name}
                                 </span>
-                            </>
-                        )}
-                        {isChild && isActive && (
-                            <div className="w-1 h-1 rounded-full bg-white/40" />
+                                {item.isPro && (
+                                    <span className="text-[8px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded-md uppercase tracking-tighter shrink-0 border border-primary/10">
+                                        PRO
+                                    </span>
+                                )}
+                            </div>
                         )}
                     </>
                 )}
@@ -242,32 +246,31 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
     return (
         <aside
             className={`
-                ${collapsed ? 'w-20' : 'w-64'} 
+                ${collapsed ? 'w-20' : 'w-[280px]'} 
                 flex flex-col h-screen fixed top-0 left-0 z-[60] transition-all duration-300 ease-in-out
                 ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-                md:flex
+                md:flex border-r border-white/5 bg-gradient-sidebar
             `}
-            style={{ background: 'linear-gradient(160deg, var(--sidebar-from) 0%, var(--sidebar-via) 40%, var(--sidebar-to) 100%)' }}
         >
             {/* Logo & Switcher */}
-            <div className={`relative h-16 flex items-center border-b border-white/10 ${collapsed ? 'justify-center px-2' : 'px-4 gap-3'}`}>
+            <div className={`relative h-20 flex items-center border-b border-white/5 ${collapsed ? 'justify-center px-2' : 'px-6 gap-3'}`}>
                 <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
-                    style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0"
+                    style={{ background: 'var(--primary)' }}
                 >
-                    <School className="w-5 h-5 text-white" />
+                    <School className="w-6 h-6 text-white" />
                 </div>
 
                 {!collapsed && (
                     <div className="flex-1 min-w-0 cursor-pointer group" onClick={() => setShowSwitcher(!showSwitcher)}>
                         <div className="flex items-center gap-1">
-                            <span className="text-sm font-bold text-white font-heading tracking-wide truncate">
-                                {currentTenant?.name || 'EduERP'}
+                            <span className="text-sm font-bold text-[var(--sidebar-text-active)] font-heading tracking-tight truncate">
+                                {currentTenant?.name || 'Pynemonk'}
                             </span>
-                            {tenants.length > 1 && <ChevronDown size={14} className={`text-white/40 transition-transform ${showSwitcher ? 'rotate-180' : ''}`} />}
+                            {tenants.length > 1 && <ChevronDown size={14} className="text-slate-400 transition-transform group-hover:text-primary" />}
                         </div>
-                        <p className="text-[10px] leading-none" style={{ color: 'var(--sidebar-dot)', opacity: 0.8 }}>
-                            {tenants.length > 1 ? 'Switch School' : 'School Manager'}
+                        <p className="text-[10px] font-semibold text-[var(--text-muted)]">
+                            {tenants.length > 1 ? 'Switch Workspace' : 'Core Platform'}
                         </p>
                     </div>
                 )}
@@ -276,32 +279,26 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                 {showSwitcher && !collapsed && (
                     <div
                         ref={switcherRef}
-                        className="absolute top-full left-4 right-4 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 animate-scale-in origin-top"
+                        className="absolute top-[80%] left-4 right-4 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 animate-scale-in origin-top"
                     >
                         {tenantFetchError ? (
                             <div className="px-4 py-3">
                                 <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-1">Error Loading Schools</p>
                                 <p className="text-xs text-slate-500 leading-relaxed">{tenantFetchError}</p>
-                                <button
-                                    onClick={() => window.location.reload()}
-                                    className="mt-2 text-[10px] font-bold text-primary hover:opacity-80 underline"
-                                >
-                                    Retry Now
-                                </button>
                             </div>
                         ) : (
                             <>
-                                <p className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Your Schools</p>
+                                <p className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Workspaces</p>
                                 {tenants.map(t => (
                                     <button
                                         key={t.id}
                                         onClick={() => handleSwitch(t.slug)}
                                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors
-                                            ${t.id === user?.tenant_id ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-50'}`}
+                                            ${t.id === user?.tenant_id ? 'bg-primary/5 text-primary' : 'text-slate-600 hover:bg-slate-50'}`}
                                     >
-                                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center 
-                                            ${t.id === user?.tenant_id ? 'bg-primary/20' : 'bg-slate-100'}`}>
-                                            <Building2 size={14} />
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center 
+                                            ${t.id === user?.tenant_id ? 'bg-primary/10' : 'bg-slate-100'}`}>
+                                            <Building2 size={15} />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs font-bold truncate">{t.name}</p>
@@ -318,7 +315,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                 {setMobileOpen && (
                     <button
                         onClick={() => setMobileOpen(false)}
-                        className="md:hidden text-white/50 hover:text-white p-2"
+                        className="md:hidden text-slate-400 hover:text-slate-600 p-2"
                     >
                         <X size={20} />
                     </button>
@@ -327,7 +324,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                 {!collapsed && (
                     <button
                         onClick={() => setCollapsed(true)}
-                        className="text-white/40 hover:text-white transition-colors p-1 hidden md:block"
+                        className="text-slate-500 hover:text-[var(--sidebar-text-active)] transition-colors p-1 hidden md:block"
                         title="Collapse"
                     >
                         <ChevronRight size={16} />
@@ -338,56 +335,54 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
             {collapsed && (
                 <button
                     onClick={() => setCollapsed(false)}
-                    className="mt-3 mx-auto text-white/40 hover:text-white transition-colors p-1"
+                    className="mt-4 mx-auto text-slate-400 hover:text-primary transition-colors p-1"
                 >
-                    <ChevronRight size={16} className="rotate-180" />
+                    <ChevronRight size={18} className="rotate-180" />
                 </button>
             )}
 
-            {!collapsed && (
-                <p className="px-5 pt-5 pb-1 text-xs font-semibold text-white/30 uppercase tracking-widest">
-                    Main Menu
-                </p>
-            )}
-
             {/* Nav */}
-            <nav className="flex-1 py-3 px-2 space-y-6 overflow-y-auto custom-scrollbar">
+            <nav className="flex-1 py-6 px-3 space-y-7 overflow-y-auto custom-scrollbar">
                 {/* Main */}
-                <div className="space-y-0.5">
-                    {navigation.main.map((item, idx) => renderNavItem(item, idx))}
-                </div>
-
-                {/* Academic */}
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                     {!collapsed && (
-                        <p className="px-3 pb-2 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
-                            Academic
+                        <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                            Overview
                         </p>
                     )}
-                    {navigation.academic.map((item, idx) => renderNavItem(item, idx))}
-                    {dynamicItems.filter(i => i.group === 'academic').map((item, idx) => renderNavItem(item, idx + 100))}
+                    {navigation.main.map((item) => renderNavItem(item))}
                 </div>
 
-                {/* People */}
-                <div className="space-y-0.5">
+                {/* People - Consistently placed */}
+                <div className="space-y-1">
                     {!collapsed && (
-                        <p className="px-3 pb-2 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
+                        <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
                             People
                         </p>
                     )}
-                    {navigation.people.map((item, idx) => renderNavItem(item, idx))}
-                    {dynamicItems.filter(i => i.group === 'people').map((item, idx) => renderNavItem(item, idx + 200))}
+                    {navigation.people.map((item) => renderNavItem(item))}
+                </div>
+
+                {/* Academic */}
+                <div className="space-y-1">
+                    {!collapsed && (
+                        <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                            Academic
+                        </p>
+                    )}
+                    {navigation.academic.map((item) => renderNavItem(item))}
+                    {dynamicItems.filter(i => i.group === 'academic').map((item) => renderNavItem(item))}
                 </div>
 
                 {/* Operations */}
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                     {!collapsed && (
-                        <p className="px-3 pb-2 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
+                        <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
                             Operations
                         </p>
                     )}
-                    {navigation.operations.map((item, idx) => renderNavItem(item, idx))}
-                    {dynamicItems.filter(i => i.group === 'operations' || !i.group).map((item, idx) => renderNavItem(item, idx + 300))}
+                    {navigation.operations.map((item) => renderNavItem(item))}
+                    {dynamicItems.filter(i => i.group === 'operations' || !i.group).map((item) => renderNavItem(item))}
                 </div>
 
                 <div className="pt-4 border-t border-white/5">
@@ -397,25 +392,18 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                         className={({ isActive }) =>
                             `group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
                             ${collapsed ? 'justify-center' : ''}
-                            ${isActive ? 'bg-white/10 text-white shadow-sm' : 'text-white/60 hover:bg-white/5 hover:text-white'}`
+                            ${isActive ? 'bg-[var(--sidebar-active)] text-[var(--primary)] font-bold' : 'text-[var(--sidebar-text)] hover:bg-slate-200/50 hover:text-[var(--text-main)]'}`
                         }
                     >
                         {({ isActive }) => (
                             <>
-                                {isActive && !collapsed && (
-                                    <span
-                                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
-                                        style={{ background: 'var(--sidebar-dot)' }}
-                                    />
-                                )}
                                 <div
                                     className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
-                                        ${isActive ? 'text-white' : 'text-white/50 group-hover:text-white group-hover:bg-white/10'}`}
-                                    style={isActive ? { background: 'rgba(255,255,255,0.18)' } : {}}
+                                        ${isActive ? 'text-[var(--sidebar-text-active)]' : 'text-slate-500 group-hover:text-[var(--sidebar-text-active)]'}`}
                                 >
-                                    <Settings size={17} />
+                                    <Settings size={18} />
                                 </div>
-                                {!collapsed && <span className="text-sm font-medium flex-1">Settings</span>}
+                                {!collapsed && <span className="text-[13px] flex-1">Settings</span>}
                             </>
                         )}
                     </NavLink>
@@ -423,31 +411,36 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
             </nav>
 
             {/* User profile */}
-            <div className={`p-3 border-t border-white/10 ${collapsed ? 'flex justify-center' : ''}`}>
+            <div className={`p-4 border-t border-white/5 ${collapsed ? 'flex justify-center' : ''}`}>
                 {collapsed ? (
                     <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm cursor-pointer"
-                        style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs cursor-pointer shadow-sm"
+                        style={{ background: 'var(--primary)' }}
                         onClick={logout}
                     >
                         {user?.email?.substring(0, 2).toUpperCase() || 'AD'}
                     </div>
                 ) : (
                     <div
-                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/8 transition-colors cursor-pointer group"
-                        onClick={logout}
+                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group"
+                        onClick={() => navigate('/settings')}
                     >
                         <div
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                            style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-sm"
+                            style={{ background: 'var(--primary)' }}
                         >
                             {user?.email?.substring(0, 2).toUpperCase() || 'AD'}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white truncate">{user?.email?.split('@')[0] || 'User'}</p>
-                            <p className="text-xs text-white/40 truncate">{user?.email || 'admin@eduerp.com'}</p>
+                            <p className="text-[13px] font-bold text-[var(--sidebar-text-active)] truncate">{user?.email?.split('@')[0] || 'User'}</p>
+                            <p className="text-[10px] text-[var(--text-muted)] truncate font-medium">Administrator</p>
                         </div>
-                        <LogOut size={15} className="text-white/30 group-hover:text-white/70 transition-colors flex-shrink-0" />
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); logout(); }}
+                            className="p-2 text-slate-500 hover:text-rose-500 transition-colors"
+                        >
+                            <LogOut size={16} />
+                        </button>
                     </div>
                 )}
             </div>

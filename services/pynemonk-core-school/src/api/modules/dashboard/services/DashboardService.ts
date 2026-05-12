@@ -229,8 +229,9 @@ export class DashboardService {
             JOIN school.student_guardian sg ON s.id = sg.student_id
             JOIN school.exam_marks em ON s.id = em.student_id
             JOIN school.exam_paper ep ON em.paper_id = ep.id
+            JOIN school.exam e ON ep.exam_id = e.id
             JOIN school.subject sub ON ep.subject_id = sub.id
-            WHERE sg.guardian_id = $1 AND s.tenant_id = $2
+            WHERE sg.guardian_id = $1 AND s.tenant_id = $2 AND e.results_published = TRUE
             GROUP BY s.id, s.first_name, s.last_name, sub.name
         `, [guardianId, tenant_id]);
 
@@ -269,7 +270,8 @@ export class DashboardService {
                 ROUND(AVG((er.marks::float / NULLIF(er.max_marks, 0)) * 100)::numeric, 1) as average
             FROM school.exam_result er
             JOIN school.subject s ON er.subject_id = s.id
-            WHERE er.student_id = $1 AND er.tenant_id = $2
+            JOIN school.exam e ON er.exam_id = e.id
+            WHERE er.student_id = $1 AND er.tenant_id = $2 AND e.results_published = TRUE
             GROUP BY s.id, s.name
         `, [studentId, tenantId]);
 

@@ -193,7 +193,7 @@ export default function Register() {
                             <div key={key} className="flex items-center gap-2">
                                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${isComplete ? 'bg-primary/30 text-primary' :
                                     isActive ? 'bg-primary text-white shadow-lg shadow-primary/20' :
-                                        'bg-white/10 text-white/30'
+                                        'bg-[var(--card-bg)]/10 text-white/30'
                                     }`}>
                                     {isComplete ? <Check className="w-3.5 h-3.5" /> : i + 1}
                                 </div>
@@ -228,7 +228,7 @@ export default function Register() {
                                     return (
                                         <div
                                             key={pkg.id}
-                                            className={`relative flex flex-col rounded-2xl border cursor-pointer transition-all duration-300 group hover:scale-105 hover:shadow-2xl ${pkg.slug === 'premium' ? 'border-primary/60 bg-white/[0.08] shadow-primary/20 shadow-xl' : 'border-white/10 bg-white/[0.05] hover:border-white/20'}`}
+                                            className={`relative flex flex-col rounded-2xl border cursor-pointer transition-all duration-300 group hover:scale-105 hover:shadow-2xl ${pkg.slug === 'premium' ? 'border-primary/60 bg-[var(--card-bg)]/[0.08] shadow-primary/20 shadow-xl' : 'border-white/10 bg-[var(--card-bg)]/[0.05] hover:border-white/20'}`}
                                             onClick={() => handlePlanSelect(pkg)}
                                         >
                                             {meta.badge && (
@@ -287,14 +287,14 @@ export default function Register() {
                             <button onClick={handleBack} className="text-white/40 hover:text-white transition-colors p-1">
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
-                            <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2 border border-white/10">
+                            <div className="flex items-center gap-2 bg-[var(--card-bg)]/10 rounded-xl px-4 py-2 border border-white/10">
                                 <span className="text-white/60 text-sm">Selected plan:</span>
                                 <span className="text-white font-semibold text-sm">{selectedPkg.name}</span>
                                 <span className="text-white/60 text-sm">· ${parseFloat(selectedPkg.price_usd).toFixed(0)}/mo</span>
                             </div>
                         </div>
 
-                        <div className="bg-white/[0.06] border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
+                        <div className="bg-[var(--card-bg)]/[0.06] border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
                                     <Building2 className="w-5 h-5 text-white" />
@@ -317,7 +317,7 @@ export default function Register() {
                                         placeholder="Greenwood High School"
                                         value={form.name}
                                         onChange={handleChange}
-                                        className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                     />
                                 </div>
 
@@ -332,7 +332,7 @@ export default function Register() {
                                         placeholder="admin@greenwood.edu"
                                         value={form.email}
                                         onChange={handleChange}
-                                        className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                     />
                                 </div>
 
@@ -345,7 +345,7 @@ export default function Register() {
                                         placeholder="+1 (555) 000-0000"
                                         value={form.phone}
                                         onChange={handleChange}
-                                        className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                     />
                                 </div>
 
@@ -358,7 +358,7 @@ export default function Register() {
                                         placeholder="123 School Lane"
                                         value={form.address}
                                         onChange={handleChange}
-                                        className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                     />
                                 </div>
 
@@ -366,19 +366,19 @@ export default function Register() {
                                     <div>
                                         <label className="block text-sm font-medium text-white/70 mb-1.5">City</label>
                                         <input id="reg-city" name="city" type="text" placeholder="New York" value={form.city} onChange={handleChange}
-                                            className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+                                            className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-white/70 mb-1.5">State / Province</label>
                                         <input id="reg-state" name="state" type="text" placeholder="NY" value={form.state} onChange={handleChange}
-                                            className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+                                            className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
                                     </div>
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-white/70 mb-1.5">Country</label>
                                     <input id="reg-country" name="country" type="text" placeholder="United States" value={form.country} onChange={handleChange}
-                                        className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+                                        className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
                                 </div>
 
                                 {error && (
@@ -406,13 +406,13 @@ export default function Register() {
                             <button onClick={() => setStep('details')} className="text-white/40 hover:text-white transition-colors p-1">
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
-                            <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2 border border-white/10">
+                            <div className="flex items-center gap-2 bg-[var(--card-bg)]/10 rounded-xl px-4 py-2 border border-white/10">
                                 <span className="text-white/60 text-sm">Step 2 of 3:</span>
                                 <span className="text-white font-semibold text-sm">Academic Setup</span>
                             </div>
                         </div>
 
-                        <div className="bg-white/[0.06] border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
+                        <div className="bg-[var(--card-bg)]/[0.06] border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                                     <Zap className="w-5 h-5 text-white" />
@@ -424,7 +424,7 @@ export default function Register() {
                             </div>
 
                             <form id="settings-form" onSubmit={handleSettingsSubmit} className="space-y-6">
-                                <div className="grid grid-cols-1 gap-5 bg-white/5 p-6 rounded-2xl border border-white/5">
+                                <div className="grid grid-cols-1 gap-5 bg-[var(--card-bg)]/5 p-6 rounded-2xl border border-white/5">
                                     <h3 className="text-white font-bold text-sm flex items-center gap-2">
                                         <Star className="w-4 h-4 text-amber-400" />
                                         Current Academic Year
@@ -437,7 +437,7 @@ export default function Register() {
                                             required
                                             value={form.academic_year_name}
                                             onChange={(e) => setForm({ ...form, academic_year_name: e.target.value })}
-                                            className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                                            className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
                                             placeholder="e.g. 2026-2027"
                                         />
                                     </div>
@@ -451,7 +451,7 @@ export default function Register() {
                                                 required
                                                 value={form.academic_year_start}
                                                 onChange={(e) => setForm({ ...form, academic_year_start: e.target.value })}
-                                                className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                                                className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
                                             />
                                         </div>
                                         <div>
@@ -462,7 +462,7 @@ export default function Register() {
                                                 required
                                                 value={form.academic_year_end}
                                                 onChange={(e) => setForm({ ...form, academic_year_end: e.target.value })}
-                                                className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                                                className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
                                             />
                                         </div>
                                     </div>
@@ -519,7 +519,7 @@ export default function Register() {
                 {/* ── Step 3: Owner account setup ── */}
                 {step === 'owner-setup' && tenant && (
                     <div className="w-full max-w-md">
-                        <div className="bg-white/[0.06] border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
+                        <div className="bg-[var(--card-bg)]/[0.06] border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
                             {/* Header */}
                             <div className="text-center mb-6">
                                 <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/30">
@@ -548,7 +548,7 @@ export default function Register() {
                                         placeholder="you@yourschool.com"
                                         value={ownerForm.admin_email}
                                         onChange={handleOwnerChange}
-                                        className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                     />
                                 </div>
 
@@ -563,7 +563,7 @@ export default function Register() {
                                         placeholder="Min 8 characters"
                                         value={ownerForm.admin_password}
                                         onChange={handleOwnerChange}
-                                        className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        className="w-full bg-[var(--card-bg)]/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                     />
                                 </div>
 
@@ -577,7 +577,7 @@ export default function Register() {
                                         placeholder="Re-enter password"
                                         value={ownerForm.admin_password_confirm}
                                         onChange={handleOwnerChange}
-                                        className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${ownerForm.admin_password_confirm && ownerForm.admin_password !== ownerForm.admin_password_confirm
+                                        className={`w-full bg-[var(--card-bg)]/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${ownerForm.admin_password_confirm && ownerForm.admin_password !== ownerForm.admin_password_confirm
                                             ? 'border-red-500/50' : 'border-white/15'
                                             }`}
                                     />
@@ -605,7 +605,7 @@ export default function Register() {
                 {/* ── Step 4: Success ── */}
                 {step === 'success' && tenant && (
                     <div className="w-full max-w-lg text-center">
-                        <div className="bg-white/[0.06] border border-white/10 rounded-2xl p-10 backdrop-blur-sm">
+                        <div className="bg-[var(--card-bg)]/[0.06] border border-white/10 rounded-2xl p-10 backdrop-blur-sm">
                             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-500/30">
                                 <Check className="w-8 h-8 text-white" />
                             </div>
@@ -615,7 +615,7 @@ export default function Register() {
                             </p>
                             <p className="text-white/40 text-sm mb-8">A confirmation will be sent to <span className="text-primary">{tenant.email}</span></p>
 
-                            <div className="bg-white/5 rounded-xl p-4 mb-8 text-left space-y-2">
+                            <div className="bg-[var(--card-bg)]/5 rounded-xl p-4 mb-8 text-left space-y-2">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-white/50">Tenant ID</span>
                                     <span className="text-white font-mono text-xs">{tenant.uuid}</span>

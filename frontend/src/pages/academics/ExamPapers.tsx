@@ -37,12 +37,12 @@ export default function ExamPapers() {
                     <ShieldAlert size={40} />
                 </div>
                 <div>
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Schedule Locked</h2>
-                    <p className="text-slate-400 font-medium mt-2 max-w-sm">Modification of the examination schedule requires administrative write privileges.</p>
+                    <h2 className="text-3xl font-black text-[var(--text-main)] tracking-tight">Schedule Locked</h2>
+                    <p className="text-[var(--text-muted)] font-medium mt-2 max-w-sm">Modification of the examination schedule requires administrative write privileges.</p>
                 </div>
                 <button 
                     onClick={() => navigate(`/exams/${id}/overview`)}
-                    className="mt-4 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                    className="mt-4 px-8 py-4 bg-surface-dark text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
                 >
                     Back to Overview
                 </button>
@@ -197,30 +197,30 @@ export default function ExamPapers() {
         return (
             <div className="h-[80vh] flex flex-col items-center justify-center gap-4">
                 <div className="w-16 h-16 border-4 border-theme-primary/20 border-t-theme-primary rounded-full animate-spin" />
-                <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Assembling Date Sheet...</p>
+                <p className="text-[var(--text-muted)] font-black uppercase tracking-widest text-[10px]">Assembling Date Sheet...</p>
             </div>
         );
     }
 
     return (
-        <div className="p-8 bg-slate-50 min-h-[calc(100vh-100px)] rounded-[3rem] border border-slate-200 shadow-2xl relative flex flex-col">
+        <div className="p-8 bg-slate-50 min-h-[calc(100vh-100px)] rounded-[3rem] border border-[var(--card-border)] shadow-2xl relative flex flex-col">
             {/* Header */}
             <header className="flex items-center justify-between mb-12">
                 <div className="flex items-center gap-6">
                     <button
                         onClick={() => navigate(`/exams/${id}/overview`)}
-                        className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all shadow-sm"
+                        className="w-12 h-12 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl flex items-center justify-center text-[var(--text-muted)] hover:text-slate-600 transition-all shadow-sm"
                     >
                         <ArrowLeft size={20} />
                     </button>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Exam Date Sheet</h1>
+                            <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tight">Exam Date Sheet</h1>
                             <span className="px-3 py-1 bg-theme-primary/10 text-theme-primary rounded-full text-[10px] font-black uppercase tracking-widest">
                                 {exam?.name}
                             </span>
                         </div>
-                        <p className="text-slate-500 font-medium mt-1">Manage papers, venues, and supervisors for this assessment series.</p>
+                        <p className="text-[var(--text-muted)] font-medium mt-1">Manage papers, venues, and supervisors for this assessment series.</p>
                     </div>
                 </div>
 
@@ -248,7 +248,7 @@ export default function ExamPapers() {
                             setIsWizardOpen(true);
                         }}
                         disabled={isLocked}
-                        className="flex items-center gap-3 px-8 py-3.5 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl shadow-slate-900/10 disabled:opacity-30"
+                        className="flex items-center gap-3 px-8 py-3.5 bg-surface-dark text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl shadow-theme/10 disabled:opacity-30"
                     >
                         <Plus size={18} />
                         Add New Paper
@@ -266,8 +266,8 @@ export default function ExamPapers() {
 
             {/* Bulk Utilities */}
             {!isLocked && (
-                <div className="flex items-center gap-6 mb-8 px-4 py-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
-                    <div className="flex items-center gap-4 text-slate-400">
+                <div className="flex items-center gap-6 mb-8 px-4 py-6 bg-[var(--card-bg)] rounded-3xl border border-[var(--card-border)] shadow-sm">
+                    <div className="flex items-center gap-4 text-[var(--text-muted)]">
                         <RotateCcw size={20} />
                         <span className="text-[10px] font-black uppercase tracking-widest">Bulk Rescheduling</span>
                     </div>
@@ -275,7 +275,7 @@ export default function ExamPapers() {
                         <input
                             type="number"
                             placeholder="Days (e.g. 2 or -2)"
-                            className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm outline-none focus:bg-white transition-all"
+                            className="w-full px-6 py-3 bg-slate-50 border border-[var(--card-border)] rounded-xl font-bold text-sm outline-none focus:bg-[var(--card-bg)] transition-all"
                             value={shiftDays || ''}
                             onChange={(e) => setShiftDays(parseInt(e.target.value) || 0)}
                         />
@@ -288,7 +288,7 @@ export default function ExamPapers() {
                         </button>
                     </div>
                     <div className="h-8 w-px bg-slate-100 mx-4" />
-                    <p className="text-[10px] font-bold text-slate-400 italic">Adjust entire exam timeline instantly (e.g. to postpone for holidays).</p>
+                    <p className="text-[10px] font-bold text-[var(--text-muted)] italic">Adjust entire exam timeline instantly (e.g. to postpone for holidays).</p>
                 </div>
             )}
 
@@ -301,15 +301,15 @@ export default function ExamPapers() {
                     const endTime = (paper.end_time || '').slice(0, 5);
 
                     return (
-                        <div key={paper.id || `staged-${idx}`} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative group hover:shadow-xl hover:shadow-slate-200/50 transition-all">
+                        <div key={paper.id || `staged-${idx}`} className="bg-[var(--card-bg)] p-8 rounded-[2.5rem] border border-[var(--card-border)] shadow-sm relative group hover:shadow-xl hover:shadow-slate-200/50 transition-all">
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-6">
-                                    <div className="w-14 h-14 bg-slate-900 text-white rounded-[1.25rem] flex items-center justify-center font-black text-lg shadow-lg shadow-slate-900/10">
+                                    <div className="w-14 h-14 bg-surface-dark text-white rounded-[1.25rem] flex items-center justify-center font-black text-lg shadow-lg shadow-theme/10">
                                         {idx + 1}
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-black text-slate-900 tracking-tight">{subject?.name || 'New Paper'}</h3>
-                                        <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                                        <h3 className="text-xl font-black text-[var(--text-main)] tracking-tight">{subject?.name || 'New Paper'}</h3>
+                                        <p className="text-xs font-bold text-[var(--text-muted)] mt-1 uppercase tracking-widest">
                                             {paper.exam_date || 'Date TBD'} • {startTime || '--:--'} - {endTime || '--:--'}
                                         </p>
                                     </div>
@@ -327,28 +327,28 @@ export default function ExamPapers() {
 
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Supervisor</p>
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-[10px] font-black text-slate-400 uppercase">
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-1">Supervisor</p>
+                                    <div className="p-4 bg-slate-50 rounded-2xl border border-[var(--card-border)] flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg flex items-center justify-center text-[10px] font-black text-[var(--text-muted)] uppercase">
                                             {supervisor ? supervisor.first_name[0] : '?'}
                                         </div>
                                         <span className="text-xs font-bold text-slate-700">{supervisor ? `${supervisor.first_name} ${supervisor.last_name}` : 'Not Assigned'}</span>
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Venue</p>
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
-                                        <MapPin size={16} className="text-slate-400" />
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-1">Venue</p>
+                                    <div className="p-4 bg-slate-50 rounded-2xl border border-[var(--card-border)] flex items-center gap-3">
+                                        <MapPin size={16} className="text-[var(--text-muted)]" />
                                         <span className="text-xs font-bold text-slate-700">{paper.room || 'TBD'}</span>
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assessment</p>
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+                                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-1">Assessment</p>
+                                    <div className="p-4 bg-slate-50 rounded-2xl border border-[var(--card-border)] flex items-center gap-3">
                                         <div className="px-3 py-1 bg-emerald-500/10 text-emerald-600 rounded-lg text-[10px] font-black">
                                             {paper.passing_marks}/{paper.max_marks}
                                         </div>
-                                        <span className="text-xs font-bold text-slate-400">Min. Passing</span>
+                                        <span className="text-xs font-bold text-[var(--text-muted)]">Min. Passing</span>
                                     </div>
                                 </div>
                                 <div className="flex items-end justify-end">
@@ -369,9 +369,9 @@ export default function ExamPapers() {
                 })}
 
                 {papers.length === 0 && (
-                    <div className="bg-white rounded-[3.5rem] border border-dashed border-slate-200 p-24 text-center">
+                    <div className="bg-[var(--card-bg)] rounded-[3.5rem] border border-dashed border-[var(--card-border)] p-24 text-center">
                         <BookOpen size={40} className="text-slate-200 mx-auto mb-6" />
-                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Empty Date Sheet</h3>
+                        <h3 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Empty Date Sheet</h3>
                         <button
                             onClick={() => setIsWizardOpen(true)}
                             className="mt-8 px-10 py-4 bg-theme-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-theme-primary/20"
@@ -382,16 +382,16 @@ export default function ExamPapers() {
 
             {/* PAPER WIZARD MODAL */}
             {isWizardOpen && (
-                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[120] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="p-10 bg-slate-900 text-white flex justify-between items-center">
+                <div className="fixed inset-0 bg-surface-dark/80 backdrop-blur-md z-[120] flex items-center justify-center p-4">
+                    <div className="bg-[var(--card-bg)] rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-10 bg-surface-dark text-white flex justify-between items-center">
                             <div>
                                 <h2 className="text-2xl font-black tracking-tight uppercase">Add Paper Workflow</h2>
-                                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2">
+                                <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-[0.2em] mt-2">
                                     Step {wizardStep} of 3 • {wizardStep === 1 ? 'Curriculum' : wizardStep === 2 ? 'Logistics' : 'Metrics'}
                                 </p>
                             </div>
-                            <button onClick={() => setIsWizardOpen(false)} className="text-slate-500 hover:text-white transition-colors">
+                            <button onClick={() => setIsWizardOpen(false)} className="text-[var(--text-muted)] hover:text-white transition-colors">
                                 <X size={24} />
                             </button>
                         </div>
@@ -410,7 +410,7 @@ export default function ExamPapers() {
                                     <div className="grid grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center ml-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Exam Date</label>
+                                                <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Exam Date</label>
                                                 <span className="text-[8px] font-bold text-indigo-500 uppercase">Within Window</span>
                                             </div>
                                             <div className="relative">
@@ -419,16 +419,16 @@ export default function ExamPapers() {
                                                     type="date"
                                                     min={exam?.start_date.split('T')[0]}
                                                     max={exam?.end_date.split('T')[0]}
-                                                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:bg-white transition-all shadow-inner"
+                                                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-[var(--card-border)] rounded-2xl font-bold text-slate-700 outline-none focus:bg-[var(--card-bg)] transition-all shadow-inner"
                                                     value={newPaper.exam_date}
                                                     onChange={e => setNewPaper({ ...newPaper, exam_date: e.target.value })}
                                                 />
                                             </div>
-                                            <p className="text-[9px] text-slate-400 ml-2 italic">Scheduled: {exam?.start_date.split('T')[0]} to {exam?.end_date.split('T')[0]}</p>
+                                            <p className="text-[9px] text-[var(--text-muted)] ml-2 italic">Scheduled: {exam?.start_date.split('T')[0]} to {exam?.end_date.split('T')[0]}</p>
                                         </div>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center ml-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Timing Mode</label>
+                                                <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Timing Mode</label>
                                                 <button
                                                     onClick={() => setNewPaper({ ...newPaper, user_period: !newPaper.user_period })}
                                                     className="text-[10px] font-black text-theme-primary uppercase tracking-widest hover:opacity-70 transition-all"
@@ -453,13 +453,13 @@ export default function ExamPapers() {
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <input
                                                         type="time"
-                                                        className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:bg-white transition-all shadow-inner text-sm"
+                                                        className="w-full px-4 py-4 bg-slate-50 border border-[var(--card-border)] rounded-2xl font-bold text-slate-700 outline-none focus:bg-[var(--card-bg)] transition-all shadow-inner text-sm"
                                                         value={newPaper.start_time ? newPaper.start_time.slice(0, 5) : ''}
                                                         onChange={e => setNewPaper({ ...newPaper, start_time: e.target.value })}
                                                     />
                                                     <input
                                                         type="time"
-                                                        className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:bg-white transition-all shadow-inner text-sm"
+                                                        className="w-full px-4 py-4 bg-slate-50 border border-[var(--card-border)] rounded-2xl font-bold text-slate-700 outline-none focus:bg-[var(--card-bg)] transition-all shadow-inner text-sm"
                                                         value={newPaper.end_time ? newPaper.end_time.slice(0, 5) : ''}
                                                         onChange={e => setNewPaper({ ...newPaper, end_time: e.target.value })}
                                                     />
@@ -474,13 +474,13 @@ export default function ExamPapers() {
                             {wizardStep === 2 && (
                                 <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Venue / Exam Room</label>
+                                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-2">Venue / Exam Room</label>
                                         <div className="relative">
                                             <MapPin size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" />
                                             <input
                                                 type="text"
                                                 placeholder="e.g. Main Hall, Room 102"
-                                                className="w-full pl-16 pr-8 py-5 bg-slate-50 border border-slate-100 rounded-3xl font-bold text-slate-700 outline-none focus:bg-white transition-all"
+                                                className="w-full pl-16 pr-8 py-5 bg-slate-50 border border-[var(--card-border)] rounded-3xl font-bold text-slate-700 outline-none focus:bg-[var(--card-bg)] transition-all"
                                                 value={newPaper.room}
                                                 onChange={e => setNewPaper({ ...newPaper, room: e.target.value })}
                                             />
@@ -501,25 +501,25 @@ export default function ExamPapers() {
                                 <div className="space-y-8 animate-in zoom-in-95">
                                     <div className="grid grid-cols-2 gap-10">
                                         <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Maximum Marks</label>
+                                            <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-4">Maximum Marks</label>
                                             <input
                                                 type="number"
-                                                className="w-full px-10 py-6 bg-slate-50 border border-slate-100 rounded-[2rem] font-black text-2xl text-slate-800 text-center outline-none focus:bg-white transition-all"
+                                                className="w-full px-10 py-6 bg-slate-50 border border-[var(--card-border)] rounded-[2rem] font-black text-2xl text-slate-800 text-center outline-none focus:bg-[var(--card-bg)] transition-all"
                                                 value={newPaper.max_marks}
                                                 onChange={e => setNewPaper({ ...newPaper, max_marks: parseInt(e.target.value) })}
                                             />
                                         </div>
                                         <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Passing Threshold</label>
+                                            <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-4">Passing Threshold</label>
                                             <input
                                                 type="number"
-                                                className="w-full px-10 py-6 bg-emerald-50 border border-emerald-100 rounded-[2rem] font-black text-2xl text-emerald-600 text-center outline-none focus:bg-white transition-all"
+                                                className="w-full px-10 py-6 bg-emerald-50 border border-emerald-100 rounded-[2rem] font-black text-2xl text-emerald-600 text-center outline-none focus:bg-[var(--card-bg)] transition-all"
                                                 value={newPaper.passing_marks}
                                                 onChange={e => setNewPaper({ ...newPaper, passing_marks: parseInt(e.target.value) })}
                                             />
                                         </div>
                                     </div>
-                                    <p className="text-xs font-medium text-slate-400 text-center px-12">
+                                    <p className="text-xs font-medium text-[var(--text-muted)] text-center px-12">
                                         These values will be used as default for marks entry and result calculations for this specific paper.
                                     </p>
                                 </div>
@@ -529,7 +529,7 @@ export default function ExamPapers() {
                                 {wizardStep > 1 && (
                                     <button
                                         onClick={() => setWizardStep(wizardStep - 1)}
-                                        className="flex-1 py-4 border border-slate-200 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:text-slate-600 transition-all"
+                                        className="flex-1 py-4 border border-[var(--card-border)] text-[var(--text-muted)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:text-slate-600 transition-all"
                                     >Previous Step</button>
                                 )}
                                 <button
@@ -567,7 +567,7 @@ export default function ExamPapers() {
                                         }
                                     }}
                                     disabled={!newPaper.subject_id || !newPaper.exam_date || !newPaper.start_time || isSaving}
-                                    className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 shadow-xl transition-all disabled:opacity-20"
+                                    className="flex-[2] py-4 bg-surface-dark text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 shadow-xl transition-all disabled:opacity-20"
                                 >
                                     {isSaving ? 'Persisting...' : wizardStep === 3 ? 'Finish & Save' : 'Continue Workflow'}
                                 </button>

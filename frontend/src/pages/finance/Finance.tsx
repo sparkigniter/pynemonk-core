@@ -1,233 +1,354 @@
-import { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
-    DollarSign, TrendingUp, TrendingDown, CreditCard, 
-    Download, Plus, Search, Filter, MoreVertical, CheckCircle2,
-    Clock, AlertCircle
+    DollarSign, TrendingUp, 
+    Download, Plus, CheckCircle2,
+    Clock, Loader2, Search, Bell,
+    ArrowUpRight,
+    Filter,
+    FileText,
+    Calendar,
+    ChevronRight,
+    Sparkles
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { getAccountingSummary, getInvoices } from '../../api/accounting.api';
+import JournalEntryForm from '../accounting/JournalEntryForm';
 
-const stats = [
-    { name: 'Total Revenue', value: '$124,500', change: '+12.5%', isPositive: true, icon: DollarSign, color: 'emerald' },
-    { name: 'Pending Dues', value: '$12,450', change: '-2.4%', isPositive: true, icon: Clock, color: 'amber' },
-    { name: 'Total Expenses', value: '$45,200', change: '+5.2%', isPositive: false, icon: TrendingDown, color: 'rose' },
-    { name: 'Net Profit', value: '$79,300', change: '+18.1%', isPositive: true, icon: TrendingUp, color: 'primary' },
-];
-
-const recentInvoices = [
-    { id: 'INV-2025-001', student: 'Alex Johnson', grade: 'Grade 10', amount: '$1,200', status: 'paid', date: 'Oct 12, 2025' },
-    { id: 'INV-2025-002', student: 'Sarah Smith', grade: 'Grade 8', amount: '$1,100', status: 'pending', date: 'Oct 14, 2025' },
-    { id: 'INV-2025-003', student: 'Mike Davis', grade: 'Grade 12', amount: '$1,500', status: 'overdue', date: 'Oct 01, 2025' },
-    { id: 'INV-2025-004', student: 'Emily Wilson', grade: 'Grade 5', amount: '$950', status: 'paid', date: 'Oct 15, 2025' },
-    { id: 'INV-2025-005', student: 'James Brown', grade: 'Grade 11', amount: '$1,350', status: 'pending', date: 'Oct 16, 2025' },
+const classData = [
+    { name: 'Grade 1', collected: 45000, target: 50000 },
+    { name: 'Grade 2', collected: 38000, target: 50000 },
+    { name: 'Grade 3', collected: 48000, target: 50000 },
+    { name: 'Grade 4', collected: 42000, target: 50000 },
+    { name: 'Grade 5', collected: 49000, target: 50000 },
+    { name: 'Grade 6', collected: 35000, target: 50000 },
 ];
 
 export default function Finance() {
-    const { can } = useAuth();
-    const [activeTab, setActiveTab] = useState<'overview' | 'invoices' | 'expenses' | 'settings'>('overview');
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState<'overview' | 'invoices' | 'defaulters' | 'reminders'>('overview');
+    const [loading, setLoading] = useState(true);
+    const [summary, setSummary] = useState<any>(null);
+    const [invoices, setInvoices] = useState<any[]>([]);
+    const [isJournalFormOpen, setIsJournalFormOpen] = useState(false);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [sumData, invData] = await Promise.all([
+                getAccountingSummary(),
+                getInvoices()
+            ]);
+            setSummary(sumData);
+            setInvoices(invData);
+        } catch (err: any) {
+            console.error('Failed to load finance data', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    };
+
+    if (loading) {
+        return (
+            <div className="h-[80vh] flex flex-col items-center justify-center gap-6">
+                <div className="relative">
+                    <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+                    <Loader2 className="w-16 h-16 text-primary animate-spin relative z-10" />
+                </div>
+                <div className="text-center">
+                    <p className="text-lg font-bold text-[var(--text-main)] tracking-tight">Syncing Financial Records</p>
+                    <p className="text-sm text-[var(--text-muted)] font-medium mt-1">Fetching real-time revenue analytics...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-6 animate-fade-in-up">
+        <div className="p-8 space-y-8 max-w-[1600px] mx-auto animate-in fade-in duration-700">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 font-heading tracking-tight">Finance & Accounting</h1>
-                    <p className="text-slate-500 text-sm mt-1">Manage fees, track expenses, and view financial reports.</p>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="flex items-center gap-6">
+                    <div className="bg-surface-dark p-4 rounded-3xl shadow-xl shadow-theme/10">
+                        <DollarSign className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-bold text-[var(--text-main)] tracking-tight">Financial Command</h1>
+                        <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mt-1 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            Revenue & Collection Engine
+                        </p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                    {can('report:export') && (
-                        <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors shadow-sm font-medium text-sm">
-                            <Download size={16} />
-                            Export Report
-                        </button>
-                    )}
-                    {can('fee:write') && (
-                        <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-theme-primary text-white rounded-xl hover:bg-theme-primary/90 transition-colors shadow-sm font-medium text-sm">
-                            <Plus size={16} />
-                            New Invoice
-                        </button>
-                    )}
+
+                <div className="flex flex-wrap items-center gap-3">
+                    <button className="btn-ghost flex items-center gap-2 !px-5 !py-3">
+                        <Download size={18} />
+                        Export Audit Trail
+                    </button>
+                    <button 
+                        onClick={() => navigate('/accounting/invoices/new')}
+                        className="btn-primary flex items-center gap-2 !px-6 !py-3"
+                    >
+                        <Plus size={18} />
+                        New Invoice
+                    </button>
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/60 shadow-sm w-max">
-                {(['overview', 'invoices', 'expenses', 'settings'] as const)
-                    .filter(tab => tab !== 'settings' || can('fee:write'))
-                    .map(tab => (
+            {/* Metrics Dashboard */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                {[
+                    { label: 'Total Outstanding', value: summary?.outstandingAR || 124500, trend: '+4.2%', icon: FileText, color: 'text-indigo-600', bg: 'bg-primary/5', sub: 'Active Receivables' },
+                    { label: 'Term Collections', value: 382000, trend: '+12%', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', sub: 'Net Realized Revenue' },
+                    { label: 'Overdue Arrears', value: 45000, trend: '-2.1%', icon: Clock, color: 'text-rose-600', bg: 'bg-rose-50', sub: 'Requires Intervention' },
+                    { label: 'Collection Rate', value: '84.8%', trend: 'On Track', icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50', sub: 'Institutional KPI', isPercent: true },
+                ].map((stat, i) => (
+                    <div key={i} className="premium-card p-6 group relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-full -mr-12 -mt-12 group-hover:scale-110 transition-transform duration-500" />
+                        
+                        <div className="flex justify-between items-start mb-6 relative z-10">
+                            <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
+                                <stat.icon size={22} />
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className={`text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-tight ${stat.trend.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                    {stat.trend}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="relative z-10">
+                            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">{stat.label}</p>
+                            <h2 className="text-3xl font-bold text-[var(--text-main)] tracking-tight mb-2">
+                                {stat.isPercent ? stat.value : formatCurrency(stat.value)}
+                            </h2>
+                            <p className="text-[10px] font-medium text-[var(--text-muted)] flex items-center gap-1.5">
+                                <Sparkles size={10} className="text-amber-500" />
+                                {stat.sub}
+                            </p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Navigation & Controls */}
+            <div className="flex flex-col xl:flex-row justify-between items-center gap-6 bg-[var(--card-bg)] p-3 rounded-[2.5rem] shadow-sm border border-[var(--card-border)]/60">
+                <div className="flex items-center gap-1 p-1 bg-slate-50/50 rounded-2xl w-full xl:w-max">
+                    {(['overview', 'invoices', 'defaulters', 'reminders'] as const).map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
+                            className={`px-8 py-3 rounded-xl text-xs font-bold transition-all capitalize ${
                                 activeTab === tab 
-                                ? 'bg-slate-100 text-slate-800 shadow-sm' 
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                                ? 'bg-[var(--card-bg)] text-surface-dark shadow-sm border border-[var(--card-border)]' 
+                                : 'text-[var(--text-muted)] hover:text-slate-600'
                             }`}
                         >
                             {tab}
                         </button>
                     ))}
+                </div>
+
+                <div className="flex items-center gap-4 w-full xl:w-auto">
+                    <div className="relative flex-1 xl:w-96">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                        <input 
+                            type="text"
+                            placeholder="Search by student, class or invoice ID..."
+                            className="input-field-modern !pl-12 !py-3.5 !text-xs !bg-slate-50/50 !border-transparent focus:!bg-[var(--card-bg)] focus:!border-[var(--card-border)]"
+                        />
+                    </div>
+                    <button className="p-3.5 btn-dark !shadow-theme/10">
+                        <Filter size={20} />
+                    </button>
+                </div>
             </div>
 
             {activeTab === 'overview' && (
-                <>
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                        {stats.map((stat, i) => {
-                            const Icon = stat.icon;
-                            return (
-                                <div key={stat.name} className={`card p-5 hover-lift delay-${(i+1)*100} relative overflow-hidden group`}>
-                                    {/* Decorative background element */}
-                                    <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full bg-gradient-${stat.color} opacity-10 group-hover:scale-150 transition-transform duration-500 ease-out`} />
-                                    
-                                    <div className="flex justify-between items-start mb-4 relative">
-                                        <div className={`w-10 h-10 rounded-xl bg-${stat.color}-50 flex items-center justify-center text-${stat.color}-600`}>
-                                            <Icon size={20} />
-                                        </div>
-                                        <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${
-                                            stat.isPositive ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50'
-                                        }`}>
-                                            {stat.change}
-                                        </div>
-                                    </div>
-                                    <div className="relative">
-                                        <h3 className="text-3xl font-bold text-slate-800 font-heading tracking-tight">{stat.value}</h3>
-                                        <p className="text-sm text-slate-500 font-medium mt-1">{stat.name}</p>
-                                    </div>
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    {/* Class-wise Collection Efficiency */}
+                    <div className="xl:col-span-2 premium-card p-8">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+                            <div>
+                                <h3 className="text-xl font-bold text-[var(--text-main)] tracking-tight">Institutional Efficiency</h3>
+                                <p className="text-xs font-medium text-[var(--text-muted)] mt-1 uppercase tracking-widest">Target vs Realized Revenue by Grade</p>
+                            </div>
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-tight">Realized</span>
                                 </div>
-                            );
-                        })}
-                    </div>
-
-                    <div className="grid lg:grid-cols-3 gap-6">
-                        {/* Recent Invoices */}
-                        <div className="lg:col-span-2 card p-6 delay-300">
-                            <div className="flex justify-between items-center mb-6">
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-800 font-heading">Recent Invoices</h3>
-                                    <p className="text-sm text-slate-500">Latest fee generation and collections</p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <div className="relative">
-                                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input type="text" placeholder="Search..." className="pl-9 pr-3 py-1.5 border border-slate-200 rounded-lg text-sm w-48 focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                                    </div>
-                                    <button className="p-1.5 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50">
-                                        <Filter size={18} />
-                                    </button>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-slate-100" />
+                                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-tight">Provisional</span>
                                 </div>
                             </div>
-                            
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="border-b border-slate-100">
-                                            <th className="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Invoice ID</th>
-                                            <th className="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Student</th>
-                                            <th className="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Amount</th>
-                                            <th className="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</th>
-                                            <th className="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
-                                            <th className="pb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {recentInvoices.map(invoice => (
-                                            <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors group">
-                                                <td className="py-3.5 pr-4 text-sm font-medium text-slate-700">{invoice.id}</td>
-                                                <td className="py-3.5 pr-4">
-                                                    <div className="text-sm font-semibold text-slate-800">{invoice.student}</div>
-                                                    <div className="text-xs text-slate-500">{invoice.grade}</div>
-                                                </td>
-                                                <td className="py-3.5 pr-4 text-sm font-semibold text-slate-700">{invoice.amount}</td>
-                                                <td className="py-3.5 pr-4 text-sm text-slate-500">{invoice.date}</td>
-                                                <td className="py-3.5 pr-4">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                                        invoice.status === 'paid' ? 'bg-emerald-50 text-emerald-700' :
-                                                        invoice.status === 'pending' ? 'bg-amber-50 text-amber-700' :
-                                                        'bg-rose-50 text-rose-700'
-                                                    }`}>
-                                                        {invoice.status === 'paid' && <CheckCircle2 size={12} />}
-                                                        {invoice.status === 'pending' && <Clock size={12} />}
-                                                        {invoice.status === 'overdue' && <AlertCircle size={12} />}
-                                                        <span className="capitalize">{invoice.status}</span>
-                                                    </span>
-                                                </td>
-                                                <td className="py-3.5 text-right">
-                                                    <button className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-all">
-                                                        <MoreVertical size={16} />
-                                                    </button>
-                                                </td>
-                                            </tr>
+                        </div>
+                        <div className="h-[400px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={classData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }} barGap={12}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis 
+                                        dataKey="name" 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} 
+                                        dy={10}
+                                    />
+                                    <YAxis 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} 
+                                    />
+                                    <Tooltip 
+                                        cursor={{fill: '#f8fafc'}}
+                                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', padding: '12px' }}
+                                    />
+                                    <Bar dataKey="collected" fill="var(--primary)" radius={[8, 8, 8, 8]} barSize={32}>
+                                        {classData.map((_entry, index) => (
+                                            <Cell key={`cell-${index}`} fillOpacity={1 - index * 0.05} />
                                         ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {/* Summary side panel */}
-                        <div className="space-y-6 delay-400">
-                            <div className="card p-6">
-                                <h3 className="text-lg font-bold text-slate-800 font-heading mb-4">Collection Overview</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="flex justify-between text-sm mb-1.5">
-                                            <span className="text-slate-500 font-medium">Collected</span>
-                                            <span className="text-slate-800 font-bold">85%</span>
-                                        </div>
-                                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: '85%' }}></div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="flex justify-between text-sm mb-1.5">
-                                            <span className="text-slate-500 font-medium">Pending</span>
-                                            <span className="text-slate-800 font-bold">12%</span>
-                                        </div>
-                                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-amber-500 rounded-full" style={{ width: '12%' }}></div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="flex justify-between text-sm mb-1.5">
-                                            <span className="text-slate-500 font-medium">Overdue</span>
-                                            <span className="text-slate-800 font-bold">3%</span>
-                                        </div>
-                                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-rose-500 rounded-full" style={{ width: '3%' }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="card p-6 bg-gradient-to-br from-indigo-600 to-purple-700 text-white border-none shadow-xl shadow-indigo-200">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="p-2 bg-white/20 rounded-lg">
-                                        <CreditCard size={20} />
-                                    </div>
-                                    <h3 className="font-semibold text-lg">Next Payout</h3>
-                                </div>
-                                <h2 className="text-3xl font-bold font-heading my-4">$24,500.00</h2>
-                                <p className="text-indigo-100 text-sm mb-4">Expected clearing on Oct 25, 2025</p>
-                                <button className="w-full py-2.5 bg-white text-indigo-600 rounded-xl font-semibold text-sm hover:bg-indigo-50 transition-colors">
-                                    View Breakdown
-                                </button>
-                            </div>
+                                    </Bar>
+                                    <Bar dataKey="target" fill="#f1f5f9" radius={[8, 8, 8, 8]} barSize={32} />
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
-                </>
+
+                    {/* Defaulter Snapshot */}
+                    <div className="premium-card p-8 flex flex-col h-full">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-xl font-bold text-[var(--text-main)] tracking-tight">Arrears Monitor</h3>
+                                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mt-1">Critical Defaulters</p>
+                            </div>
+                            <button className="p-2 text-[var(--text-muted)] hover:text-primary transition-colors">
+                                <ArrowUpRight size={20} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-2">
+                            {[
+                                { name: 'Aryan Khan', class: 'Grade 10-A', amount: 4500, days: 12, risk: 'Low' },
+                                { name: 'Sara Williams', class: 'Grade 8-B', amount: 3200, days: 8, risk: 'Low' },
+                                { name: 'James Wilson', class: 'Grade 12-C', amount: 12500, days: 45, risk: 'High' },
+                                { name: 'Emily Brown', class: 'Grade 9-A', amount: 2100, days: 5, risk: 'Low' },
+                                { name: 'Michael Chen', class: 'Grade 11-B', amount: 8900, days: 32, risk: 'Medium' },
+                            ].map((student, i) => (
+                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 transition-all group cursor-pointer border border-transparent hover:border-[var(--card-border)]">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-surface-dark flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-theme/10">
+                                            {student.name.split(' ').map(n => n[0]).join('')}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-[var(--text-main)] group-hover:text-primary transition-colors leading-none mb-1">{student.name}</p>
+                                            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-tight">{student.class}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold text-[var(--text-main)]">{formatCurrency(student.amount)}</p>
+                                        <p className={`text-[9px] font-black uppercase tracking-tight mt-0.5 ${student.risk === 'High' ? 'text-rose-500' : student.risk === 'Medium' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                            {student.days}d Overdue
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-8 pt-8 border-t border-[var(--card-border)] space-y-3">
+                            <button className="w-full py-4 bg-rose-50 text-rose-600 rounded-2xl font-bold text-xs hover:bg-rose-100 transition-all flex items-center justify-center gap-3">
+                                <Bell size={18} />
+                                Batch Notifications
+                            </button>
+                            <button className="w-full py-4 bg-slate-50 text-[var(--text-muted)] rounded-2xl font-bold text-xs cursor-not-allowed flex items-center justify-center gap-3">
+                                <Calendar size={18} />
+                                Schedule Recovery
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
-            
+
             {activeTab === 'invoices' && (
-                <div className="card p-8 flex flex-col items-center justify-center min-h-[400px] text-center">
-                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                        <CreditCard className="text-slate-400" size={32} />
+                <div className="premium-card overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[1000px]">
+                            <thead>
+                                <tr className="bg-slate-50/50 border-b border-[var(--card-border)]">
+                                    <th className="px-8 py-5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">ID Reference</th>
+                                    <th className="px-8 py-5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Entity Account</th>
+                                    <th className="px-8 py-5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Ledger Item</th>
+                                    <th className="px-8 py-5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Allocation Status</th>
+                                    <th className="px-8 py-5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest text-right">Value</th>
+                                    <th className="px-8 py-5 w-16"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {invoices.map((inv, i) => (
+                                    <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/30 transition-all group">
+                                        <td className="px-8 py-6">
+                                            <span className="text-xs font-bold text-[var(--text-main)] bg-slate-100 px-3 py-1.5 rounded-lg border border-[var(--card-border)]/60">
+                                                {inv.invoice_no}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-lg bg-primary/5 flex items-center justify-center text-primary font-bold text-[10px]">
+                                                    {inv.student_name?.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-[var(--text-main)] group-hover:text-primary transition-colors">{inv.student_name}</span>
+                                                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-tight">Student Ledger</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-slate-700">{inv.installment_name || 'Quarterly Tuition'}</span>
+                                                <span className="text-[10px] font-medium text-[var(--text-muted)]">AY 2024-25 • Term 1</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className={`px-4 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider border shadow-sm
+                                                ${inv.status === 'paid' 
+                                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100 shadow-emerald-500/5' 
+                                                    : 'bg-amber-50 text-amber-600 border-amber-100 shadow-amber-500/5'}`}>
+                                                {inv.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6 text-right font-bold text-[var(--text-main)] text-sm">
+                                            {formatCurrency(parseFloat(inv.total_amount))}
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <button className="p-2.5 text-slate-300 hover:text-slate-600 hover:bg-[var(--card-bg)] rounded-xl transition-all border border-transparent hover:border-[var(--card-border)]">
+                                                <ChevronRight size={18} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-2">Full Invoice Management</h3>
-                    <p className="text-slate-500 max-w-sm mb-6">Create, send, and track fee invoices for all students across different categories.</p>
-                    {can('fee:write') && (
-                        <button className="px-5 py-2.5 bg-theme-primary text-white rounded-xl font-medium hover:bg-theme-primary/90">
-                            Create First Invoice
-                        </button>
-                    )}
+                </div>
+            )}
+
+            {/* Quick Post Drawer */}
+            {isJournalFormOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-surface-dark/40 backdrop-blur-md" onClick={() => setIsJournalFormOpen(false)} />
+                    <div className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden bg-[var(--card-bg)] rounded-[2.5rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.3)] animate-in slide-in-from-bottom-12 duration-700">
+                        <div className="p-1">
+                            <JournalEntryForm onClose={() => setIsJournalFormOpen(false)} />
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

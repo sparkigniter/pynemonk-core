@@ -49,10 +49,12 @@ export default class StaffHelper extends BaseModel {
             )
             SELECT 
                 s.*, 
+                u.email,
                 COUNT(*) OVER() as total_count,
                 COALESCE(a.subjects, '[]') as assignments,
                 (ct.staff_id IS NOT NULL) as is_class_teacher
             FROM school.staff s
+            JOIN auth.user u ON s.user_id = u.id
             LEFT JOIN assignments a ON s.id = a.staff_id
             LEFT JOIN class_teachers ct ON s.id = ct.staff_id
             WHERE s.tenant_id = $1 AND s.is_deleted = FALSE

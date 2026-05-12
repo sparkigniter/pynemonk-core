@@ -7,7 +7,7 @@ import { apiRateLimiter } from "../../core/middleware/RateLimiter.js";
 
 const router = Router();
 
-router.get("/", apiRateLimiter, requireAuth, requirePermission(["report:read"]), (req, res) => {
+router.get("/", apiRateLimiter, requireAuth, (req, res) => {
     const controller = container.resolve(DashboardController);
     return controller.getDashboard(req, res);
 });

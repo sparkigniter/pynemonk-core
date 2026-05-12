@@ -81,8 +81,11 @@ export default class StudentHelper {
 
     // ─── Logs & History ──────────────────────────────────────────────────────
 
-    public async createLog(data: { tenant_id: number; student_id: number; event_type: string; description: string; metadata?: any }): Promise<void> {
-        await this.db.query(
+    public async createLog(
+        data: { tenant_id: number; student_id: number; event_type: string; description: string; metadata?: any },
+        db: Pool | any = this.db
+    ): Promise<void> {
+        await db.query(
             `INSERT INTO school.student_log (tenant_id, student_id, event_type, description, metadata)
              VALUES ($1, $2, $3, $4, $5)`,
             [data.tenant_id, data.student_id, data.event_type, data.description, data.metadata ? JSON.stringify(data.metadata) : null]
@@ -123,6 +126,7 @@ export default class StudentHelper {
 
     // ─── Search & List (preserved) ───────────────────────────────────────────
 
+
     public async listStudents(
         tenantId: number,
         filters: any = {}
@@ -135,16 +139,30 @@ export default class StudentHelper {
         const params: any[] = [tenantId];
         let paramIndex = 2;
 
+        // ── Enrollment JOIN conditions (built dynamically) ────────────────────
+        // These MUST go into the JOIN, not the WHERE, so that students without
+        // an enrollment row (e.g. admitted but not yet assigned to a classroom)
+        // are still visible in the listing.
+        const enrollJoinConditions = [
+            `se.student_id = s.id`,
+            `se.is_deleted = FALSE`,
+            `se.status = 'active'`,
+        ];
+
         if (filters.academic_year_id) {
-            conditions.push(`se.academic_year_id = $${paramIndex}`);
+            enrollJoinConditions.push(`se.academic_year_id = $${paramIndex}`);
             params.push(filters.academic_year_id);
             paramIndex++;
         }
-        
+
         if (filters.classroom_id) {
-            conditions.push(`se.classroom_id = $${paramIndex}`);
-            params.push(filters.classroom_id);
-            paramIndex++;
+            if (filters.classroom_id === 'none' || filters.classroom_id === 0) {
+                conditions.push(`se.classroom_id IS NULL`);
+            } else {
+                enrollJoinConditions.push(`se.classroom_id = $${paramIndex}`);
+                params.push(filters.classroom_id);
+                paramIndex++;
+            }
         }
 
         if (filters.grade_id) {
@@ -191,11 +209,19 @@ export default class StudentHelper {
             paramIndex++;
         }
 
+        // Optionally surface unenrolled students only
+        if (filters.unenrolled === true || filters.unenrolled === 'true') {
+            conditions.push(`se.id IS NULL`);
+        }
+
         const whereClause = ` WHERE ` + conditions.join(" AND ");
+        const enrollJoinOn = enrollJoinConditions.join(" AND ");
+
         const baseJoin = `
             FROM school.student s
-            LEFT JOIN school.student_enrollment se ON s.id = se.student_id AND se.is_deleted = FALSE AND se.status = 'active'
+            LEFT JOIN school.student_enrollment se ON ${enrollJoinOn}
             LEFT JOIN school.classroom c ON se.classroom_id = c.id
+            LEFT JOIN accounting.v_student_financial_status vfs ON s.id = vfs.student_id
         `;
 
         // 1. Get accurate total count
@@ -206,13 +232,16 @@ export default class StudentHelper {
         // 2. Get paginated data
         const dataQuery = `
             SELECT DISTINCT ON (s.created_at, s.id) s.*, 
-                   c.name as classroom_name, c.section as classroom_section
+                   se.academic_year_id as enrollment_year_id,
+                   c.name as classroom_name, c.section as classroom_section,
+                   COALESCE(vfs.financial_status, 'unpaid') as fee_status,
+                   COALESCE(vfs.outstanding_balance, 0) as outstanding_balance
             ${baseJoin}
             ${whereClause}
             ORDER BY s.created_at DESC, s.id ASC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
         `;
-        
+
         const dataParams = [...params, limit, offset];
         const res = await this.db.query(dataQuery, dataParams);
 

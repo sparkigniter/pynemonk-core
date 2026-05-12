@@ -77,10 +77,12 @@ class TokenService {
         const context = prefetchedContext || await this.userHelper.getIdentityContext(email, clientId);
         if (!context) throw new Error("User identity not found");
 
+        const primaryRole = context.roles.find((r: any) => r.is_primary) || context.roles[0];
         const payload: any = {
             sub: context.user_id,
             email: context.email,
             tenant_id: context.tenant_id,
+            role_id: primaryRole ? primaryRole.id : null,
             roles: context.roles.map((r: any) => r.slug), // Extract slugs for easy checking
             scope: context.permissions.join(" "),
             iat: Math.floor(Date.now() / 1000)

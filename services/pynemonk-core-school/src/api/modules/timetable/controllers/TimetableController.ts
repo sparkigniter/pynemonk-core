@@ -14,6 +14,11 @@ export class TimetableController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const classroomId = parseInt(req.params.classroomId);
+            const scope = await this.getScope(req);
+
+            if (!scope.hasClassroom(classroomId)) {
+                return this.forbidden(res, "You do not have access to this classroom's timetable");
+            }
 
             const data = await this.timetableService.getByClassroom(tenantId, classroomId);
             return this.ok(res, "Timetable retrieved", data);
@@ -88,9 +93,13 @@ export class TimetableController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const teacherId = parseInt(req.query.teacher_id as string);
-            const day = parseInt(req.query.day as string);
+            const scope = await this.getScope(req);
 
-            const data = await this.timetableService.getTeacherSchedule(tenantId, teacherId, day);
+            if (!scope.hasStaff(teacherId)) {
+                return this.forbidden(res, "You do not have access to this teacher's schedule");
+            }
+
+            const data = await this.timetableService.getTeacherSchedule(tenantId, teacherId, parseInt(req.query.day as string));
             return this.ok(res, "Teacher schedule retrieved", data);
         } catch (error: any) {
             return this.internalservererror(res, error.message);

@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
 import { injectable } from "tsyringe";
 import { TeacherNoteService } from "../services/TeacherNoteService.js";
-import BaseController from "../../../core/controllers/BaseController.js";
+import ResourceController from "../../../core/controllers/ResourceController.js";
 
 @injectable()
-export class TeacherNoteController extends BaseController {
+export class TeacherNoteController extends ResourceController {
     constructor(private noteService: TeacherNoteService) {
         super();
     }
@@ -13,12 +13,18 @@ export class TeacherNoteController extends BaseController {
         try {
             const tenantId = (req as any).user.tenantId;
             const userId = (req as any).user.userId;
+            const scope = await this.getScope(req);
+
             const filters = {
                 startDate: req.query.startDate as string,
                 endDate: req.query.endDate as string,
                 classroomId: req.query.classroomId ? parseInt(req.query.classroomId as string) : undefined,
                 subjectId: req.query.subjectId ? parseInt(req.query.subjectId as string) : undefined,
             };
+
+            if (filters.classroomId && !scope.hasClassroom(filters.classroomId)) {
+                return this.forbidden(res, "You do not have access to this classroom");
+            }
 
             const notes = await this.noteService.listNotes(tenantId, userId, filters);
             return this.ok(res, "Notes retrieved", notes);

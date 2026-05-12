@@ -2,6 +2,7 @@ import { injectable, inject } from "tsyringe";
 import e from "express";
 import StudentService from "../services/StudentService.js";
 import { AdmissionNumberService } from "../services/AdmissionNumberService.js";
+import EnrollmentHelper from "../helpers/EnrollmentHelper.js";
 import ApiResponseHandler from "../../../core/ApiResponseHandler.js";
 import ResourceController from "../../../core/controllers/ResourceController.js";
 
@@ -9,7 +10,8 @@ import ResourceController from "../../../core/controllers/ResourceController.js"
 export default class StudentController extends ResourceController {
     constructor(
         @inject(StudentService) private studentService: StudentService,
-        @inject(AdmissionNumberService) private admissionNumberService: AdmissionNumberService
+        @inject(AdmissionNumberService) private admissionNumberService: AdmissionNumberService,
+        @inject(EnrollmentHelper) private enrollmentHelper: EnrollmentHelper
     ) {
         super();
     }
@@ -87,7 +89,7 @@ export default class StudentController extends ResourceController {
             const tenantId = this.getTenantId(req);
             const scope = await this.getScope(req);
             const user = (req as any).user;
-            const { page, limit, search, classroom_id, academic_year_id, gender, blood_group, religion, nationality, grade_id } = req.query;
+            const { page, limit, search, classroom_id, academic_year_id, gender, blood_group, religion, nationality, grade_id, unenrolled } = req.query;
             const filters: any = {
                 page: page ? parseInt(page as string, 10) : 1,
                 limit: limit ? parseInt(limit as string, 10) : 10,
@@ -98,7 +100,8 @@ export default class StudentController extends ResourceController {
                 blood_group: blood_group as string,
                 religion: religion as string,
                 nationality: nationality as string,
-                grade_id: grade_id ? parseInt(grade_id as string) : undefined
+                grade_id: grade_id ? parseInt(grade_id as string) : undefined,
+                unenrolled: unenrolled === 'true'
             };
 
             const canReadFull = user.permissions.includes('student:read') || scope.accessLevel === "FULL";
@@ -145,6 +148,14 @@ export default class StudentController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const studentId = parseInt(req.params.id, 10);
+            const scope = await this.getScope(req);
+            const user = (req as any).user;
+
+            if (scope.accessLevel !== "FULL" && !scope.hasStudent(studentId)) {
+                ApiResponseHandler.forbidden(res, "You do not have permission to upload documents for this student");
+                return;
+            }
+
             const doc = await this.studentService.addDocument(tenantId, studentId, req.body);
             ApiResponseHandler.ok(res, "Document uploaded successfully", doc);
         } catch (error: any) {
@@ -172,11 +183,63 @@ export default class StudentController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const studentId = parseInt(req.params.id, 10);
+            const scope = await this.getScope(req);
+
+            if (scope.accessLevel !== "FULL" && !scope.hasStudent(studentId)) {
+                ApiResponseHandler.forbidden(res, "You do not have permission to update this student profile");
+                return;
+            }
+
             const student = await this.studentService.updateStudentProfile(tenantId, studentId, req.body);
             ApiResponseHandler.ok(res, "Student updated successfully", student);
         } catch (error: any) {
             console.error(error);
             ApiResponseHandler.badrequest(res, "Failed to update student");
+        }
+    }
+
+    public async enroll(req: e.Request, res: e.Response): Promise<void> {
+        try {
+            const tenantId = this.getTenantId(req);
+            const studentId = parseInt(req.params.id, 10);
+            const { classroom_id, academic_year_id, roll_number } = req.body;
+            const scope = await this.getScope(req);
+
+            if (scope.accessLevel !== "FULL" && !scope.hasStudent(studentId)) {
+                ApiResponseHandler.forbidden(res, "You do not have permission to place this student");
+                return;
+            }
+
+            const enrollment = await this.enrollmentHelper.enrollStudent({
+                tenant_id: tenantId,
+                student_id: studentId,
+                classroom_id: parseInt(classroom_id),
+                academic_year_id: parseInt(academic_year_id),
+                roll_number
+            });
+
+            ApiResponseHandler.ok(res, "Student placed successfully", enrollment);
+        } catch (error: any) {
+            console.error(error);
+            ApiResponseHandler.badrequest(res, "Failed to place student");
+        }
+    }
+    public async addGuardian(req: e.Request, res: e.Response): Promise<void> {
+        try {
+            const tenantId = this.getTenantId(req);
+            const studentId = parseInt(req.params.id, 10);
+            const scope = await this.getScope(req);
+
+            if (scope.accessLevel !== "FULL" && !scope.hasStudent(studentId)) {
+                ApiResponseHandler.forbidden(res, "You do not have permission to add guardians for this student");
+                return;
+            }
+
+            const guardian = await this.studentService.addGuardian(tenantId, studentId, req.body);
+            ApiResponseHandler.ok(res, "Guardian added successfully", guardian);
+        } catch (error: any) {
+            console.error(error);
+            ApiResponseHandler.badrequest(res, "Failed to add guardian");
         }
     }
 }

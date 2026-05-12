@@ -64,6 +64,48 @@ api.interceptors.request.use((config) => {
 // --- Types ---
 type Role = 'parent' | 'teacher'
 type TeacherView = 'home' | 'classes' | 'class_detail' | 'attendance' | 'calendar' | 'exams' | 'profile' | 'homework' | 'homework_new' | 'schedule' | 'inbox' | 'more'
+type AssignmentType = 'practice' | 'homework' | 'test' | 'project'
+type BlockType = 'instructions' | 'question' | 'mcq' | 'attachment' | 'link'
+
+interface Block {
+    id: string;
+    type: BlockType;
+    content: any;
+}
+
+const TEMPLATES: Record<string, { title: string; blocks: Block[] }> = {
+    practice: {
+        title: 'Weekly Practice Worksheet',
+        blocks: [
+            { id: '1', type: 'instructions', content: 'Complete the following exercises to reinforce this week\'s concepts.' },
+            { id: '2', type: 'question', content: 'Solve for x: 2x + 5 = 15' },
+            { id: '3', type: 'question', content: 'What is the capital of France?' }
+        ]
+    },
+    reading: {
+        title: 'Reading Reflection Task',
+        blocks: [
+            { id: '1', type: 'instructions', content: 'Read Chapter 4 of the textbook and answer the reflection questions below.' },
+            { id: '2', type: 'link', content: { url: 'https://pynemonk.com/library', label: 'E-Library Access' } },
+            { id: '3', type: 'question', content: 'Summarize the main conflict in the chapter.' }
+        ]
+    },
+    project: {
+        title: 'Mid-Term Research Project',
+        blocks: [
+            { id: '1', type: 'instructions', content: 'Follow the rubric attached to complete your research project.' },
+            { id: '2', type: 'attachment', content: { name: 'Project_Rubric.pdf', url: '#' } },
+            { id: '3', type: 'question', content: 'Project Title & Objectives' }
+        ]
+    },
+    test: {
+        title: 'Quick Assessment',
+        blocks: [
+            { id: '1', type: 'mcq', content: { question: 'Which planet is known as the Red Planet?', options: ['Earth', 'Mars', 'Jupiter', 'Saturn'], correct: 1 } },
+            { id: '2', type: 'mcq', content: { question: 'What is 15 * 3?', options: ['30', '45', '60', '75'], correct: 1 } }
+        ]
+    }
+};
 
 interface Student {
   id: number;
@@ -759,6 +801,24 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [hwMode, setHwMode] = useState<'text' | 'snap' | 'voice'>('text')
   const [showStartClass, setShowStartClass] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState<TimetableItem | null>(null)
+  
+  // Homework Wizard State
+  const [hwStep, setHwStep] = useState(0)
+  const [showBlockSheet, setShowBlockSheet] = useState(false)
+  const [hwFormData, setHwFormData] = useState({
+    title: '',
+    assignment_type: 'homework' as AssignmentType,
+    classroom_id: undefined as number | undefined,
+    subject_id: undefined as number | undefined,
+    due_date: new Date().toISOString().split('T')[0],
+    due_time: '23:59',
+    blocks: [] as Block[],
+    submission_type: 'both' as 'file' | 'text' | 'both',
+    max_score: 10,
+    is_graded: true,
+    allow_late: false,
+    auto_close: true
+  })
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -953,7 +1013,7 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
       <main className="flex-1 overflow-y-auto custom-scrollbar">
         <AnimatePresence mode="wait">
           {view === 'home' && (
-            <motion.div key="home" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="px-6 py-6 space-y-6">
+            <motion.div key="home" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="px-6 py-6 space-y-6 pb-32">
               {/* Dynamic Header Insight */}
               <div className="flex justify-between items-end mb-2">
                 <div>
@@ -1066,7 +1126,7 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
           )}
 
           {view === 'schedule' && (
-            <motion.div key="schedule" className="flex-1 flex flex-col overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div key="schedule" className="flex-1 flex flex-col overflow-hidden pb-32" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ScheduleView 
                 timetable={timetable} 
                 assignments={data?.assignments || []} 
@@ -1086,7 +1146,7 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
           )}
 
           {view === 'exams' && (
-            <motion.div key="exams" className="flex-1 flex flex-col overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div key="exams" className="flex-1 flex flex-col overflow-hidden pb-32" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ExamManagementView 
                 exams={exams} 
                 loading={loading} 
@@ -1106,7 +1166,7 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
           )}
 
           {view === 'classes' && (
-            <motion.div key="classes" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="px-6 py-6 space-y-6">
+            <motion.div key="classes" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="px-6 py-6 space-y-6 pb-32">
               {/* View Switcher */}
               <div className="flex gap-2 p-1 bg-white rounded-2xl border border-slate-100 shadow-sm">
                 <button
@@ -1381,101 +1441,308 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
           )}
 
           {view === 'homework_new' && (
-            <motion.div key="homework_new" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="px-6 py-6 space-y-8 pb-32">
-              <div className="bg-slate-900 p-8 rounded-[3rem] text-white flex flex-col items-center gap-6 text-center overflow-hidden relative">
-                <div className="flex gap-4 p-1 bg-white/10 rounded-2xl relative z-10">
-                  <button
-                    onClick={() => setHwMode('text')}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${hwMode === 'text' ? 'bg-white text-slate-900 shadow-lg' : 'text-white/60'}`}
-                  >
-                    Type
+            <motion.div key="homework_new" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col bg-slate-50 relative pb-32">
+              {/* Header */}
+              <div className="px-6 pt-12 pb-6 bg-white border-b border-slate-100 flex items-center justify-between sticky top-0 z-40">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => hwStep === 0 ? setView('homework') : setHwStep(prev => prev - 1)} className="w-12 h-12 flex items-center justify-center bg-slate-50 text-slate-400 rounded-2xl active:scale-95 transition-all">
+                    <ArrowLeft size={20} />
                   </button>
-                  <button
-                    onClick={() => setHwMode('snap')}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${hwMode === 'snap' ? 'bg-white text-slate-900 shadow-lg' : 'text-white/60'}`}
-                  >
-                    Snap
-                  </button>
-                  <button
-                    onClick={() => setHwMode('voice')}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${hwMode === 'voice' ? 'bg-white text-slate-900 shadow-lg' : 'text-white/60'}`}
-                  >
-                    Voice
-                  </button>
+                  {hwStep > 0 && (
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900 tracking-tight">Step {hwStep}</h3>
+                      <p className="text-[8px] font-black text-brand-600 uppercase tracking-widest mt-1">Creation Wizard</p>
+                    </div>
+                  )}
                 </div>
-
-                <div className="relative z-10 flex flex-col items-center gap-3">
-                  <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
-                    {hwMode === 'text' && <ClipboardCheck size={32} className="text-white" />}
-                    {hwMode === 'snap' && <Camera size={32} className="text-white" />}
-                    {hwMode === 'voice' && <Mic size={32} className="text-white" />}
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black">
-                      {hwMode === 'text' ? 'Type Instructions' : hwMode === 'snap' ? 'Snap Blackboard' : 'Record Message'}
-                    </h3>
-                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-1">Zero-friction assignment</p>
-                  </div>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4].map(s => (
+                    <div key={s} className={`h-1 rounded-full transition-all ${s <= hwStep ? 'w-4 bg-brand-600' : 'w-2 bg-slate-100'}`} />
+                  ))}
                 </div>
-                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-brand-500/20 rounded-full blur-3xl"></div>
               </div>
 
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Class & Subject</label>
-                  <select className="w-full bg-white border-2 border-slate-100 rounded-[1.5rem] p-4 text-sm font-bold appearance-none outline-none focus:border-indigo-500 shadow-sm">
-                    <option>Select Target Class</option>
-                    {data?.assignments.map((a, i) => <option key={i}>{a.classroom_name} - {a.subject_name}</option>)}
-                  </select>
-                </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {/* Step 0: Quick Start */}
+                {hwStep === 0 && (
+                  <div className="p-8 space-y-6">
+                    <div className="mb-10">
+                      <h2 className="text-3xl font-black text-slate-900 tracking-tight">Assignment</h2>
+                      <p className="text-sm font-bold text-slate-400 mt-2">Pick an entry point for your task</p>
+                    </div>
+                    
+                    <button 
+                        onClick={() => setHwStep(1)}
+                        className="w-full flex items-center justify-between p-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 active:scale-95 transition-all"
+                    >
+                        <div className="flex items-center gap-6">
+                            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                                <Plus size={28} />
+                            </div>
+                            <div className="text-left">
+                                <span className="text-base font-black text-slate-900 block">From Scratch</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Clean Slate</span>
+                            </div>
+                        </div>
+                        <ChevronRight size={20} className="text-slate-200" />
+                    </button>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Homework Title</label>
-                  <input type="text" placeholder="e.g. Chapter 4 Practice" className="w-full bg-white border-2 border-slate-100 rounded-[1.5rem] p-4 text-sm font-bold outline-none focus:border-indigo-500 shadow-sm" />
-                </div>
-
-                {hwMode === 'text' && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Description</label>
-                    <textarea
-                      placeholder="Type homework instructions here..."
-                      className="w-full bg-white border-2 border-slate-100 rounded-[1.5rem] p-6 text-sm font-bold outline-none focus:border-indigo-500 shadow-sm min-h-[150px]"
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        {[
+                            { id: 'practice', label: 'Worksheet', icon: FileSpreadsheet, color: '#4f46e5' },
+                            { id: 'reading', label: 'Reading', icon: BookOpen, color: '#10b981' },
+                            { id: 'project', label: 'Project', icon: Trophy, color: '#f59e0b' },
+                            { id: 'test', label: 'Quick Test', icon: HelpCircle, color: '#f43f5e' }
+                        ].map(t => (
+                            <button
+                                key={t.id}
+                                onClick={() => {
+                                  const template = TEMPLATES[t.id];
+                                  setHwFormData(prev => ({ ...prev, title: template.title, blocks: template.blocks.map(b => ({ ...b, id: Math.random().toString(36) })) }));
+                                  setHwStep(2);
+                                }}
+                                className="flex flex-col items-start gap-8 p-8 bg-white rounded-[2.5rem] border border-slate-100 active:scale-95 transition-all"
+                            >
+                                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm" style={{ backgroundColor: `${t.color}10`, color: t.color }}>
+                                    <t.icon size={24} />
+                                </div>
+                                <span className="text-xs font-black text-slate-900">{t.label}</span>
+                            </button>
+                        ))}
+                    </div>
                   </div>
                 )}
 
-                {hwMode === 'snap' && (
-                  <div className="bg-indigo-50 p-8 rounded-[2.5rem] border-2 border-dashed border-indigo-200 flex flex-col items-center gap-4 transition-all hover:bg-indigo-100/50">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-indigo-500">
-                      <Camera size={24} />
+                {/* Step 1: Basics */}
+                {hwStep === 1 && (
+                  <div className="p-8 space-y-10">
+                    <div className="space-y-4">
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Assignment Title</label>
+                      <input 
+                        type="text" 
+                        value={hwFormData.title}
+                        onChange={e => setHwFormData({...hwFormData, title: e.target.value})}
+                        placeholder="e.g. Chapter 4 Practice" 
+                        className="w-full text-3xl font-black text-slate-900 placeholder:text-slate-100 focus:outline-none bg-transparent" 
+                      />
                     </div>
-                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Tap to capture blackboard</p>
+
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Classroom & Subject</label>
+                        <select 
+                          value={hwFormData.classroom_id}
+                          onChange={e => setHwFormData({...hwFormData, classroom_id: parseInt(e.target.value)})}
+                          className="w-full bg-white border-2 border-slate-50 rounded-[2rem] p-6 text-sm font-bold appearance-none outline-none focus:border-brand-500 shadow-sm"
+                        >
+                          <option value="">Choose Target</option>
+                          {data?.assignments.map((a, i) => <option key={i} value={a.classroom_id}>{a.classroom_name} - {a.subject_name}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="space-y-4">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Deadline</label>
+                        <div className="flex gap-2">
+                          {['Today', 'Tomorrow'].map(d => (
+                            <button 
+                              key={d}
+                              onClick={() => setHwFormData({...hwFormData, due_date: d === 'Today' ? new Date().toISOString().split('T')[0] : new Date(Date.now() + 86400000).toISOString().split('T')[0]})}
+                              className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${hwFormData.due_date === (d === 'Today' ? new Date().toISOString().split('T')[0] : new Date(Date.now() + 86400000).toISOString().split('T')[0]) ? 'bg-brand-600 text-white shadow-lg shadow-brand-100' : 'bg-white text-slate-400'}`}
+                            >
+                              {d}
+                            </button>
+                          ))}
+                        </div>
+                        <input 
+                          type="date" 
+                          value={hwFormData.due_date}
+                          onChange={e => setHwFormData({...hwFormData, due_date: e.target.value})}
+                          className="w-full bg-white border-2 border-slate-50 rounded-[2rem] p-6 text-sm font-bold outline-none focus:border-brand-500 shadow-sm" 
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {hwMode === 'voice' && (
-                  <div className="bg-rose-50 p-8 rounded-[2.5rem] border-2 border-dashed border-rose-200 flex flex-col items-center gap-4 transition-all hover:bg-rose-100/50">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-rose-500 animate-pulse">
-                      <Mic size={24} />
-                    </div>
-                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Hold to record instructions</p>
-                    <div className="flex gap-1">
-                      {[...Array(5)].map((_, i) => (
-                        <div key={i} className="w-1 bg-rose-200 rounded-full" style={{ height: Math.random() * 20 + 10 + 'px' }}></div>
+                {/* Step 2: Content */}
+                {hwStep === 2 && (
+                  <div className="p-8 space-y-6">
+                    <AnimatePresence>
+                      {hwFormData.blocks.map((block) => (
+                        <motion.div 
+                          key={block.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm relative overflow-hidden"
+                        >
+                          <div className="flex items-center justify-between mb-6">
+                            <span className="text-[9px] font-black text-brand-600 uppercase tracking-[0.3em]">{block.type} Block</span>
+                            <button onClick={() => setHwFormData(prev => ({ ...prev, blocks: prev.blocks.filter(b => b.id !== block.id) }))}><X size={18} className="text-rose-400" /></button>
+                          </div>
+                          {block.type === 'instructions' && (
+                            <textarea 
+                              className="w-full text-sm font-bold text-slate-700 bg-transparent focus:outline-none resize-none leading-relaxed"
+                              rows={3}
+                              value={block.content}
+                              onChange={e => setHwFormData(prev => ({ ...prev, blocks: prev.blocks.map(b => b.id === block.id ? { ...b, content: e.target.value } : b) }))}
+                              placeholder="Type instructions here..."
+                            />
+                          )}
+                          {block.type === 'question' && (
+                            <input 
+                              className="w-full text-sm font-black text-slate-900 bg-transparent focus:outline-none"
+                              value={block.content}
+                              onChange={e => setHwFormData(prev => ({ ...prev, blocks: prev.blocks.map(b => b.id === block.id ? { ...b, content: e.target.value } : b) }))}
+                              placeholder="Enter your question..."
+                            />
+                          )}
+                        </motion.div>
                       ))}
+                    </AnimatePresence>
+                    
+                    <button 
+                        onClick={() => setShowBlockSheet(true)}
+                        className="w-full py-10 border-2 border-dashed border-slate-200 rounded-[3rem] flex flex-col items-center justify-center gap-3 text-slate-300 font-black uppercase text-[10px] tracking-widest hover:border-brand-300 hover:bg-brand-50 transition-all"
+                    >
+                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-brand-600 mb-2"><Plus size={24} /></div>
+                        Add Content Block
+                    </button>
+                  </div>
+                )}
+
+                {/* Step 3: Settings */}
+                {hwStep === 3 && (
+                  <div className="p-8 space-y-8">
+                    <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm space-y-6">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Submission Policy</h4>
+                      <div className="flex p-1.5 bg-slate-50 rounded-2xl">
+                        {['file', 'text', 'both'].map(m => (
+                          <button
+                            key={m}
+                            onClick={() => setHwFormData({...hwFormData, submission_type: m as any})}
+                            className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${hwFormData.submission_type === m ? 'bg-white text-brand-600 shadow-md' : 'text-slate-400'}`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-8 bg-white rounded-[3rem] border border-slate-100 shadow-sm">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                          <CheckCircle2 size={24} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-900">Grading Enabled</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Mark assignments</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setHwFormData({...hwFormData, is_graded: !hwFormData.is_graded})}
+                        className={`w-14 h-7 rounded-full relative transition-all ${hwFormData.is_graded ? 'bg-brand-600' : 'bg-slate-200'}`}
+                      >
+                        <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${hwFormData.is_graded ? 'left-8' : 'left-1'}`} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 4: Review */}
+                {hwStep === 4 && (
+                  <div className="p-8 space-y-8">
+                    <div className="p-10 bg-slate-900 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden">
+                      <div className="absolute -top-10 -right-10 w-40 h-40 bg-brand-500/20 rounded-full blur-3xl" />
+                      <div className="relative z-10">
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-400 mb-2">Review Draft</p>
+                        <h3 className="text-3xl font-black mb-10 leading-tight">{hwFormData.title}</h3>
+                        <div className="grid grid-cols-2 gap-8 pt-8 border-t border-white/10">
+                          <div>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Target</p>
+                            <p className="text-sm font-black">{data?.assignments.find(a => a.classroom_id === hwFormData.classroom_id)?.classroom_name || 'Classroom'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Due Date</p>
+                            <p className="text-sm font-black">{new Date(hwFormData.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="absolute bottom-10 left-6 right-6">
-                <button
-                  onClick={() => navigateTo('homework')}
-                  className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-sm shadow-2xl active:scale-[0.98] transition-transform"
-                >
-                  Publish to Students
-                </button>
+              {/* Sticky Action Bar */}
+              <div className="fixed bottom-0 left-0 right-0 p-8 bg-white/80 backdrop-blur-xl border-t border-slate-100 flex items-center gap-4 z-40">
+                {hwStep < 4 ? (
+                  <button 
+                    onClick={() => setHwStep(prev => prev + 1)}
+                    disabled={hwStep === 0}
+                    className={`flex-1 py-6 bg-slate-900 text-white rounded-[2.5rem] text-xs font-black uppercase tracking-[0.2em] flex items-center justify-center gap-4 active:scale-95 transition-all shadow-2xl shadow-slate-200 ${hwStep === 0 ? 'opacity-0 pointer-events-none' : ''}`}
+                  >
+                    Next Phase <ArrowRight size={18} />
+                  </button>
+                ) : (
+                  <button 
+                    onClick={async () => {
+                      setSaving(true);
+                      try {
+                        const payload = {
+                          ...hwFormData,
+                          due_date: `${hwFormData.due_date}T${hwFormData.due_time}:00`,
+                          description: JSON.stringify(hwFormData.blocks),
+                          subject_id: data?.assignments.find(a => a.classroom_id === hwFormData.classroom_id)?.subject_id
+                        };
+                        const res = await api.post('/school/homework', payload);
+                        if (res.data.success) {
+                          setHwStep(0);
+                          setView('homework');
+                          fetchMainData();
+                        }
+                      } catch (err) { console.error(err); }
+                      setSaving(false);
+                    }}
+                    className="flex-1 py-6 bg-brand-600 text-white rounded-[2.5rem] text-xs font-black uppercase tracking-[0.2em] flex items-center justify-center gap-4 active:scale-95 transition-all shadow-2xl shadow-brand-100"
+                  >
+                    {saving ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Send size={20} />}
+                    Dispatch Now
+                  </button>
+                )}
               </div>
+
+              {/* Block Bottom Sheet */}
+              <AnimatePresence>
+                {showBlockSheet && (
+                  <>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBlockSheet(false)} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60]" />
+                    <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[3.5rem] p-10 z-[70] shadow-2xl">
+                      <div className="w-12 h-1.5 bg-slate-100 rounded-full mx-auto mb-10" />
+                      <h3 className="text-xl font-black text-slate-900 tracking-tight mb-8">Add Content</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {[
+                          { id: 'instructions', label: 'Instructions', icon: ClipboardCheck, color: '#4f46e5' },
+                          { id: 'question', label: 'Question', icon: HelpCircle, color: '#10b981' },
+                          { id: 'mcq', label: 'MCQ', icon: Layout, color: '#f59e0b' },
+                          { id: 'attachment', label: 'Attachment', icon: Paperclip, color: '#f43f5e' }
+                        ].map(b => (
+                          <button
+                            key={b.id}
+                            onClick={() => {
+                              const newBlock: Block = { id: Math.random().toString(36), type: b.id as any, content: b.id === 'mcq' ? { question: '', options: ['', '', '', ''], correct: 0 } : '' };
+                              setHwFormData(prev => ({ ...prev, blocks: [...prev.blocks, newBlock] }));
+                              setShowBlockSheet(false);
+                            }}
+                            className="flex items-center gap-4 p-6 bg-slate-50 rounded-[2rem] border border-slate-100 active:scale-95 transition-all"
+                          >
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm" style={{ backgroundColor: `${b.color}10`, color: b.color }}><b.icon size={20} /></div>
+                            <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">{b.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
 

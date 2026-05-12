@@ -16,6 +16,7 @@ import ClassroomHelper from "./api/modules/classroom/helpers/ClassroomHelper.js"
 import ClassroomService from "./api/modules/classroom/services/ClassroomService.js";
 import ClassroomController from "./api/modules/classroom/controllers/ClassroomController.js";
 import AdmissionService from "./api/modules/admission/services/AdmissionService.js";
+import AdmissionWorkflowService from "./api/modules/admission/services/AdmissionWorkflowService.js";
 import AdmissionController from "./api/modules/admission/controllers/AdmissionController.js";
 import RoleService from "./api/modules/staff/services/RoleService.js";
 import RoleController from "./api/modules/staff/controllers/RoleController.js";
@@ -61,7 +62,9 @@ import { EventEmitter } from "events";
 function setupDI(): void {
     // ── Infrastructure ──────────────────────────────────────────────────────
     container.registerInstance("DB", pool);
-    container.registerInstance("EventBus", new EventEmitter());
+    if (!container.isRegistered("EventBus")) {
+        container.registerInstance("EventBus", new EventEmitter());
+    }
     container.register("IAuthClient", { useClass: InternalAuthClient });
 
     // ── Student Module ──────────────────────────────────────────────────────
@@ -88,6 +91,7 @@ function setupDI(): void {
     container.register(GuardianHelper, { useClass: GuardianHelper });
     container.register(GuardianController, { useClass: GuardianController });
     container.register(AdmissionService, { useClass: AdmissionService });
+    container.register(AdmissionWorkflowService, { useClass: AdmissionWorkflowService });
     container.register(AdmissionController, { useClass: AdmissionController });
 
     // ── Role Management ──────────────────────────────────────────────────────

@@ -7,8 +7,8 @@ import StatsCard from '../../components/ui/StatsCard';
 import AttendanceChart from '../../components/ui/AttendanceChart';
 import QuickActions from '../../components/ui/QuickActions';
 import ActivityFeed from '../../components/ui/ActivityFeed';
-import UpcomingEvents from '../../components/ui/UpcomingEvents';
 import SubjectPerformance from '../../components/ui/SubjectPerformance';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDashboardData } from '../../api/dashboard.api';
 import { useState, useEffect } from 'react';
@@ -17,17 +17,20 @@ import { ComboBox } from '../../components/ui/ComboBox';
 import TeacherDashboard from './components/TeacherDashboard';
 
 const Dashboard = () => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     
     useEffect(() => {
         const fetchDashboard = async () => {
             try {
                 const res = await getDashboardData();
                 setData(res);
-            } catch (err) {
+            } catch (err: any) {
                 console.error('Failed to fetch dashboard', err);
+                setError(err.message);
             } finally {
                 setLoading(false);
             }
@@ -39,6 +42,26 @@ const Dashboard = () => {
         return (
             <div className="h-[70vh] flex items-center justify-center">
                 <Loader2 className="w-10 h-10 text-primary animate-spin" />
+            </div>
+        );
+    }
+
+    if (error || !data) {
+        return (
+            <div className="h-[70vh] flex flex-col items-center justify-center text-center space-y-6">
+                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center">
+                    <Layout size={40} />
+                </div>
+                <div className="space-y-2">
+                    <h2 className="text-3xl font-black text-slate-800 tracking-tight">Restricted Access</h2>
+                    <p className="text-[var(--text-muted)] max-w-md mx-auto">Your current role does not have the permissions required to view the global school dashboard. Please contact your administrator if you believe this is an error.</p>
+                </div>
+                <button 
+                    onClick={() => navigate('/accounting')} 
+                    className="btn-primary px-8"
+                >
+                    Go to Accounting Hub
+                </button>
             </div>
         );
     }
@@ -238,24 +261,24 @@ const Dashboard = () => {
     }
 
     return (
-        <div className="space-y-10 max-w-[1600px] mx-auto pb-10">
+        <div className="space-y-10 max-w-[1600px] mx-auto pb-10 animate-in fade-in duration-1000">
             {/* ── Modern Hero Section ── */}
-            <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-8 sm:p-12 text-white shadow-2xl shadow-slate-200/50">
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-surface-dark p-8 sm:p-12 text-white shadow-2xl shadow-theme/20">
                 {/* Visual accents */}
                 <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/20 to-transparent pointer-events-none" />
                 <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
                 
                 <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-10">
                     <div className="space-y-6">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--card-bg)]/5 rounded-full border border-white/10 backdrop-blur-md">
                             <Sparkles size={14} className="text-amber-400" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">
                                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                             </span>
                         </div>
                         
                         <div className="space-y-2">
-                            <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-[1.1]">
+                            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.1]">
                                 {greeting()}, <span className="text-primary">{capitalizedRole}</span>.
                             </h1>
                             <p className="text-white/50 text-lg font-medium max-w-xl">
@@ -264,28 +287,28 @@ const Dashboard = () => {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-4 pt-4">
-                            <button className="px-8 py-4 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl shadow-white/5 active:scale-95">
+                            <button className="px-8 py-4 bg-[var(--card-bg)] text-surface-dark rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl shadow-white/5 active:scale-95">
                                 Home Shortcuts
                             </button>
                         </div>
                     </div>
 
-                    <div className="lg:w-[400px] bg-white/5 backdrop-blur-xl rounded-[2rem] border border-white/10 p-6 space-y-6">
+                    <div className="lg:w-[400px] bg-[var(--card-bg)]/5 backdrop-blur-xl rounded-[2rem] border border-white/10 p-6 space-y-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-black uppercase tracking-widest">Today at a Glance</h3>
+                            <h3 className="text-sm font-bold uppercase tracking-widest">Today at a Glance</h3>
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         </div>
                         
                         <div className="space-y-4">
                             {activeMiniStats.length > 0 ? activeMiniStats.map((stat) => (
-                                <div key={stat.label} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-all group">
+                                <div key={stat.label} className="flex items-center justify-between p-4 bg-[var(--card-bg)]/5 rounded-2xl border border-white/5 hover:border-white/10 transition-all group">
                                     <div className="flex items-center gap-4">
-                                        <div className="p-2.5 rounded-xl bg-white/5 text-white/70 group-hover:text-white transition-colors">
+                                        <div className="p-2.5 rounded-xl bg-[var(--card-bg)]/5 text-white/70 group-hover:text-white transition-colors">
                                             <stat.icon size={18} />
                                         </div>
                                         <span className="text-sm font-bold text-white/70 group-hover:text-white transition-colors">{stat.label}</span>
                                     </div>
-                                    <span className="text-lg font-black text-white">{stat.value}</span>
+                                    <span className="text-lg font-bold text-white">{stat.value}</span>
                                 </div>
                             )) : (
                                 <div className="text-center py-6 text-white/30 text-xs font-bold uppercase tracking-widest">
@@ -300,9 +323,9 @@ const Dashboard = () => {
             {/* ── Key School Stats ── */}
             <div className="space-y-6">
                 <div className="flex items-center justify-between px-4">
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight">Main <span className="text-primary">School</span> Stats</h2>
-                    <button className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-2">
-                        View Full Records <ChevronRight size={14} />
+                    <h2 className="text-xl font-bold text-[var(--text-main)] tracking-tight">System <span className="text-primary">Intelligence</span></h2>
+                    <button className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-2">
+                        View Detailed Records <ChevronRight size={14} />
                     </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -310,206 +333,115 @@ const Dashboard = () => {
                         <StatsCard key={stat.title} {...stat} />
                     ))}
                 </div>
+                
                 {/* ── Role-Specific Overview ── */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                <div className="xl:col-span-2 space-y-8">
-                    {data.type === 'admin' ? (
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-                            <div className="flex items-center justify-between mb-8">
-                                <div>
-                                    <h3 className="text-xl font-black text-slate-800 tracking-tight">Student Attendance Trends</h3>
-                                    <p className="text-xs font-medium text-slate-400 mt-1">Daily presence tracking across the school.</p>
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 pt-6">
+                    <div className="xl:col-span-2 space-y-8">
+                        {data.type === 'admin' ? (
+                            <div className="premium-card p-8">
+                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-[var(--text-main)] tracking-tight">Attendance Dynamics</h3>
+                                        <p className="text-xs font-medium text-[var(--text-muted)] mt-1">Real-time presence metrics across institutional levels.</p>
+                                    </div>
+                                    <ComboBox
+                                        value="Last 30 Days"
+                                        onChange={() => {}}
+                                        options={[
+                                            { value: 'Last 30 Days', label: 'Last 30 Days' },
+                                            { value: 'This Term', label: 'This Term' },
+                                            { value: 'Academic Year', label: 'Academic Year' },
+                                        ]}
+                                        className="w-48"
+                                    />
                                 </div>
-                                <ComboBox
-                                    value="Last 30 Days"
-                                    onChange={() => {}}
-                                    options={[
-                                        { value: 'Last 30 Days', label: 'Last 30 Days' },
-                                        { value: 'This Term', label: 'This Term' },
-                                        { value: 'Academic Year', label: 'Academic Year' },
-                                    ]}
-                                    className="w-48"
-                                />
+                                <div className="h-[300px]">
+                                    <AttendanceChart data={data.attendanceTrends || []} />
+                                </div>
                             </div>
-                            <AttendanceChart data={data.attendanceTrends || []} />
-                        </div>
-                    ) : data.type === 'teacher' ? (
-                        <div className="space-y-8">
-                            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-                                <div className="flex items-center justify-between mb-8">
-                                    <h3 className="text-xl font-black text-slate-800 tracking-tight">Pending Marks Entry</h3>
-                                    <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-full">
-                                        {data.insights?.urgentMarking?.length || 0} Records
-                                    </span>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {data.insights?.urgentMarking?.map((item: any, i: number) => (
-                                        <div key={i} className="p-6 bg-slate-50/50 rounded-3xl border border-slate-100/50 hover:border-primary/20 hover:bg-primary/5 transition-all group">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className="bg-white p-2 rounded-xl shadow-sm text-primary"><PenTool size={18} /></div>
-                                                <span className="text-[10px] font-black text-primary/60 uppercase tracking-widest">Entry Missing</span>
-                                            </div>
-                                            <h4 className="text-sm font-black text-slate-800 tracking-tight">{item.exam_name}</h4>
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{item.subject_name}</p>
-                                            <div className="mt-6 flex items-center justify-between">
-                                                <div className="flex -space-x-2">
-                                                    {[1,2,3].map(j => <div key={j} className="w-6 h-6 rounded-full border-2 border-white bg-slate-200" />)}
+                        ) : data.type === 'teacher' ? (
+                            <div className="space-y-8">
+                                <div className="premium-card p-8">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className="text-xl font-bold text-[var(--text-main)] tracking-tight">Pending Assessments</h3>
+                                        <span className="px-3 py-1 bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest rounded-full">
+                                            {data.insights?.urgentMarking?.length || 0} Required
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {data.insights?.urgentMarking?.map((item: any, i: number) => (
+                                            <div key={i} className="p-6 bg-slate-50/50 rounded-3xl border border-[var(--card-border)] hover:border-primary/20 hover:bg-[var(--card-bg)] transition-all group">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="bg-[var(--card-bg)] p-2 rounded-xl shadow-sm text-primary border border-[var(--card-border)]"><PenTool size={18} /></div>
+                                                    <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Entry Missing</span>
                                                 </div>
-                                                <span className="text-[10px] font-black text-slate-900">{item.marked_students}/{item.total_students} Done</span>
+                                                <h4 className="text-sm font-bold text-[var(--text-main)] tracking-tight">{item.exam_name}</h4>
+                                                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mt-1">{item.subject_name}</p>
+                                                <div className="mt-6 flex items-center justify-between">
+                                                    <div className="flex -space-x-2">
+                                                        {[1,2,3].map(j => <div key={j} className="w-6 h-6 rounded-full border-2 border-white bg-slate-200" />)}
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-slate-600">{item.marked_students}/{item.total_students} Indexed</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                    {(!data.insights?.urgentMarking || data.insights.urgentMarking.length === 0) && (
-                                        <div className="col-span-full py-12 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">
-                                            All exams marked. Great job!
-                                        </div>
-                                    )}
+                                        ))}
+                                    </div>
                                 </div>
+                                <QuickActions />
                             </div>
-                            
-                            <QuickActions />
-                        </div>
-                    ) : data.type === 'parent' ? (
-                        <div className="space-y-8">
-                            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-                                <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">Academic Progress</h3>
-                                <div className="space-y-6">
-                                    {data.insights?.performance?.map((p: any, i: number) => (
-                                        <div key={i} className="space-y-2">
-                                            <div className="flex justify-between items-center px-1">
-                                                <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">{p.student_name} • {p.subject_name}</span>
-                                                <span className="text-sm font-black text-primary">{p.score}%</span>
-                                            </div>
-                                            <div className="h-3 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                                                <div className="h-full bg-primary transition-all duration-1000 ease-out rounded-full shadow-[0_0_10px_rgba(99,102,241,0.3)]" style={{ width: `${p.score}%` }} />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <QuickActions />
-                        </div>
-                    ) : <QuickActions />}
-                </div>
+                        ) : <QuickActions />}
+                    </div>
 
-                <div className="space-y-8">
-                    {data.type === 'admin' ? (
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm flex flex-col h-full">
+                    <div className="space-y-8">
+                        <div className="premium-card p-8 flex flex-col">
                             <div className="flex items-center justify-between mb-8">
-                                <h3 className="text-xl font-black text-slate-800 tracking-tight">School Activity</h3>
-                                <button className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><BarChart2 size={18} className="text-slate-400" /></button>
+                                <h3 className="text-xl font-bold text-[var(--text-main)] tracking-tight">Campus Activity</h3>
+                                <div className="p-2 bg-slate-50 rounded-xl text-[var(--text-muted)]"><BarChart2 size={18} /></div>
                             </div>
                             <ActivityFeed data={data.activityStream || []} />
                         </div>
-                    ) : data.type === 'teacher' ? (
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm h-full">
-                            <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">Daily Schedule</h3>
-                            <div className="space-y-4">
-                                {data.upcomingExams?.map((exam: any, i: number) => (
-                                    <div key={i} className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 hover:bg-white transition-all">
-                                        <div className="bg-primary/10 p-3 rounded-xl text-primary"><Calendar size={20} /></div>
-                                        <div>
-                                            <h4 className="text-sm font-black text-slate-800">{exam.name}</h4>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{exam.subject_name} • {new Date(exam.exam_date).toLocaleDateString()}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-                            <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">Academic Events</h3>
-                            <UpcomingEvents data={data.upcomingExams || []} />
-                        </div>
-                    )}
+                    </div>
                 </div>
-            </div>
-            </div>
 
-            {/* ── Supplementary Role-Based Dashboards ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                {data.type === 'admin' ? (
-                    <>
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-                            <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">Staff Status</h3>
+                {/* ── Supplementary View ── */}
+                {data.type === 'admin' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 pt-4">
+                        <div className="premium-card p-8">
+                            <h3 className="text-xl font-bold text-[var(--text-main)] tracking-tight mb-8">Faculty Presence</h3>
                             <div className="space-y-4">
                                 {data.insights?.staffOnLeave?.map((s: any, i: number) => (
-                                    <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50">
+                                    <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-[var(--card-border)]">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-slate-200" />
+                                            <div className="w-9 h-9 rounded-full bg-slate-200 border-2 border-white shadow-sm" />
                                             <span className="text-sm font-bold text-slate-700">{s.name}</span>
                                         </div>
-                                        <span className="px-2 py-1 bg-primary/5 text-primary text-[8px] font-black uppercase tracking-widest rounded-md">{s.leave_type}</span>
+                                        <span className="px-2.5 py-1 bg-amber-50 text-amber-600 text-[9px] font-bold uppercase tracking-widest rounded-lg border border-amber-100">{s.leave_type}</span>
                                     </div>
                                 ))}
                                 {(!data.insights?.staffOnLeave || data.insights.staffOnLeave.length === 0) && (
-                                    <div className="text-center py-8 text-slate-400 text-xs font-bold uppercase tracking-widest italic">All staff present today.</div>
+                                    <div className="text-center py-10 text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-widest italic opacity-50">Operational capacity at 100%</div>
                                 )}
                             </div>
                         </div>
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-                            <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">New Student Admissions</h3>
+                        <div className="premium-card p-8">
+                            <h3 className="text-xl font-bold text-[var(--text-main)] tracking-tight mb-8">Recent Admissions</h3>
                             <div className="space-y-4">
                                 {data.insights?.recentAdmissions?.map((s: any, i: number) => (
-                                    <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50">
+                                    <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-[var(--card-border)]">
                                         <div>
-                                            <h4 className="text-sm font-bold text-slate-700">{s.name}</h4>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase">{s.grade}</p>
+                                            <h4 className="text-sm font-bold text-[var(--text-main)]">{s.name}</h4>
+                                            <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">{s.grade}</p>
                                         </div>
-                                        <span className="text-[10px] font-black text-primary">{new Date(s.enrollment_date).toLocaleDateString()}</span>
+                                        <span className="text-[10px] font-bold text-primary">{new Date(s.enrollment_date).toLocaleDateString()}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-                            <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">Grade Distribution</h3>
+                        <div className="premium-card p-8">
+                            <h3 className="text-xl font-bold text-[var(--text-main)] tracking-tight mb-8">Performance Index</h3>
                             <SubjectPerformance data={data.insights?.gradePerformance || []} />
                         </div>
-                    </>
-                ) : data.type === 'teacher' ? (
-                    <>
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-                            <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">My Classes Hub</h3>
-                            <div className="space-y-3">
-                                {data.myClasses?.map((cls: any, i: number) => (
-                                    <div key={i} className="p-5 bg-slate-50/50 rounded-3xl border border-slate-100/50 hover:bg-white transition-all flex items-center justify-between group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-primary font-black group-hover:bg-primary group-hover:text-white transition-all">
-                                                {cls.name.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <h4 className="text-sm font-black text-slate-800">{cls.name} - {cls.section}</h4>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{cls.grade_name}</p>
-                                            </div>
-                                        </div>
-                                        <ChevronRight size={16} className="text-slate-300 group-hover:text-primary transition-colors" />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="md:col-span-2 bg-slate-900 rounded-[2.5rem] p-12 text-white relative overflow-hidden flex items-center justify-between">
-                            <div className="relative z-10 space-y-6 max-w-lg">
-                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
-                                    <Sparkles size={14} className="text-primary" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Daily Spotlight</span>
-                                </div>
-                                <h3 className="text-3xl font-black tracking-tight leading-tight">Focus on Student Well-being.</h3>
-                                <p className="text-white/50 text-sm font-medium">Review your daily class logs and check for student attendance streaks to identify those who may need additional academic support this week.</p>
-                            </div>
-                            <div className="absolute right-0 bottom-0 p-12 opacity-10"><Layout size={200} /></div>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
-                            <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">Exam Milestones</h3>
-                            <UpcomingEvents data={data.insights?.upcomingExams || []} />
-                        </div>
-                        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm md:col-span-2">
-                            <h3 className="text-xl font-black text-slate-800 tracking-tight mb-8">Subject-wise Progress</h3>
-                            <SubjectPerformance data={data.insights?.performance || []} />
-                        </div>
-                    </>
+                    </div>
                 )}
             </div>
         </div>

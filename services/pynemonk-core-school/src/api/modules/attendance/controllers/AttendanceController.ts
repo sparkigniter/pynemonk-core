@@ -56,6 +56,23 @@ export class AttendanceController extends ResourceController {
             return this.internalservererror(res, error.message);
         }
     }
+
+    public async getStudentStats(req: Request, res: Response) {
+        try {
+            const tenantId = this.getTenantId(req);
+            const studentId = parseInt(req.params.studentId);
+            const scope = await this.getScope(req);
+
+            if (scope.accessLevel !== "FULL" && !scope.hasStudent(studentId)) {
+                return this.forbidden(res, "You do not have access to this student's attendance data");
+            }
+
+            const stats = await this.attendanceService.getStudentAttendanceStats(tenantId, studentId);
+            return this.ok(res, "Student attendance stats retrieved", stats);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
 }
 
 export default AttendanceController;

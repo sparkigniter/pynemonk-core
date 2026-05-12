@@ -8,7 +8,7 @@ import { AuthenticatedRequest } from "../../core/middleware/AuthMiddleware.js";
 
 const router = Router();
 
-// Only users with student:write permission can process admissions
+// 1. Direct Admission (Legacy/Simple)
 router.post(
     "/",
     apiRateLimiter,
@@ -16,6 +16,48 @@ router.post(
     requireAuth,
     requirePermission(["student:write"]),
     (req, res) => container.resolve(AdmissionController).admit(req as AuthenticatedRequest, res),
+);
+
+// 2. Multistage Workflow
+router.post(
+    "/workflow/start",
+    apiRateLimiter,
+    requireAuth,
+    requirePermission(["student:write"]),
+    (req, res) => container.resolve(AdmissionController).startWorkflow(req as AuthenticatedRequest, res),
+);
+
+router.patch(
+    "/workflow/:id",
+    apiRateLimiter,
+    requireAuth,
+    requirePermission(["student:write"]),
+    (req, res) => container.resolve(AdmissionController).updateWorkflow(req as AuthenticatedRequest, res),
+);
+
+router.post(
+    "/workflow/:id/finalize",
+    apiRateLimiter,
+    requireAuth,
+    requirePermission(["student:write"]),
+    (req, res) => container.resolve(AdmissionController).finalizeWorkflow(req as AuthenticatedRequest, res),
+);
+
+// 3. Application List/Management
+router.get(
+    "/applications",
+    apiRateLimiter,
+    requireAuth,
+    requirePermission(["student:read"]),
+    (req, res) => container.resolve(AdmissionController).listApplications(req as AuthenticatedRequest, res),
+);
+
+router.get(
+    "/workflow/:id",
+    apiRateLimiter,
+    requireAuth,
+    requirePermission(["student:read"]),
+    (req, res) => container.resolve(AdmissionController).getApplication(req as AuthenticatedRequest, res),
 );
 
 export default router;

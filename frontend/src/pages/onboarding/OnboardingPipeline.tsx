@@ -79,16 +79,16 @@ const OnboardingPipeline = ({ type }: { type?: 'Student' | 'Teacher' }) => {
                         <Sparkles size={12} className="text-primary" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-primary">Admission Pipeline</span>
                     </div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none">
+                    <h1 className="text-4xl font-black text-[var(--text-main)] tracking-tight leading-none">
                         {type ? `${type} Intake` : 'Global Pipeline'}
                     </h1>
-                    <p className="text-slate-400 font-medium text-sm">
+                    <p className="text-[var(--text-muted)] font-medium text-sm">
                         Manage leads and track onboarding progress for {type?.toLowerCase() || 'all'} candidates.
                     </p>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <button className="bg-white text-slate-600 px-6 py-3 rounded-2xl text-xs font-black hover:bg-slate-50 transition-all shadow-sm border border-slate-100 flex items-center gap-2">
+                    <button className="bg-[var(--card-bg)] text-slate-600 px-6 py-3 rounded-2xl text-xs font-black hover:bg-slate-50 transition-all shadow-sm border border-[var(--card-border)] flex items-center gap-2">
                         <Filter size={16} />
                         Filters
                     </button>
@@ -102,7 +102,7 @@ const OnboardingPipeline = ({ type }: { type?: 'Student' | 'Teacher' }) => {
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-40 gap-4">
                     <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Syncing Pipeline...</p>
+                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Syncing Pipeline...</p>
                 </div>
             ) : (
                 <div className="flex gap-8 overflow-x-auto pb-10 px-4 snap-x no-scrollbar">
@@ -114,40 +114,40 @@ const OnboardingPipeline = ({ type }: { type?: 'Student' | 'Teacher' }) => {
                                 <div className="flex items-center justify-between px-2">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-2.5 h-2.5 rounded-full ${col.color.replace('-50', '-500')}`} />
-                                        <h3 className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">
+                                        <h3 className="font-black text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
                                             {col.title}
                                         </h3>
-                                        <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-[10px] font-black text-slate-400">
+                                        <span className="px-2 py-0.5 bg-slate-100 rounded-lg text-[10px] font-black text-[var(--text-muted)]">
                                             {candidatesInCol.length}
                                         </span>
                                     </div>
                                 </div>
                                 
                                 {/* Column Content */}
-                                <div className="space-y-4 min-h-[600px] p-2 rounded-[2.5rem] bg-slate-50/50 border border-slate-100/50">
+                                <div className="space-y-4 min-h-[600px] p-2 rounded-[2.5rem] bg-slate-50/50 border border-[var(--card-border)]/50">
                                     {candidatesInCol.map((candidate) => (
-                                        <div key={candidate.id} className="group p-5 bg-white border border-slate-100 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 transition-all cursor-pointer">
+                                        <div key={candidate.id} className="group p-5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 transition-all cursor-pointer">
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-300">
+                                                    <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-[var(--card-border)] flex items-center justify-center font-black text-slate-300">
                                                         {candidate.target_name[0]}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <h4 className="font-black text-sm text-slate-900 truncate tracking-tight">{candidate.target_name}</h4>
-                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">
+                                                        <h4 className="font-black text-sm text-[var(--text-main)] truncate tracking-tight">{candidate.target_name}</h4>
+                                                        <p className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-widest mt-0.5">
                                                             {candidate.template_name}
                                                         </p>
                                                     </div>
                                                 </div>
                                                 <button className="p-2 opacity-0 group-hover:opacity-100 hover:bg-slate-50 rounded-xl transition-all">
-                                                    <MoreHorizontal size={16} className="text-slate-400" />
+                                                    <MoreHorizontal size={16} className="text-[var(--text-muted)]" />
                                                 </button>
                                             </div>
                                             
                                             <div className="mt-6 flex items-center justify-between">
-                                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100/50">
-                                                    <Clock size={12} className="text-slate-400" />
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-[var(--card-border)]/50">
+                                                    <Clock size={12} className="text-[var(--text-muted)]" />
+                                                    <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-tighter">
                                                         {new Date(candidate.created_at).toLocaleDateString()}
                                                     </span>
                                                 </div>
@@ -178,25 +178,25 @@ const OnboardingPipeline = ({ type }: { type?: 'Student' | 'Teacher' }) => {
 
             {/* Entrance Test Score Modal */}
             {scoringInstance && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-md p-10 shadow-2xl animate-in zoom-in-95 duration-300">
-                        <h3 className="text-2xl font-black text-slate-900 mb-2">Record Entrance Score</h3>
-                        <p className="text-slate-400 font-medium mb-8">Enter the assessment result for {scoringInstance.target_name}.</p>
+                <div className="fixed inset-0 modal-overlay backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[var(--card-bg)] rounded-[2.5rem] w-full max-w-md p-10 shadow-2xl animate-in zoom-in-95 duration-300">
+                        <h3 className="text-2xl font-black text-[var(--text-main)] mb-2">Record Entrance Score</h3>
+                        <p className="text-[var(--text-muted)] font-medium mb-8">Enter the assessment result for {scoringInstance.target_name}.</p>
                         
                         <div className="space-y-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assessment Score (0-100)</label>
+                                <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Assessment Score (0-100)</label>
                                 <input 
                                     type="number" 
                                     value={score}
                                     onChange={e => setScore(e.target.value)}
-                                    className="w-full p-5 bg-slate-50 border border-slate-100 rounded-2xl font-black text-lg focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                                    className="w-full p-5 bg-slate-50 border border-[var(--card-border)] rounded-2xl font-black text-lg focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
                                     placeholder="85"
                                 />
                             </div>
 
                             <div className="flex gap-4 pt-4">
-                                <button onClick={() => setScoringInstance(null)} className="flex-1 px-8 py-4 rounded-2xl text-xs font-black text-slate-400 hover:bg-slate-50 transition-all">Cancel</button>
+                                <button onClick={() => setScoringInstance(null)} className="flex-1 px-8 py-4 rounded-2xl text-xs font-black text-[var(--text-muted)] hover:bg-slate-50 transition-all">Cancel</button>
                                 <button 
                                     onClick={handleRecordScore}
                                     disabled={isSaving || !score}

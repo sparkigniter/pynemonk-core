@@ -75,7 +75,7 @@ export default function MyClasses() {
     if (loading) {
         return (
             <div className="h-[70vh] flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 border-4 border-slate-100 border-t-primary rounded-full animate-spin" />
+                <div className="w-12 h-12 border-4 border-[var(--card-border)] border-t-primary rounded-full animate-spin" />
                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Gathering your classes...</p>
             </div>
         );
@@ -92,34 +92,34 @@ export default function MyClasses() {
                         </div>
                         <div>
                             <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none">My Workload</h1>
-                            <p className="text-slate-400 font-medium mt-1">Unified access to all your assigned classes and subjects.</p>
+                            <p className="text-[var(--text-muted)] font-medium mt-1">Unified access to all your assigned classes and subjects.</p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4 pt-2">
                         <div className="relative w-full lg:w-96">
-                            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                             <input
                                 type="text"
                                 placeholder={`Find a ${viewMode === 'class' ? 'class' : 'subject'}...`}
-                                className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-[1rem] text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-slate-300 shadow-sm"
+                                className="w-full pl-11 pr-4 py-3 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-[1rem] text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-slate-300 shadow-sm"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
                         </div>
                         
                         {/* View Switcher Toggle */}
-                        <div className="flex items-center gap-1 p-1 bg-white border border-slate-100 rounded-xl shadow-sm">
+                        <div className="flex items-center gap-1 p-1 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl shadow-sm">
                             <button 
                                 onClick={() => setViewMode('class')}
-                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'class' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-slate-600'}`}
+                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'class' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-[var(--text-muted)] hover:text-slate-600'}`}
                             >
                                 <LayoutGrid size={14} />
                                 Class View
                             </button>
                             <button 
                                 onClick={() => setViewMode('subject')}
-                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'subject' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-slate-600'}`}
+                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewMode === 'subject' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-[var(--text-muted)] hover:text-slate-600'}`}
                             >
                                 <List size={14} />
                                 Subject View
@@ -128,15 +128,15 @@ export default function MyClasses() {
                     </div>
                 </div>
 
-                <div className="hidden lg:flex items-center gap-4 px-6 py-4 bg-white rounded-[1.5rem] border border-slate-100 shadow-sm">
+                <div className="hidden lg:flex items-center gap-4 px-6 py-4 bg-[var(--card-bg)] rounded-[1.5rem] border border-[var(--card-border)] shadow-sm">
                    <div className="flex flex-col items-center gap-1">
                        <span className="text-xl font-black text-slate-800">{classrooms.length}</span>
-                       <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Sections</span>
+                       <span className="text-[8px] font-black text-[var(--text-muted)] uppercase tracking-widest">Sections</span>
                    </div>
                    <div className="w-px h-8 bg-slate-100" />
                    <div className="flex flex-col items-center gap-1">
                        <span className="text-xl font-black text-rose-500">{dashboardData?.insights?.urgentMarking?.length || 0}</span>
-                       <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Pending</span>
+                       <span className="text-[8px] font-black text-[var(--text-muted)] uppercase tracking-widest">Pending</span>
                    </div>
                 </div>
             </div>
@@ -150,7 +150,7 @@ export default function MyClasses() {
                         const classAssignments = dashboardData?.allAssignments?.filter((a: any) => a.classroom_id === cls.id) || [];
 
                         return (
-                            <div key={cls.id} className="group bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-500 flex flex-col relative overflow-hidden">
+                            <div key={cls.id} className="group bg-[var(--card-bg)] rounded-[2.5rem] border border-[var(--card-border)] p-8 shadow-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-500 flex flex-col relative overflow-hidden">
                                 <div className="space-y-1 mb-8">
                                     <div className="flex items-center gap-2">
                                         <h3 className="text-2xl font-black text-slate-800 tracking-tight">{cls.name} - {cls.section}</h3>
@@ -158,18 +158,18 @@ export default function MyClasses() {
                                     </div>
                                     <div className="flex flex-wrap gap-1.5 pt-1">
                                         {classAssignments.map((a: any) => (
-                                            <span key={a.id} className="px-2 py-0.5 bg-slate-50 text-slate-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-100">{a.subject_name}</span>
+                                            <span key={a.id} className="px-2 py-0.5 bg-slate-50 text-[var(--text-muted)] rounded-lg text-[8px] font-black uppercase tracking-widest border border-[var(--card-border)]">{a.subject_name}</span>
                                         ))}
                                     </div>
                                 </div>
 
                                 {/* Today's Context */}
-                                <div className="space-y-4 mb-8 p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                                <div className="space-y-4 mb-8 p-4 bg-slate-50/50 rounded-2xl border border-[var(--card-border)]">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                        <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest flex items-center gap-2">
                                             <Clock size={12} /> Today's Sessions
                                         </p>
-                                        <span className="text-[9px] font-bold text-slate-400">{todaySlots.length} Scheduled</span>
+                                        <span className="text-[9px] font-bold text-[var(--text-muted)]">{todaySlots.length} Scheduled</span>
                                     </div>
                                     <div className="space-y-2">
                                         {todaySlots.map((slot: any, idx: number) => (
@@ -188,7 +188,7 @@ export default function MyClasses() {
                                 <div className="grid grid-cols-1 gap-2 mt-auto">
                                     <button 
                                         onClick={() => navigate(`/attendance?classId=${cls.id}`)}
-                                        className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-2 ${isMissingAttendance ? 'bg-primary text-white shadow-xl shadow-primary/20 hover:opacity-90' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                                        className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-2 ${isMissingAttendance ? 'bg-primary text-white shadow-xl shadow-primary/20 hover:opacity-90' : 'bg-slate-100 text-[var(--text-muted)] hover:bg-slate-200'}`}
                                     >
                                         <CalendarCheck size={16} />
                                         Take Attendance
@@ -196,14 +196,14 @@ export default function MyClasses() {
                                     <div className="grid grid-cols-2 gap-2">
                                         <button 
                                             onClick={() => navigate(`/homework?classId=${cls.id}`)}
-                                            className="py-4 bg-white border border-slate-100 text-slate-500 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:border-primary/20 hover:text-primary transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            className="py-4 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] rounded-2xl font-black text-[9px] uppercase tracking-widest hover:border-primary/20 hover:text-primary transition-all active:scale-95 flex items-center justify-center gap-2"
                                         >
                                             <BookCheck size={14} />
                                             Homework
                                         </button>
                                         <button 
                                             onClick={() => navigate(`/exams?classId=${cls.id}`)}
-                                            className="py-4 bg-white border border-slate-100 text-slate-500 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:border-primary/20 hover:text-primary transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            className="py-4 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] rounded-2xl font-black text-[9px] uppercase tracking-widest hover:border-primary/20 hover:text-primary transition-all active:scale-95 flex items-center justify-center gap-2"
                                         >
                                             <PenTool size={14} />
                                             Marks
@@ -220,20 +220,20 @@ export default function MyClasses() {
             {viewMode === 'subject' && (
                 <div className="space-y-6">
                     {filteredSubjects.map((subject) => (
-                        <div key={subject.name} className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
-                            <div className="p-6 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                        <div key={subject.name} className="bg-[var(--card-bg)] rounded-[2rem] border border-[var(--card-border)] overflow-hidden shadow-sm">
+                            <div className="p-6 bg-slate-50/50 border-b border-[var(--card-border)] flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-lg">
                                         {subject.name[0]}
                                     </div>
                                     <div>
                                         <h3 className="text-xl font-black text-slate-800 tracking-tight">{subject.name}</h3>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{subject.code}</p>
+                                        <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">{subject.code}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
                                     <span className="block text-xl font-black text-slate-800">{subject.classes.length}</span>
-                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Assigned Classes</span>
+                                    <span className="text-[8px] font-black text-[var(--text-muted)] uppercase tracking-widest">Assigned Classes</span>
                                 </div>
                             </div>
                             <div className="divide-y divide-slate-50">
@@ -244,7 +244,7 @@ export default function MyClasses() {
                                             <div className="flex items-center gap-8">
                                                 <div className="w-24">
                                                     <span className="text-lg font-black text-slate-800">{cls.classroom_name}</span>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{cls.section} Section</p>
+                                                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-tight">{cls.section} Section</p>
                                                 </div>
                                                 <div className="hidden md:flex flex-col">
                                                     <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Today's Status</span>
@@ -262,21 +262,21 @@ export default function MyClasses() {
                                             <div className="flex items-center gap-2">
                                                 <button 
                                                     onClick={() => navigate(`/attendance?classId=${cls.classroom_id}`)}
-                                                    className="p-3 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
+                                                    className="p-3 text-[var(--text-muted)] hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
                                                     title="Take Attendance"
                                                 >
                                                     <CalendarCheck size={18} />
                                                 </button>
                                                 <button 
                                                     onClick={() => navigate(`/homework?classId=${cls.classroom_id}`)}
-                                                    className="p-3 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
+                                                    className="p-3 text-[var(--text-muted)] hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
                                                     title="Assign Homework"
                                                 >
                                                     <BookCheck size={18} />
                                                 </button>
                                                 <button 
                                                     onClick={() => navigate(`/exams?classId=${cls.classroom_id}`)}
-                                                    className="p-3 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
+                                                    className="p-3 text-[var(--text-muted)] hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
                                                     title="Enter Marks"
                                                 >
                                                     <PenTool size={18} />
@@ -300,13 +300,13 @@ export default function MyClasses() {
 
             {/* Empty State */}
             {((viewMode === 'class' && filteredClasses.length === 0) || (viewMode === 'subject' && filteredSubjects.length === 0)) && (
-                <div className="py-20 text-center space-y-4 bg-white rounded-[3rem] border border-slate-100 border-dashed border-2">
+                <div className="py-20 text-center space-y-4 bg-[var(--card-bg)] rounded-[3rem] border border-[var(--card-border)] border-dashed border-2">
                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300">
                         <BookOpen size={32} />
                     </div>
                     <div>
                         <h3 className="text-lg font-black text-slate-800">No {viewMode === 'class' ? 'classes' : 'subjects'} found</h3>
-                        <p className="text-xs font-medium text-slate-400">Try adjusting your search or contact the administrator for assignments.</p>
+                        <p className="text-xs font-medium text-[var(--text-muted)]">Try adjusting your search or contact the administrator for assignments.</p>
                     </div>
                 </div>
             )}

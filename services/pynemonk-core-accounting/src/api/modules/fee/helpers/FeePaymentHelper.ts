@@ -1,5 +1,5 @@
 import { injectable, inject } from "tsyringe";
-import pool from "../../../../db/pg-pool.js";
+import { Pool } from "pg";
 import BaseModel from "../../../core/models/BaseModel.js";
 
 @injectable()
@@ -16,7 +16,7 @@ export default class FeePaymentHelper extends BaseModel {
             WHERE p.tenant_id = $1 AND p.is_deleted = FALSE
             ORDER BY p.payment_date DESC
         `;
-        const result = await pool.query(query, [tenantId]);
+        const result = await this.db.query(query, [tenantId]);
         return result.rows;
     }
 
@@ -27,11 +27,11 @@ export default class FeePaymentHelper extends BaseModel {
             JOIN accounting.fee_invoice i ON p.invoice_id = i.id
             WHERE p.tenant_id = $1 AND p.id = $2 AND p.is_deleted = FALSE
         `;
-        const result = await pool.query(query, [tenantId, id]);
+        const result = await this.db.query(query, [tenantId, id]);
         return result.rows[0];
     }
 
-    public async create(data: any) {
+    public async create(data: any, db: Pool | any = this.db) {
         const query = `
             INSERT INTO accounting.fee_payment (
                 tenant_id, invoice_id, amount, payment_method, 
@@ -45,11 +45,21 @@ export default class FeePaymentHelper extends BaseModel {
             data.payment_gateway, data.payment_gateway_ref, data.payment_date,
             data.receipt_no, data.notes, data.received_by
         ];
-        const result = await pool.query(query, values);
+        const result = await db.query(query, values);
         
-        // Update invoice paid amount
-        await pool.query(
-            "UPDATE accounting.fee_invoice SET paid_amount = paid_amount + $1, updated_at = NOW() WHERE id = $2",
+        // Update invoice paid amount, due amount and status
+        await db.query(`
+            UPDATE accounting.fee_invoice 
+            SET 
+                paid_amount = paid_amount + $1,
+                due_amount = net_amount - (paid_amount + $1),
+                status = CASE 
+                    WHEN (net_amount - (paid_amount + $1)) <= 0 THEN 'paid'
+                    WHEN (net_amount - (paid_amount + $1)) < net_amount THEN 'partial'
+                    ELSE 'unpaid'
+                END,
+                updated_at = NOW()
+            WHERE id = $2`,
             [data.amount, data.invoice_id]
         );
         
@@ -60,8 +70,18 @@ export default class FeePaymentHelper extends BaseModel {
         // Get payment info first to revert invoice paid amount
         const payment = await this.findById(tenantId, id);
         if (payment) {
-            await pool.query(
-                "UPDATE accounting.fee_invoice SET paid_amount = paid_amount - $1, updated_at = NOW() WHERE id = $2",
+            await this.db.query(`
+                UPDATE accounting.fee_invoice 
+                SET 
+                    paid_amount = paid_amount - $1,
+                    due_amount = due_amount + $1,
+                    status = CASE 
+                        WHEN (due_amount + $1) <= 0 THEN 'paid'
+                        WHEN (due_amount + $1) >= net_amount THEN 'unpaid'
+                        ELSE 'partial'
+                    END,
+                    updated_at = NOW()
+                WHERE id = $2`,
                 [payment.amount, payment.invoice_id]
             );
         }
@@ -71,7 +91,7 @@ export default class FeePaymentHelper extends BaseModel {
             WHERE tenant_id = $1 AND id = $2
             RETURNING id
         `;
-        const result = await pool.query(query, [tenantId, id]);
+        const result = await this.db.query(query, [tenantId, id]);
         return result.rows[0];
     }
 }

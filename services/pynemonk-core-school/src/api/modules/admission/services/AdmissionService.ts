@@ -12,9 +12,10 @@ export interface AdmissionRequest {
         admission_no: string;
         first_name: string;
         last_name: string;
-        email: string;
+        email?: string;
         gender: string;
         date_of_birth: string;
+        mother_tongue?: string;
         blood_group?: string;
         nationality?: string;
         religion?: string;
@@ -25,7 +26,7 @@ export interface AdmissionRequest {
     guardian: {
         first_name: string;
         last_name: string;
-        email: string;
+        email?: string;
         phone: string;
         gender?: string;
         relation: string;
@@ -34,12 +35,18 @@ export interface AdmissionRequest {
         is_emergency?: boolean;
         avatar_url?: string;
     };
-    enrollment: {
+    enrollment?: {
         classroom_id?: number;
         grade_id?: number;
         section?: string;
         academic_year_id: number;
         roll_number?: string;
+    };
+    finance?: {
+        payment_method?: string;
+        amount_paid?: number;
+        reference_no?: string;
+        notes?: string;
     };
 }
 
@@ -55,37 +62,31 @@ export default class AdmissionService {
         private classroomHelper: ClassroomHelper,
     ) {}
 
-    public async admitStudent(tenantId: number, data: AdmissionRequest): Promise<any> {
+    public async admitStudent(tenantId: number, data: AdmissionRequest, userId: number): Promise<any> {
         const client = await this.db.connect();
         try {
             await client.query("BEGIN");
 
             // 0. Resolve Classroom ID if not provided
-            let classroomId = data.enrollment.classroom_id;
-            if (!classroomId && data.enrollment.grade_id && data.enrollment.section) {
+            let classroomId = data.enrollment?.classroom_id;
+            if (!classroomId && data.enrollment?.grade_id && data.enrollment?.section) {
                 const classroom = await this.classroomHelper.findByGradeAndSection(
                     tenantId,
                     data.enrollment.academic_year_id,
                     data.enrollment.grade_id,
                     data.enrollment.section,
                 );
-                if (!classroom) {
-                    throw new Error(
-                        `Classroom not found for Grade ${data.enrollment.grade_id} Section ${data.enrollment.section}`,
-                    );
+                if (classroom) {
+                    classroomId = classroom.id;
                 }
-                classroomId = classroom.id;
-            }
-
-            if (!classroomId) {
-                throw new Error("Classroom ID is required for enrollment");
             }
 
             // 1. Create Student Auth User
+            const studentEmail = data.student.email || `std_${data.student.admission_no.toLowerCase().replace(/[^a-z0-9]/g, '_')}@pynemonk.internal`;
             const studentAuth = await this.authClient.createUser(
                 {
                     tenant_id: tenantId,
-                    email: data.student.email,
+                    email: studentEmail,
                     password: "ChangeMe123!", // Initial default password
                     role_slug: "student",
                 },
@@ -93,10 +94,11 @@ export default class AdmissionService {
             );
 
             // 2. Create Guardian Auth User
+            const guardianEmail = data.guardian.email || `grd_${data.student.admission_no.toLowerCase().replace(/[^a-z0-9]/g, '_')}@pynemonk.internal`;
             const guardianAuth = await this.authClient.createUser(
                 {
                     tenant_id: tenantId,
-                    email: data.guardian.email,
+                    email: guardianEmail,
                     password: "ChangeMe123!",
                     role_slug: "parent",
                 },
@@ -106,22 +108,26 @@ export default class AdmissionService {
             // 3. Create Student Profile
             const student = await this.studentHelper.createStudent(
                 {
+                    ...data.student,
                     tenant_id: tenantId,
                     user_id: studentAuth.id,
-                    ...data.student,
+                    email: studentEmail,
                 },
                 client,
             );
+            console.log(`[AdmissionService] Student profile created: ${student.id}`);
 
             // 4. Create Guardian Profile
             const guardian = await this.guardianHelper.createGuardian(
                 {
+                    ...data.guardian,
                     tenant_id: tenantId,
                     user_id: guardianAuth.id,
-                    ...data.guardian,
+                    email: guardianEmail,
                 },
                 client,
             );
+            console.log(`[AdmissionService] Guardian profile created: ${guardian.id}`);
 
             // 5. Link Student and Guardian
             await this.guardianHelper.linkStudent(
@@ -134,26 +140,42 @@ export default class AdmissionService {
             );
 
             // 6. Enroll Student in Classroom
-            const enrollment = await this.enrollmentHelper.enrollStudent(
-                {
-                    tenant_id: tenantId,
-                    student_id: student.id,
-                    classroom_id: classroomId,
-                    academic_year_id: data.enrollment.academic_year_id,
-                    roll_number: data.enrollment.roll_number,
-                },
-                client,
-            );
+            let enrollment = null;
+            if (classroomId && data.enrollment) {
+                enrollment = await this.enrollmentHelper.enrollStudent(
+                    {
+                        tenant_id: tenantId,
+                        student_id: student.id,
+                        classroom_id: classroomId,
+                        academic_year_id: data.enrollment.academic_year_id,
+                        roll_number: data.enrollment.roll_number,
+                    },
+                    client,
+                );
+            }
 
             await client.query("COMMIT");
 
             // 7. Emit Event
-            this.dispatchAdmissionEvent(tenantId, student.id, enrollment);
+            const studentName = `${student.first_name} ${student.last_name}`;
+            const academicYearId = enrollment?.academic_year_id || data.enrollment?.academic_year_id;
+            
+            if (academicYearId) {
+                this.dispatchAdmissionEvent(
+                    tenantId, 
+                    student.id, 
+                    studentName, 
+                    academicYearId, 
+                    enrollment?.classroom_id || null, 
+                    userId, 
+                    data.finance
+                );
+            }
 
             return {
                 student_id: student.id,
                 admission_no: student.admission_no,
-                enrollment_id: enrollment.id,
+                enrollment_id: enrollment?.id,
             };
         } catch (error) {
             await client.query("ROLLBACK");
@@ -163,13 +185,32 @@ export default class AdmissionService {
         }
     }
 
-    private dispatchAdmissionEvent(tenantId: number, studentId: number, enrollment: any) {
-        this.eventBus.emit("STUDENT_ADMITTED", {
+    private dispatchAdmissionEvent(tenantId: number, studentId: number, studentName: string, academicYearId: number, classroomId: number | null, userId: number, finance?: any) {
+        // Map to standard accounting automation format
+        const totalFee = finance?.admission_fee ?? 0;
+        const amountPaid = finance?.amount_paid ?? 0;
+        
+        // isPaid should be true only if explicitly set or if amountPaid covers the totalFee
+        // If amountPaid is 0 and is_paid is false, isPaid will be false.
+        const isPaid = !!(finance?.is_paid || (amountPaid > 0 && totalFee > 0 && amountPaid >= totalFee));
+
+        const eventData = {
             tenantId,
             studentId,
-            classroomId: enrollment.classroom_id,
-            academicYearId: enrollment.academic_year_id,
-        });
-        console.log(`[EventBus] Emitted STUDENT_ADMITTED: student=${studentId}`);
+            studentName,
+            userId,
+            classroomId,
+            academicYearId,
+            amount: totalFee,
+            amountPaid: amountPaid,
+            isPaid,
+            paymentMethod: finance?.payment_method || 'Cash',
+            reference: finance?.reference_no || `ADM-${Date.now()}`,
+            finance
+        };
+
+        this.eventBus.emit("ADMISSION_COMPLETED", eventData);
+        console.log(`[AdmissionService] >>> EVENT EMITTED: ADMISSION_COMPLETED for student: ${studentName}`);
+        console.log(`[AdmissionService] Payload: ${JSON.stringify(eventData)}`);
     }
 }

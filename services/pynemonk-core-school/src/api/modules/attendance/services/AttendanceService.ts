@@ -120,6 +120,37 @@ export class AttendanceService {
             client.release();
         }
     }
+
+    public async getStudentAttendanceStats(tenantId: number, studentId: number) {
+        const query = `
+            SELECT 
+                a.status,
+                COUNT(*) as count
+            FROM school.attendance a
+            JOIN school.student_enrollment se ON a.enrollment_id = se.id
+            WHERE se.tenant_id = $1 AND se.student_id = $2 AND se.is_deleted = FALSE
+            GROUP BY a.status
+        `;
+        const res = await this.db.query(query, [tenantId, studentId]);
+        
+        const stats: any = {
+            present: 0,
+            absent: 0,
+            late: 0,
+            excused: 0,
+            total: 0
+        };
+
+        res.rows.forEach(row => {
+            stats[row.status] = parseInt(row.count);
+            stats.total += parseInt(row.count);
+        });
+
+        // Calculate percentage
+        stats.percentage = stats.total > 0 ? Math.round(((stats.present + stats.late) / stats.total) * 100) : 0;
+
+        return stats;
+    }
 }
 
 export default AttendanceService;

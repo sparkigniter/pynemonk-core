@@ -54,13 +54,13 @@ export default class AcademicYearHelper extends BaseModel {
         return year?.status === 'closed';
     }
 
-    public async create(tenantId: number, data: { name: string; start_date: string; end_date: string }) {
+    public async create(tenantId: number, data: { name: string; start_date: string; end_date: string; is_current?: boolean }) {
         const query = `
-            INSERT INTO school.academic_year (tenant_id, name, start_date, end_date, status)
-            VALUES ($1, $2, $3, $4, 'planning')
+            INSERT INTO school.academic_year (tenant_id, name, start_date, end_date, is_current)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
         `;
-        const result = await this.db.query(query, [tenantId, data.name, data.start_date, data.end_date]);
+        const result = await this.db.query(query, [tenantId, data.name, data.start_date, data.end_date, data.is_current || false]);
         return result.rows[0];
     }
 }

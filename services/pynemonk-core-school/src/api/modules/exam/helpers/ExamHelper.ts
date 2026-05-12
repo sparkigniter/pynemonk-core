@@ -41,18 +41,19 @@ export class ExamHelper extends BaseModel {
 
     public async createExam(data: any) {
         const query = `
-            INSERT INTO school.exam (tenant_id, academic_year_id, exam_term_id, name, exam_type, start_date, end_date)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO school.exam (tenant_id, academic_year_id, exam_term_id, name, exam_type, start_date, end_date, description)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
         `;
         const values = [
             data.tenant_id,
             data.academic_year_id,
-            data.exam_term_id,
+            data.exam_term_id || null,
             data.name,
             data.exam_type || 'periodic',
             data.start_date || null,
-            data.end_date || null
+            data.end_date || null,
+            data.description || null
         ];
         const res = await this.db.query(query, values);
         return res.rows[0];
@@ -60,7 +61,24 @@ export class ExamHelper extends BaseModel {
 
     public async findAllExams(tenantId: number, academicYearId: number, ids?: number[], classroomId?: number) {
         let query = `
-            SELECT DISTINCT e.*, et.name as term_name
+            SELECT DISTINCT e.*, et.name as term_name,
+                COALESCE((
+                    SELECT ROUND(AVG(paper_progress))
+                    FROM (
+                        SELECT 
+                            CASE 
+                                WHEN total_students > 0 THEN (marked_students::float / total_students) * 100 
+                                ELSE 0 
+                            END as paper_progress
+                        FROM (
+                            SELECT 
+                                (SELECT COUNT(*) FROM school.exam_student es WHERE es.exam_id = e.id AND es.is_deleted = FALSE AND es.is_excluded = FALSE) as total_students,
+                                (SELECT COUNT(*) FROM school.exam_marks em WHERE em.paper_id = ep.id) as marked_students
+                            FROM school.exam_paper ep
+                            WHERE ep.exam_id = e.id AND ep.is_deleted = FALSE
+                        ) ps
+                    ) pps
+                ), 0) as progress_percentage
             FROM school.exam e
             LEFT JOIN school.exam_term et ON e.exam_term_id = et.id
             LEFT JOIN school.exam_invitation ei ON e.id = ei.exam_id AND ei.is_deleted = FALSE
@@ -142,7 +160,8 @@ export class ExamHelper extends BaseModel {
     public async findPapersByExam(tenantId: number, examId: number) {
         const query = `
             SELECT ep.*, s.name as subject_name, s.code as subject_code,
-                   TRIM(CONCAT(st.first_name, ' ', st.last_name)) as supervisor_name
+                   TRIM(CONCAT(st.first_name, ' ', st.last_name)) as supervisor_name,
+                   (SELECT COUNT(*) FROM school.exam_marks em WHERE em.paper_id = ep.id) as marked_count
             FROM school.exam_paper ep
             JOIN school.subject s ON ep.subject_id = s.id
             LEFT JOIN school.staff st ON ep.supervisor_id = st.id
@@ -398,6 +417,9 @@ export class ExamHelper extends BaseModel {
                 exam_type = COALESCE($5, exam_type),
                 start_date = COALESCE($6, start_date),
                 end_date = COALESCE($7, end_date),
+                is_published = COALESCE($8, is_published),
+                results_published = COALESCE($9, results_published),
+                description = COALESCE($10, description),
                 updated_at = NOW()
             WHERE tenant_id = $1 AND id = $2
             RETURNING *
@@ -409,9 +431,83 @@ export class ExamHelper extends BaseModel {
             data.name,
             data.exam_type,
             data.start_date,
-            data.end_date
+            data.end_date,
+            data.is_published,
+            data.results_published,
+            data.description
         ];
         const res = await this.db.query(query, values);
         return res.rows[0];
+    }
+
+    public async getExamResults(tenantId: number, examId: number) {
+        const query = `
+            SELECT 
+                em.student_id, 
+                em.paper_id, 
+                em.marks_obtained, 
+                em.is_absent,
+                em.remarks
+            FROM school.exam_marks em
+            WHERE em.tenant_id = $1 AND em.exam_id = $2
+        `;
+        const res = await this.db.query(query, [tenantId, examId]);
+        return res.rows;
+    }
+
+    public async getExamDashboardStats(tenantId: number, staffId?: number, examIds?: number[]) {
+        // 1. Active Exams (Not published)
+        let activeExamsQuery = `SELECT COUNT(*) FROM school.exam WHERE tenant_id = $1 AND is_published = FALSE AND is_deleted = FALSE`;
+        const activeExamsParams: any[] = [tenantId];
+        if (examIds) {
+            activeExamsQuery += ` AND id = ANY($2)`;
+            activeExamsParams.push(examIds);
+        }
+        const activeExamsRes = await this.db.query(activeExamsQuery, activeExamsParams);
+
+        // 2. Urgent Marking Queue & Aggregate Stats
+        let urgentQuery = `
+            SELECT e.name as exam_name, s.name as subject_name, ep.exam_date, ep.id as paper_id, e.id as exam_id,
+                   (SELECT COUNT(*) FROM school.exam_student es WHERE es.exam_id = e.id AND es.is_deleted = FALSE AND es.is_excluded = FALSE) as total_students,
+                   (SELECT COUNT(*) FROM school.exam_marks em WHERE em.paper_id = ep.id) as marked_students
+            FROM school.exam_paper ep
+            JOIN school.exam e ON ep.exam_id = e.id
+            JOIN school.subject s ON ep.subject_id = s.id
+            WHERE ep.tenant_id = $1 AND ep.is_deleted = FALSE AND e.is_deleted = FALSE
+              AND ep.exam_date < CURRENT_DATE
+        `;
+        const urgentParams: any[] = [tenantId];
+        let pIdx = 2;
+
+        if (examIds) {
+            urgentQuery += ` AND e.id = ANY($${pIdx})`;
+            urgentParams.push(examIds);
+            pIdx++;
+        }
+
+        // If staffId is provided, filter by papers they are associated with
+        if (staffId) {
+            urgentQuery += ` AND (ep.supervisor_id = $${pIdx} OR EXISTS (
+                SELECT 1 FROM school.teacher_assignment ta 
+                WHERE ta.staff_id = $${pIdx} AND ta.subject_id = ep.subject_id AND ta.is_deleted = FALSE
+            ))`;
+            urgentParams.push(staffId);
+            pIdx++;
+        }
+
+        urgentQuery += ` ORDER BY ep.exam_date DESC`;
+        const urgentRes = await this.db.query(urgentQuery, urgentParams);
+
+        const workQueue = urgentRes.rows.filter(r => parseInt(r.marked_students) < parseInt(r.total_students));
+        
+        const totalPendingPapers = workQueue.length;
+        const totalAnswerSheetsPending = workQueue.reduce((acc, curr) => acc + (parseInt(curr.total_students) - parseInt(curr.marked_students)), 0);
+
+        return {
+            activeExams: parseInt(activeExamsRes.rows[0].count),
+            papersToEvaluate: totalAnswerSheetsPending,
+            resultsPending: totalPendingPapers,
+            workQueue: workQueue.slice(0, 5)
+        };
     }
 }

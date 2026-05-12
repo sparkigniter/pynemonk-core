@@ -16,6 +16,8 @@ export interface Exam {
   exam_term_id?: number;
   term_name?: string;
   is_published: boolean;
+  results_published: boolean;
+  progress_percentage?: number;
 }
 
 export interface ExamPaper {
@@ -30,6 +32,7 @@ export interface ExamPaper {
   room?: string;
   max_marks: number;
   passing_marks: number;
+  supervisor_id?: number | null;
   user_period: boolean;
 }
 
@@ -106,4 +109,10 @@ export const examApi = {
 
   deletePaper: (examId: number, paperId: number) =>
     patch(`/school/exams/${examId}/papers/${paperId}/delete`, {}),
+  
+  getStats: () =>
+    get<any>('/school/exams/stats'),
+
+  getExamResults: (id: number) =>
+    get<any>(`/school/exams/${id}/results`),
 };

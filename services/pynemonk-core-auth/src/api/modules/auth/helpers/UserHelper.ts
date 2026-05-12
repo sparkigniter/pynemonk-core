@@ -16,13 +16,13 @@ class UserHelper {
 
     // ── User ─────────────────────────────────────────────────────────────────
 
-    public async createUser(email: string, roleId: number): Promise<UserRecord> {
+    public async createUser(email: string, roleId: number, tenantId: number): Promise<UserRecord> {
         const query = `
-            INSERT INTO auth.user (email, role_id, is_deleted, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, email, role_id, is_deleted, created_at, updated_at;
+            INSERT INTO auth.user (email, role_id, tenant_id, is_deleted, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, email, role_id, tenant_id, is_deleted, created_at, updated_at;
         `;
-        const res = await this.db.query(query, [email, roleId, false, new Date(), new Date()]);
+        const res = await this.db.query(query, [email, roleId, tenantId, false, new Date(), new Date()]);
 
         // Also assign the initial role in the join table
         await this.assignRole(res.rows[0].id, roleId, true);
@@ -233,21 +233,21 @@ class UserHelper {
             ),
             all_user_roles AS (
                 -- Identify ALL active role IDs for this user
-                SELECT r.id as role_id, r.tenant_id, r.slug
+                SELECT r.id, r.tenant_id, r.slug, ur.is_primary
                 FROM auth.user_role ur
                 JOIN auth.role r ON ur.role_id = r.id
-                WHERE ur.user_id = (SELECT id FROM user_info) AND ur.is_deleted = FALSE
+                WHERE ur.user_id = (SELECT id FROM user_info LIMIT 1) AND ur.is_deleted = FALSE
                 UNION
-                SELECT r.id as role_id, r.tenant_id, r.slug
+                SELECT r.id, r.tenant_id, r.slug, TRUE as is_primary
                 FROM auth.user u
                 JOIN auth.role r ON u.role_id = r.id
-                WHERE u.id = (SELECT id FROM user_info) AND u.is_deleted = FALSE
+                WHERE u.id = (SELECT id FROM user_info LIMIT 1) AND u.is_deleted = FALSE
             ),
             selected_tenant AS (
                 -- Resolve the current school context
                 SELECT id, name, slug, uuid FROM auth.tenant 
                 WHERE is_deleted = FALSE
-                  AND (($3::text IS NULL AND id = (SELECT tenant_id FROM user_info)) OR ($3::text IS NOT NULL AND slug = $3))
+                  AND (($3::text IS NULL AND id = (SELECT tenant_id FROM user_info LIMIT 1)) OR ($3::text IS NOT NULL AND slug = $3))
                 LIMIT 1
             ),
             all_user_tenants AS (
@@ -256,16 +256,20 @@ class UserHelper {
                 FROM auth.user_role ur
                 JOIN auth.role r ON ur.role_id = r.id
                 JOIN auth.tenant t ON r.tenant_id = t.id
-                WHERE ur.user_id = (SELECT id FROM user_info) AND ur.is_deleted = FALSE AND t.is_deleted = FALSE
+                WHERE ur.user_id = (SELECT id FROM user_info LIMIT 1) AND ur.is_deleted = FALSE AND t.is_deleted = FALSE
+                UNION
+                SELECT t.id, t.name, t.slug, t.uuid
+                FROM auth.user u
+                JOIN auth.tenant t ON u.tenant_id = t.id
+                WHERE u.id = (SELECT id FROM user_info LIMIT 1) AND u.is_deleted = FALSE AND t.is_deleted = FALSE
             ),
             effective_permissions AS (
                 -- SOURCE 1: App-Specific Role Scopes (The primary Admin UI target)
-                -- This is now the strict, single source of truth for permissions.
                 SELECT s.value
                 FROM auth.client_role_scope crs
                 JOIN auth.scope s ON crs.scope_id = s.id
                 JOIN auth.client c ON crs.client_id = c.id
-                WHERE crs.role_id IN (SELECT role_id FROM all_user_roles)
+                WHERE crs.role_id IN (SELECT id FROM all_user_roles WHERE tenant_id = (SELECT id FROM selected_tenant) OR tenant_id IS NULL)
                   AND c.client_id = $2
                   AND crs.granted = TRUE
             )
@@ -273,7 +277,9 @@ class UserHelper {
                 u.id as user_id, u.email, u.password_hash,
                 (SELECT JSON_AGG(t) FROM selected_tenant t) as current_tenant,
                 (SELECT JSON_AGG(t) FROM all_user_tenants t) as all_tenants,
-                (SELECT JSON_AGG(r) FROM all_user_roles r) as all_roles,
+                (SELECT JSON_AGG(json_build_object('id', r.id, 'slug', r.slug, 'tenant_id', r.tenant_id, 'is_primary', r.is_primary)) 
+                 FROM all_user_roles r 
+                 WHERE r.tenant_id = (SELECT id FROM selected_tenant) OR r.tenant_id IS NULL) as all_roles,
                 COALESCE((
                     SELECT ARRAY_AGG(DISTINCT value) FROM effective_permissions
                 ), '{}') as permissions

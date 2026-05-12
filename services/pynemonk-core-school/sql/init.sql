@@ -272,15 +272,33 @@ CREATE INDEX IF NOT EXISTS idx_attendance_date ON school.attendance (tenant_id, 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Exam
 -- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS school.exam_term (
+    id               serial        NOT NULL,
+    tenant_id        int           NOT NULL REFERENCES auth.tenant(id),
+    academic_year_id int           NOT NULL REFERENCES school.academic_year(id),
+    name             varchar(100)  NOT NULL,          -- e.g. "First Term"
+    start_date       DATE,
+    end_date         DATE,
+    is_deleted       BOOLEAN       NOT NULL DEFAULT FALSE,
+    created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_exam_term_tenant ON school.exam_term (tenant_id, academic_year_id) WHERE is_deleted = FALSE;
+
 CREATE TABLE IF NOT EXISTS school.exam (
     id               serial        NOT NULL,
     tenant_id        int           NOT NULL REFERENCES auth.tenant(id),
     academic_year_id int           NOT NULL REFERENCES school.academic_year(id),
+    exam_term_id     int           REFERENCES school.exam_term(id),
     name             varchar(100)  NOT NULL,          -- "Unit Test 1", "Mid Term", "Final"
     exam_type        varchar(30)   NOT NULL DEFAULT 'periodic',  -- periodic, term, annual
     start_date       DATE          NOT NULL,
     end_date         DATE          NOT NULL,
+    description      text,
     is_published     BOOLEAN       NOT NULL DEFAULT FALSE,
+    results_published BOOLEAN      NOT NULL DEFAULT FALSE,
     is_deleted       BOOLEAN       NOT NULL DEFAULT FALSE,
     created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
@@ -340,9 +358,16 @@ CREATE TABLE IF NOT EXISTS school.homework (
     staff_id     int           NOT NULL REFERENCES school.staff(id),
     title        varchar(200)  NOT NULL,
     description  text,
-    due_date     DATE          NOT NULL,
+    due_date     TIMESTAMPTZ   NOT NULL,
     max_score    numeric(6,2)  DEFAULT 10,
     attachment_url varchar(500),
+    assignment_type VARCHAR(30) DEFAULT 'homework',
+    submission_type VARCHAR(30) DEFAULT 'both',
+    max_attempts INT DEFAULT 1,
+    allow_late BOOLEAN DEFAULT FALSE,
+    auto_close BOOLEAN DEFAULT TRUE,
+    is_graded BOOLEAN DEFAULT TRUE,
+    rubric TEXT,
     is_deleted   BOOLEAN       NOT NULL DEFAULT FALSE,
     created_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),

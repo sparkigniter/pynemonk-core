@@ -5,20 +5,22 @@ export const AdmissionValidator = Joi.object({
         admission_no: Joi.string().required(),
         first_name: Joi.string().required(),
         last_name: Joi.string().required(),
-        email: Joi.string().email().required(),
+        email: Joi.string().email().optional().allow(null, ""),
         gender: Joi.string().valid("male", "female", "other").required(),
         date_of_birth: Joi.string().isoDate().required(),
+        mother_tongue: Joi.string().optional().allow(null, ""),
         blood_group: Joi.string().optional().allow(null, ""),
         nationality: Joi.string().optional().allow(null, ""),
         religion: Joi.string().optional().allow(null, ""),
         phone: Joi.string().optional().allow(null, ""),
         address: Joi.string().optional().allow(null, ""),
         avatar_url: Joi.string().uri().optional().allow(null, ""),
-    }).required(),
+        status: Joi.string().optional().allow(null, ""),
+    }).required().unknown(true),
     guardian: Joi.object({
         first_name: Joi.string().required(),
         last_name: Joi.string().required(),
-        email: Joi.string().email().required(),
+        email: Joi.string().email().optional().allow(null, ""),
         phone: Joi.string().required(),
         gender: Joi.string().valid("male", "female", "other").optional(),
         relation: Joi.string().required(),
@@ -26,15 +28,18 @@ export const AdmissionValidator = Joi.object({
         address: Joi.string().optional().allow(null, ""),
         is_emergency: Joi.boolean().default(false),
         avatar_url: Joi.string().uri().optional().allow(null, ""),
-    }).required(),
+    }).required().unknown(true),
     enrollment: Joi.object({
         classroom_id: Joi.number().integer().optional(),
         grade_id: Joi.number().integer().optional(),
-        section: Joi.string().optional(),
-        academic_year_id: Joi.number().integer().required(),
+        section: Joi.string().optional().allow(null, ""),
+        academic_year_id: Joi.number().integer().optional(),
         roll_number: Joi.string().optional().allow(null, ""),
-    })
-        .or("classroom_id", "grade_id")
-        .and("grade_id", "section")
-        .required(),
-});
+    }).optional().unknown(true),
+    finance: Joi.object({
+        payment_method: Joi.string().lowercase().valid("cash", "bank", "online", "upi", "card", "cheque", "bank_transfer").optional(),
+        amount_paid: Joi.number().min(0).optional(),
+        reference_no: Joi.string().optional().allow(null, ""),
+        notes: Joi.string().optional().allow(null, ""),
+    }).optional().unknown(true),
+}).unknown(true);

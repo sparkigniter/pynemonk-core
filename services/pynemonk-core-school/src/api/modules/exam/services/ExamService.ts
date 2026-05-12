@@ -134,4 +134,72 @@ export class ExamService {
     public async updateExam(tenantId: number, id: number, data: any) {
         return this.examHelper.updateExam(tenantId, id, data);
     }
+
+    public async getExamResults(tenantId: number, examId: number) {
+        return this.examHelper.getExamResults(tenantId, examId);
+    }
+
+    public async getDashboardStats(tenantId: number, userId: number, examIds?: number[]) {
+        return this.examHelper.getExamDashboardStats(tenantId, undefined, examIds); // Base version, controller can pass staffId if needed
+    }
+
+    public async getStudentPerformance(tenantId: number, studentId: number) {
+        // Fetch all marks for this student
+        const query = `
+            SELECT 
+                COALESCE(ay.name, 'Unknown Year') as academic_year,
+                COALESCE(et.name, 'General') as term_name,
+                e.name as exam_name,
+                e.exam_type,
+                s.name as subject_name,
+                s.code as subject_code,
+                ep.max_marks,
+                ep.passing_marks,
+                em.marks_obtained,
+                em.is_absent
+            FROM school.exam_marks em
+            JOIN school.exam e ON em.exam_id = e.id
+            JOIN school.exam_paper ep ON em.paper_id = ep.id
+            JOIN school.subject s ON ep.subject_id = s.id
+            LEFT JOIN school.exam_term et ON e.exam_term_id = et.id
+            LEFT JOIN school.academic_year ay ON e.academic_year_id = ay.id
+            WHERE em.tenant_id = $1 AND em.student_id = $2 AND e.is_deleted = FALSE
+            ORDER BY ay.start_date DESC, et.created_at DESC, e.start_date DESC
+        `;
+        const res = await (this.examHelper as any).db.query(query, [tenantId, studentId]);
+        
+        // Group by Academic Year
+        const performance: any = {};
+        res.rows.forEach((row: any) => {
+            if (!performance[row.academic_year]) {
+                performance[row.academic_year] = {
+                    year: row.academic_year,
+                    terms: {}
+                };
+            }
+            if (!performance[row.academic_year].terms[row.term_name]) {
+                performance[row.academic_year].terms[row.term_name] = {
+                    name: row.term_name,
+                    exams: {}
+                };
+            }
+            if (!performance[row.academic_year].terms[row.term_name].exams[row.exam_name]) {
+                performance[row.academic_year].terms[row.term_name].exams[row.exam_name] = {
+                    name: row.exam_name,
+                    type: row.exam_type,
+                    subjects: []
+                };
+            }
+            performance[row.academic_year].terms[row.term_name].exams[row.exam_name].subjects.push({
+                subject: row.subject_name,
+                code: row.subject_code,
+                marks: row.marks_obtained,
+                max: row.max_marks,
+                passing: row.passing_marks,
+                is_absent: row.is_absent
+            });
+        });
+
+        return Object.values(performance);
+    }
 }

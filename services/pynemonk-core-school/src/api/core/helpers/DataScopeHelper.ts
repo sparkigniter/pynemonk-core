@@ -14,6 +14,7 @@ export class DataScope {
         public classroomIds: number[] = [],
         public subjectIds: number[] = [],
         public examIds: number[] = [],
+        public paperIds: number[] = [],
         public studentIds: number[] = [],
         public staffIds: number[] = [],
         public studentId?: number,
@@ -43,6 +44,11 @@ export class DataScope {
     /** Check if the user has access to a specific exam */
     public hasExam(id: number): boolean {
         return this.accessLevel === AccessLevel.FULL || this.examIds.includes(id);
+    }
+
+    /** Check if the user has access to a specific exam paper */
+    public hasPaper(id: number): boolean {
+        return this.accessLevel === AccessLevel.FULL || this.paperIds.includes(id);
     }
 
     /** Check if the user has access to a specific subject */
@@ -132,7 +138,19 @@ export class DataScopeHelper {
                     examIds = Array.from(new Set<number>([...examIds, ...supervisedExams.rows.map((e: any) => e.exam_id as number)]));
                 }
 
-                console.log(`[DataScopeHelper] User ${user.userId} is TEACHER. Resolved ${classroomIds.length} classrooms, ${gradeIds.length} grades.`);
+                // Fetch relevant paper IDs
+                let paperIds: number[] = [];
+                if (subjectIds.length > 0 || staffId) {
+                    const papers = await this.db.query(
+                        `SELECT id FROM school.exam_paper 
+                         WHERE (subject_id = ANY($1) OR supervisor_id = $2) 
+                         AND is_deleted = FALSE`,
+                        [subjectIds, staffId],
+                    );
+                    paperIds = papers.rows.map((p: any) => p.id as number);
+                }
+
+                console.log(`[DataScopeHelper] User ${user.userId} is TEACHER. Resolved ${classroomIds.length} classrooms, ${gradeIds.length} grades, ${paperIds.length} papers.`);
                 
                 return new DataScope(
                     AccessLevel.ASSIGNED,
@@ -140,6 +158,7 @@ export class DataScopeHelper {
                     classroomIds,
                     subjectIds,
                     examIds,
+                    paperIds,
                     studentIds,
                     [staffId],
                     undefined,
@@ -159,12 +178,12 @@ export class DataScopeHelper {
             if (studentRes.rows.length > 0) {
                 const sid = studentRes.rows[0].id;
                 console.log(`[DataScopeHelper] User ${user.userId} is STUDENT. Returning SELF scope for studentId ${sid}`);
-                return new DataScope(AccessLevel.SELF, [], [], [], [], [sid], [], sid);
+                return new DataScope(AccessLevel.SELF, [], [], [], [], [], [sid], [], sid);
             }
         }
 
         // Default: No access
         console.log(`[DataScopeHelper] User ${user.userId} has no resolved scope. Returning SELF with empty IDs.`);
-        return new DataScope(AccessLevel.SELF, [], [], [], [], [], [], -1);
+        return new DataScope(AccessLevel.SELF, [], [], [], [], [], [], [], -1);
     }
 }

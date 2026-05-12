@@ -2,6 +2,8 @@ import "reflect-metadata";
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
+import feeRouter from "./api/modules/fee/routes.js";
+import accountsRouter from "./api/modules/accounts/routes.js";
 
 /**
  * Creates and configures the Express application without starting the HTTP
@@ -36,7 +38,9 @@ export function createApp(opts?: { prefix?: string }): express.Application {
 
     app.use(bodyParser.json());
 
-    // ── Routes (To be added later) ────────────────────────────────────────────
+    // ── Routes ──────────────────────────────────────────────────────────────
+    app.use(`${prefix}/fees`, feeRouter);
+    app.use(`${prefix}/accounts`, accountsRouter);
 
     // ── Health check ──────────────────────────────────────────────────────────
     app.get(`${prefix}/health`, (_req, res) => {

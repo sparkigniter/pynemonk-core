@@ -87,6 +87,18 @@ studentRouter.post(
     },
 );
 
+studentRouter.post(
+    "/:id/enroll",
+    apiRateLimiter,
+    sensitiveRateLimiter,
+    requireAuth,
+    requirePermission(["student:write"]),
+    (req, res) => {
+        const ctrl = container.resolve(StudentController);
+        return ctrl.enroll(req, res);
+    },
+);
+
 studentRouter.put(
     "/:id",
     apiRateLimiter,
@@ -96,6 +108,18 @@ studentRouter.put(
     (req, res) => {
         const ctrl = container.resolve(StudentController);
         return ctrl.update(req, res);
+    },
+);
+
+studentRouter.post(
+    "/:id/guardians",
+    apiRateLimiter,
+    sensitiveRateLimiter,
+    requireAuth,
+    requirePermission(["student:write"]),
+    (req, res) => {
+        const ctrl = container.resolve(StudentController);
+        return ctrl.addGuardian(req, res);
     },
 );
 

@@ -23,6 +23,7 @@ export interface RegisterUserRequest {
     email: string;
     password: string;
     role_id: number;
+    tenant_id: number;
     first_name?: string;
     last_name?: string;
     phone?: string;

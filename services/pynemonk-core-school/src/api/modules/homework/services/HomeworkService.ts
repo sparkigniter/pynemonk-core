@@ -15,6 +15,12 @@ export class HomeworkService {
         return staff.id;
     }
 
+    async getHomeworkById(tenantId: number, userId: number, id: number) {
+        const homework = await this.homeworkHelper.findById(tenantId, id);
+        if (!homework) throw new Error("Homework not found");
+        return homework;
+    }
+
     async listHomework(tenantId: number, userId: number, filters: any) {
         // Teachers only see their own homework by default, unless they are admins
         // For now, let's just pass filters. 

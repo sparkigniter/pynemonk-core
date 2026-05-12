@@ -76,18 +76,18 @@ const DraggableResource = ({
                 }
             }}
             className={`
-                flex items-center gap-3 p-3 rounded-2xl mb-2 cursor-grab active:cursor-grabbing transition-all border-2 touch-none
+                flex items-center gap-3 p-3 rounded-2xl mb-2 cursor-grab active:cursor-grabbing transition-all border border-[var(--card-border)] touch-none
                 ${isDragging
                     ? 'opacity-40 scale-95 border-dashed border-primary/30'
-                    : `${color} border-slate-100/50 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5`}
+                    : `bg-[var(--card-bg)] shadow-sm hover:shadow-md hover:border-[var(--card-border)] hover:-translate-y-0.5`}
             `}
         >
-            <div className="bg-white/80 p-2 rounded-xl shadow-sm border border-slate-100 text-slate-600">
+            <div className={`p-2 rounded-xl text-slate-600 ${color.includes('emerald') ? 'bg-emerald-50 text-emerald-600' : color.includes('amber') ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
                 <Icon className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-sm font-extrabold truncate leading-tight text-slate-800">{name}</p>
-                {subtitle && <p className="text-[10px] font-black opacity-60 uppercase tracking-tighter truncate mt-0.5 text-slate-500">{subtitle}</p>}
+                <p className="text-xs font-bold truncate leading-tight text-slate-800">{name}</p>
+                {subtitle && <p className="text-[9px] font-bold opacity-60 uppercase tracking-tight truncate mt-0.5 text-[var(--text-muted)]">{subtitle}</p>}
             </div>
         </div>
     );
@@ -122,7 +122,7 @@ const DraggableEntry = ({
 
     const getSubjectColor = (name: string) => {
         const colors = [
-            'bg-indigo-500', 'bg-emerald-500', 'bg-amber-500',
+            'bg-primary', 'bg-emerald-500', 'bg-amber-500',
             'bg-rose-500', 'bg-sky-500', 'bg-violet-500',
             'bg-fuchsia-500', 'bg-teal-500', 'bg-orange-500'
         ];
@@ -143,23 +143,23 @@ const DraggableEntry = ({
             {...listeners}
             onClick={() => onClick(entry)}
             className={`
-                h-full w-full rounded-2xl p-3 shadow-md flex flex-col justify-between overflow-hidden group/entry cursor-grab active:cursor-grabbing border-2 transition-all relative touch-none
+                h-full w-full rounded-xl p-3 flex flex-col justify-between overflow-hidden group/entry cursor-grab active:cursor-grabbing border transition-all relative touch-none
                 ${isDraft
-                    ? 'bg-white border-primary border-dashed text-primary shadow-primary/5 ring-4 ring-primary/5'
-                    : 'bg-white border-slate-100 hover:border-slate-200 shadow-slate-200/50'}
+                    ? 'bg-[var(--card-bg)] border-primary border-dashed text-primary ring-4 ring-primary/5'
+                    : 'bg-[var(--card-bg)] border-[var(--card-border)] hover:border-[var(--card-border)] shadow-sm'}
             `}
         >
             {!isDraft && <div className={`absolute top-0 left-0 bottom-0 w-1 ${subjectColor}`} />}
 
             <div className="relative">
                 <div className="flex items-start justify-between mb-1">
-                    <p className={`text-[12px] font-extrabold truncate uppercase tracking-tight leading-tight ${isDraft ? 'text-primary' : 'text-slate-900'}`}>
+                    <p className={`text-[11px] font-bold truncate uppercase tracking-tight leading-tight ${isDraft ? 'text-primary' : 'text-[var(--text-main)]'}`}>
                         {entry.subject_name}
                     </p>
                     {!isDraft && canWrite && (
                         <button
                             onPointerDown={(e) => { e.stopPropagation(); onToggleSticky(entry.id!, !!isSticky); }}
-                            className={`p-1 rounded-md transition-all ${isSticky ? 'text-amber-500 bg-amber-50' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'}`}
+                            className={`p-1 rounded-md transition-all ${isSticky ? 'text-amber-500 bg-amber-50' : 'text-slate-300 hover:text-[var(--text-muted)] hover:bg-slate-50'}`}
                             title={isSticky ? "Unpin this period" : "Pin this period"}
                         >
                             {isSticky ? <Pin size={10} className="fill-current" /> : <Pin size={10} />}
@@ -167,35 +167,35 @@ const DraggableEntry = ({
                     )}
                 </div>
                 <div className="flex items-center gap-1.5 opacity-90">
-                    <div className={`p-0.5 rounded-md ${isDraft ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-500'}`}>
+                    <div className={`p-0.5 rounded-md ${isDraft ? 'bg-primary/10 text-primary' : 'bg-slate-50 text-[var(--text-muted)]'}`}>
                         <User className="w-3 h-3" />
                     </div>
-                    <p className={`text-[10px] font-bold truncate ${isDraft ? 'text-primary/90' : 'text-slate-600'}`}>
+                    <p className={`text-[9px] font-bold truncate ${isDraft ? 'text-primary/90' : 'text-[var(--text-muted)]'}`}>
                         {entry.teacher_name}
                     </p>
                 </div>
             </div>
 
             <div className="flex items-center justify-between mt-auto pt-2">
-                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${isDraft ? 'bg-primary/5 text-primary' : 'bg-slate-50 text-slate-400'}`}>
+                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg ${isDraft ? 'bg-primary/5 text-primary' : 'bg-slate-50 text-[var(--text-muted)]'}`}>
                     <Clock className="w-2.5 h-2.5" />
-                    <span className="text-[10px] font-black uppercase tracking-tighter">
+                    <span className="text-[9px] font-bold uppercase tracking-tight">
                         {entry.start_time.slice(0, 5)}
                     </span>
                 </div>
                 {canWrite && (
                     <button
                         onPointerDown={(e) => { e.stopPropagation(); entry.id && onDelete(entry.id); }}
-                        className={`p-1.5 transition-all rounded-xl ${isDraft ? 'text-primary/40 hover:text-rose-500 hover:bg-rose-50' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}
+                        className={`p-1.5 transition-all rounded-lg ${isDraft ? 'text-primary/40 hover:text-rose-500 hover:bg-rose-50' : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'}`}
                     >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3 h-3" />
                     </button>
                 )}
             </div>
 
             {isSticky && (
-                <div className="absolute top-0 right-0 w-8 h-8 flex items-center justify-center pointer-events-none opacity-10">
-                    <Lock size={20} className="text-amber-600" />
+                <div className="absolute top-0 right-0 w-8 h-8 flex items-center justify-center pointer-events-none opacity-5">
+                    <Lock size={16} className="text-amber-600" />
                 </div>
             )}
         </div>
@@ -223,20 +223,20 @@ const DroppableSlot = ({
             ref={setNodeRef}
             onClick={onClick}
             className={`
-                p-2 border-r border-slate-100 relative group/cell min-h-[120px] transition-all duration-300 cursor-pointer
-                ${isOver ? (isConflict ? 'bg-rose-50 ring-4 ring-rose-200 ring-inset z-10' : 'bg-primary/5 ring-4 ring-primary/20 ring-inset z-10') : 'hover:bg-slate-50/30'}
-                ${isHighlighted ? 'bg-amber-50/50 ring-2 ring-amber-100 ring-inset' : ''}
-                ${isSelected ? 'bg-primary/10 ring-4 ring-primary/30 ring-inset z-10 shadow-inner' : ''}
+                p-1.5 border-r border-[var(--card-border)] relative group/cell min-h-[110px] transition-all duration-300 cursor-pointer
+                ${isOver ? (isConflict ? 'bg-rose-50 ring-2 ring-rose-200 ring-inset z-10' : 'bg-primary/5 ring-2 ring-primary/20 ring-inset z-10') : 'hover:bg-slate-50/50'}
+                ${isHighlighted ? 'bg-amber-50/50 ring-1 ring-amber-100 ring-inset' : ''}
+                ${isSelected ? 'bg-primary/5 ring-2 ring-primary/10 ring-inset z-10' : ''}
                 ${isConflict && !isOver ? 'bg-rose-50/30' : ''}
             `}
         >
-            <div className="h-full w-full rounded-2xl transition-all">
+            <div className="h-full w-full rounded-xl transition-all">
                 {children}
             </div>
             {!children && !id.startsWith('break-') && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-all duration-500 scale-90 group-hover/cell:scale-100 pointer-events-none">
-                    <div className="bg-white/80 p-2 rounded-xl shadow-sm border border-slate-100">
-                        {isConflict ? <X className="w-4 h-4 text-rose-500" /> : <Plus className="w-4 h-4 text-primary" />}
+                    <div className="bg-[var(--card-bg)] p-1.5 rounded-lg shadow-sm border border-[var(--card-border)]">
+                        {isConflict ? <X className="w-3.5 h-3.5 text-rose-500" /> : <Plus className="w-3.5 h-3.5 text-primary" />}
                     </div>
                 </div>
             )}
@@ -569,7 +569,7 @@ const Timetable: React.FC = () => {
     };
 
     return (
-        <div className="p-6 bg-[#F8FAFC] min-h-screen font-sans">
+        <div className="p-8 bg-slate-50/30 min-h-screen font-sans animate-in fade-in duration-500">
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCorners}
@@ -578,38 +578,38 @@ const Timetable: React.FC = () => {
                 onDragEnd={handleDragEnd}
             >
                 <div className="max-w-[1600px] mx-auto">
-                    <header className="flex flex-col xl:flex-row xl:items-center justify-between mb-10 gap-6">
+                    <header className="flex flex-col xl:flex-row xl:items-center justify-between mb-8 gap-6">
                         <div className="flex items-center gap-6">
-                            <div className="bg-slate-900 p-4 rounded-[2rem] shadow-2xl shadow-slate-900/20 transform -rotate-3 hover:rotate-0 transition-transform duration-500">
+                            <div className="bg-surface-dark p-4 rounded-3xl shadow-xl shadow-theme/10">
                                 <Calendar className="w-8 h-8 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Weekly Class Schedule</h1>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] mt-1 flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    Dynamic Resource Optimization
+                                <h1 className="text-3xl font-bold text-[var(--text-main)] tracking-tight">Academic Timetable</h1>
+                                <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mt-1 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                    Optimizing Institutional Resources
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-4 bg-white p-3 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100">
+                        <div className="flex flex-wrap items-center gap-4 bg-[var(--card-bg)] p-3 rounded-[2rem] shadow-sm border border-[var(--card-border)]/60">
                             <div className="flex items-center gap-2 px-2">
                                 <ComboBox value={selectedGrade} onChange={val => setSelectedGrade(val as number)} placeholder="Select Grade" options={grades.map(g => ({ value: g.id, label: g.name }))} />
                                 <ChevronRight className="text-slate-200 w-4 h-4" />
                                 <ComboBox value={selectedClassroom} onChange={val => setSelectedClassroom(val as number)} disabled={!selectedGrade} placeholder="Select Class" options={classrooms.map(c => ({ value: c.id, label: `${c.name}${c.section}` }))} />
                             </div>
                             
-                            <div className="h-10 w-px bg-slate-100 mx-2 hidden md:block" />
+                            <div className="h-8 w-px bg-slate-100 mx-2 hidden md:block" />
 
                             <div className="flex items-center gap-2">
                                 {canWrite && (
-                                    <button onClick={() => setIsBreakModalOpen(true)} className="p-3 bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-2xl transition-all shadow-sm" title="Break Settings">
+                                    <button onClick={() => setIsBreakModalOpen(true)} className="p-3 text-[var(--text-muted)] hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all" title="Break Settings">
                                         <Clock className="w-5 h-5" />
                                     </button>
                                 )}
 
                                 {canWrite && (
-                                    <button onClick={handleAutoGenerate} disabled={!selectedClassroom || isGenerating} className="bg-amber-500 text-white px-8 py-3.5 rounded-[1.5rem] text-xs font-black hover:bg-amber-600 flex items-center gap-3 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all active:scale-95">
+                                    <button onClick={handleAutoGenerate} disabled={!selectedClassroom || isGenerating} className="btn-primary !bg-amber-500 !shadow-amber-500/10 !border-amber-600/20">
                                         {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                                         Auto-Optimize
                                     </button>
@@ -624,7 +624,7 @@ const Timetable: React.FC = () => {
                                         <button 
                                             onClick={handleSaveChanges} 
                                             disabled={isSaving} 
-                                            className="bg-emerald-500 text-white px-8 py-3.5 rounded-[1.5rem] text-xs font-black hover:bg-emerald-600 flex items-center gap-3 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 animate-in zoom-in-90"
+                                            className="btn-primary animate-in zoom-in-95"
                                         >
                                             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                                             {isDirty ? 'Commit Changes' : 'Finalize Schedule'}
@@ -639,18 +639,17 @@ const Timetable: React.FC = () => {
                         {canWrite && (
                             <aside className="lg:w-[320px] space-y-6">
                                 {selectedSlot && (
-                                    <div className="bg-white rounded-[2rem] border-2 border-slate-900 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-6 animate-in slide-in-from-left duration-500 overflow-hidden relative">
-                                        {/* Decorative Accent */}
+                                    <div className="bg-[var(--card-bg)] rounded-[2rem] border border-[var(--card-border)] shadow-xl p-6 animate-in slide-in-from-left duration-300 relative overflow-hidden">
                                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-2xl" />
 
                                         <div className="flex justify-between items-center mb-6 relative z-10">
                                             <div className="flex items-center gap-3">
-                                                <div className="bg-slate-900 p-2 rounded-xl text-white shadow-lg">
+                                                <div className="bg-surface-dark p-2 rounded-xl text-white">
                                                     <Sparkles size={18} />
                                                 </div>
                                                 <div>
-                                                    <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest leading-none">Slot Insights</h2>
-                                                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-[0.1em]">
+                                                    <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-none mb-1">Slot Insights</h2>
+                                                    <p className="text-xs font-bold text-slate-800 uppercase tracking-tight">
                                                         {DAYS.find(d => d.id === selectedSlot.day)?.fullName} • {selectedSlot.time}
                                                     </p>
                                                 </div>
@@ -662,8 +661,8 @@ const Timetable: React.FC = () => {
 
                                         <div className="space-y-4 relative z-10">
                                             <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Available Faculty</p>
-                                                <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[8px] font-black uppercase">Collision Free</span>
+                                                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Available Faculty</p>
+                                                <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-tight border border-emerald-100">Collision Free</span>
                                             </div>
                                             <div className="space-y-1 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                                                 {staff.filter(s => !globalSchedule.some(entry => 
@@ -684,17 +683,17 @@ const Timetable: React.FC = () => {
                                                     />
                                                 ))}
                                             </div>
-                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                                <p className="text-[10px] font-medium text-slate-500 leading-relaxed text-center italic">
-                                                    Select a teacher to highlight their availability across the entire week, or drag them into the slot to assign.
+                                            <div className="bg-slate-50 p-4 rounded-2xl border border-[var(--card-border)]">
+                                                <p className="text-[10px] font-medium text-[var(--text-muted)] leading-relaxed text-center italic">
+                                                    Drag faculty into the grid to assign.
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6">
-                                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">Subject Matrix</h2>
+                                <div className="bg-[var(--card-bg)] rounded-[2rem] border border-[var(--card-border)]/60 shadow-sm p-6">
+                                    <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-6 px-1">Curriculum Matrix</h2>
                                     <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                         {subjects.map(s => {
                                             const assignment = assignments.find(a => Number(a.subject_id) === Number(s.id));
@@ -714,8 +713,8 @@ const Timetable: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6">
-                                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">Teacher Faculty</h2>
+                                <div className="bg-[var(--card-bg)] rounded-[2rem] border border-[var(--card-border)]/60 shadow-sm p-6">
+                                    <h2 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-6 px-1">Faculty Roster</h2>
                                     <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                         {staff.map(s => {
                                             const teacherAssignments = assignments.filter(a => Number(a.staff_id) === Number(s.id));
@@ -732,7 +731,6 @@ const Timetable: React.FC = () => {
                                                     icon={User} 
                                                     canWrite={canWrite}
                                                     onClick={() => {
-                                                        // Highlight logic will be handled via state
                                                         setHighlightedTeacherId(s.id);
                                                     }}
                                                 />
@@ -745,30 +743,32 @@ const Timetable: React.FC = () => {
 
                         <main className={`flex-1 ${!canWrite ? 'max-w-7xl mx-auto w-full' : ''}`}>
                             {!selectedClassroom ? (
-                                <div className="bg-white rounded-[3rem] border border-slate-200/60 p-32 text-center">
-                                    <Clock className="w-12 h-12 text-primary mx-auto mb-8" />
-                                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Classroom</h2>
+                                <div className="bg-[var(--card-bg)] rounded-[3rem] border border-[var(--card-border)]/60 p-32 text-center">
+                                    <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center text-slate-300 mx-auto mb-8 border border-[var(--card-border)]">
+                                        <Clock size={32} />
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Select Classroom Configuration</h2>
+                                    <p className="text-[var(--text-muted)] font-medium mt-2">Initialize a specific classroom to manage its weekly schedule.</p>
                                 </div>
                             ) : (
-                                <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-2xl overflow-hidden">
+                                <div className="bg-[var(--card-bg)] rounded-[2rem] border border-[var(--card-border)]/60 shadow-sm overflow-hidden">
                                     <div className="overflow-x-auto">
                                         <div className="min-w-[1000px]">
-                                            <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
-                                                <div className="p-6 border-r border-slate-100 flex items-center justify-center"><Clock size={16} /></div>
-                                                {DAYS.map(day => <div key={day.id} className="p-6 border-r border-slate-100 text-center font-black text-slate-900 text-sm uppercase tracking-widest">{day.name}</div>)}
+                                            <div className="grid grid-cols-7 border-b border-[var(--card-border)] bg-slate-50/30">
+                                                <div className="p-5 border-r border-[var(--card-border)] flex items-center justify-center text-slate-300"><Clock size={16} /></div>
+                                                {DAYS.map(day => <div key={day.id} className="p-5 border-r border-[var(--card-border)] text-center font-bold text-[var(--text-main)] text-[11px] uppercase tracking-widest">{day.name}</div>)}
                                             </div>
 
                                             <div className="relative">
                                                 {TIME_SLOTS.map((time) => {
                                                     const breakInfo = breaks.find(b => b.start_time.startsWith(time.split(':')[0]));
                                                     return (
-                                                        <div key={time} className={`grid grid-cols-7 border-b border-slate-50 min-h-[110px] ${breakInfo ? 'bg-slate-50/80' : ''}`}>
-                                                            <div className="p-4 border-r border-slate-100 text-slate-400 text-xs font-black flex items-center justify-center"><span>{time}</span></div>
+                                                        <div key={time} className={`grid grid-cols-7 border-b border-slate-50 min-h-[110px] ${breakInfo ? 'bg-slate-50/50' : ''}`}>
+                                                            <div className="p-4 border-r border-[var(--card-border)] text-[var(--text-muted)] text-[10px] font-bold flex items-center justify-center"><span>{time}</span></div>
                                                             {DAYS.map(day => {
                                                                 const slotId = `${day.id}-${time}`;
                                                                 const isConflict = dragConflict === slotId;
                                                                 
-                                                                // Highlighting logic: Is this teacher free at this time globally?
                                                                 const isHighlighted = highlightedTeacherId ? !globalSchedule.some(entry => 
                                                                     Number(entry.teacher_id) === Number(highlightedTeacherId) && 
                                                                     Number(entry.day_of_week) === day.id && 
@@ -792,8 +792,8 @@ const Timetable: React.FC = () => {
                                                                         }}
                                                                     >
                                                                         {breakInfo ? (
-                                                                            <div className="h-full w-full flex items-center justify-center opacity-30">
-                                                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{breakInfo.name}</span>
+                                                                            <div className="h-full w-full flex items-center justify-center opacity-40">
+                                                                                <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)] bg-slate-100 px-2 py-1 rounded-md">{breakInfo.name}</span>
                                                                             </div>
                                                                         ) : (
                                                                             entries.filter(e => e.day_of_week === day.id && e.start_time.startsWith(time.split(':')[0])).map(entry => (
@@ -825,42 +825,42 @@ const Timetable: React.FC = () => {
 
             {/* Details Modal */}
             {selectedEntry && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100">
-                        <div className="p-8 bg-slate-900 text-white relative">
+                <div className="fixed inset-0 bg-surface-dark/40 backdrop-blur-sm z-[110] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="bg-[var(--card-bg)] rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden border border-[var(--card-border)]">
+                        <div className="p-8 bg-surface-dark text-white relative">
                             <div className="flex items-center gap-4 mb-2">
-                                <div className="bg-white/10 p-2 rounded-xl backdrop-blur-md">
-                                    <Clock className="w-5 h-5" />
+                                <div className="bg-[var(--card-bg)]/10 p-2 rounded-xl">
+                                    <Clock className="w-5 h-5 text-white/80" />
                                 </div>
-                                <h2 className="text-xl font-black uppercase tracking-tight">Period Details</h2>
+                                <h2 className="text-xl font-bold tracking-tight">Period Analysis</h2>
                             </div>
-                            <p className="text-slate-400 text-sm font-bold opacity-80 uppercase tracking-widest">
+                            <p className="text-[var(--text-muted)] text-xs font-bold uppercase tracking-widest opacity-80">
                                 {DAYS.find(d => d.id === selectedEntry.day_of_week)?.fullName} • {selectedEntry.start_time.slice(0, 5)} - {selectedEntry.end_time.slice(0, 5)}
                             </p>
                             <button onClick={() => setSelectedEntry(null)} className="absolute top-8 right-8 text-white/40 hover:text-white transition-colors">
-                                <X />
+                                <X size={20} />
                             </button>
                         </div>
                         
-                        <div className="p-8 space-y-8">
-                            <div className="flex items-start gap-6 p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                                <div className="bg-primary/10 p-4 rounded-2xl">
-                                    <Sparkles className="w-6 h-6 text-primary" />
+                        <div className="p-8 space-y-6">
+                            <div className="flex items-start gap-5 p-5 bg-slate-50 rounded-2xl border border-[var(--card-border)]">
+                                <div className="bg-primary/10 p-3.5 rounded-xl">
+                                    <Sparkles className="w-5 h-5 text-primary" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Subject</p>
-                                    <h3 className="text-2xl font-black text-slate-900">{selectedEntry.subject_name}</h3>
+                                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">Subject Unit</p>
+                                    <h3 className="text-lg font-bold text-[var(--text-main)]">{selectedEntry.subject_name}</h3>
                                 </div>
                             </div>
 
-                             <div className="flex items-start gap-6 p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                                <div className="bg-amber-500/10 p-4 rounded-2xl">
-                                    <User className="w-6 h-6 text-amber-600" />
+                             <div className="flex items-start gap-5 p-5 bg-slate-50 rounded-2xl border border-[var(--card-border)]">
+                                <div className="bg-amber-500/10 p-3.5 rounded-xl">
+                                    <User className="w-5 h-5 text-amber-600" />
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Assigned Teacher</p>
+                                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2">Responsible Faculty</p>
                                     <ComboBox
-                                        placeholder="Assign Teacher..."
+                                        placeholder="Select Faculty..."
                                         value={selectedEntry.teacher_id?.toString() || ''}
                                         onChange={async (val) => {
                                             if (!val || !selectedClassroom) return;
@@ -868,7 +868,6 @@ const Timetable: React.FC = () => {
                                             const teacher = staff.find(s => s.id === staffId);
                                             if (!teacher) return;
 
-                                            // Update local state immediately
                                             const updatedEntries = entries.map(e => 
                                                 e.id === selectedEntry.id 
                                                 ? { ...e, teacher_id: staffId, teacher_name: `${teacher.first_name} ${teacher.last_name}` } 
@@ -882,7 +881,6 @@ const Timetable: React.FC = () => {
                                             } : null);
                                             setIsDirty(true);
 
-                                            // Also update curriculum mapping in background
                                             try {
                                                 await assignTeacher({
                                                     staff_id: staffId,
@@ -890,7 +888,7 @@ const Timetable: React.FC = () => {
                                                     subject_id: selectedEntry.subject_id!,
                                                     academic_year_id: activeYearId!
                                                 });
-                                                notify('success', 'Assignment Updated', `Teacher linked to ${selectedEntry.subject_name}`);
+                                                notify('success', 'Assignment Updated', `Faculty linked successfully.`);
                                             } catch (err) { console.error(err); }
                                         }}
                                         options={staff.map(s => ({ value: s.id.toString(), label: `${s.first_name} ${s.last_name}` }))}
@@ -901,16 +899,16 @@ const Timetable: React.FC = () => {
                             <div className="flex gap-4 pt-4">
                                 <button 
                                     onClick={() => { handleDeleteEntry(selectedEntry.id!); setSelectedEntry(null); }}
-                                    className="flex-1 py-4 bg-rose-50 text-rose-500 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
+                                    className="btn-ghost !text-rose-500 hover:!bg-rose-50 flex-1 !py-3.5"
                                 >
                                     <Trash2 size={16} />
-                                    Delete Period
+                                    Purge Period
                                 </button>
                                 <button 
                                     onClick={() => setSelectedEntry(null)}
-                                    className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 shadow-lg transition-all"
+                                    className="btn-primary flex-1 !py-3.5"
                                 >
-                                    Close View
+                                    Dismiss
                                 </button>
                             </div>
                         </div>
@@ -920,17 +918,17 @@ const Timetable: React.FC = () => {
 
             <DragOverlay>
                 {activeDragItem ? (
-                    <div className="opacity-80 scale-105 shadow-2xl">
+                    <div className="opacity-90 scale-105 shadow-2xl">
                         <div className={`
-                            flex items-center gap-3 p-4 rounded-2xl bg-white border-2 border-primary shadow-xl min-w-[200px]
+                            flex items-center gap-3 p-4 rounded-2xl bg-[var(--card-bg)] border border-primary shadow-2xl min-w-[220px]
                         `}>
                             <div className="bg-primary/10 p-2 rounded-xl text-primary">
                                 {activeDragItem.data.current?.type === 'subject' ? <Clock className="w-5 h-5" /> : <User className="w-5 h-5" />}
                             </div>
                             <div>
-                                <p className="text-sm font-black text-slate-800">{activeDragItem.data.current?.name}</p>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    {activeDragItem.data.current?.type}
+                                <p className="text-sm font-bold text-slate-800">{activeDragItem.data.current?.name}</p>
+                                <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                                    Allocating {activeDragItem.data.current?.type}
                                 </p>
                             </div>
                         </div>
@@ -940,26 +938,41 @@ const Timetable: React.FC = () => {
 
             {/* Modals */}
             {isBreakModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[110] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden">
-                        <div className="p-8 bg-slate-900 text-white flex justify-between">
-                            <h2 className="text-xl font-black uppercase">Break Settings</h2>
-                            <button onClick={() => setIsBreakModalOpen(false)}><X /></button>
+                <div className="fixed inset-0 modal-overlay backdrop-blur-sm z-[110] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="bg-[var(--card-bg)] rounded-[2rem] w-full max-w-xl shadow-2xl overflow-hidden">
+                        <div className="p-8 bg-surface-dark text-white flex justify-between items-center">
+                            <h2 className="text-lg font-bold uppercase tracking-tight">Institutional Breaks</h2>
+                            <button onClick={() => setIsBreakModalOpen(false)} className="text-white/40 hover:text-white transition-colors"><X /></button>
                         </div>
-                        <div className="p-8 space-y-8">
-                            <div className="space-y-2">
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-2 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
                                 {breaks.map(b => (
-                                    <div key={b.id} className="flex justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <div className="font-bold">{b.name} ({b.start_time.slice(0, 5)} - {b.end_time.slice(0, 5)})</div>
-                                        <button onClick={() => handleDeleteBreak(b.id)} className="text-rose-500"><Trash2 size={18} /></button>
+                                    <div key={b.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-[var(--card-border)]">
+                                        <div>
+                                            <p className="font-bold text-slate-800">{b.name}</p>
+                                            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{b.start_time.slice(0, 5)} - {b.end_time.slice(0, 5)}</p>
+                                        </div>
+                                        <button onClick={() => handleDeleteBreak(b.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={16} /></button>
                                     </div>
                                 ))}
+                                {breaks.length === 0 && <p className="text-center py-8 text-[var(--text-muted)] text-sm italic">No break intervals defined.</p>}
                             </div>
-                            <div className="p-6 bg-primary/5 rounded-3xl space-y-4">
-                                <div className="grid grid-cols-3 gap-4">
-                                    <input id="break-name" placeholder="Name" className="px-4 py-2 rounded-xl" />
-                                    <input id="break-start" type="time" className="px-4 py-2 rounded-xl" />
-                                    <input id="break-end" type="time" className="px-4 py-2 rounded-xl" />
+                            
+                            <div className="p-6 bg-slate-50/50 border border-[var(--card-border)] rounded-[2rem] space-y-5">
+                                <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest px-1">Define New Interval</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight px-1">Label</label>
+                                        <input id="break-name" placeholder="e.g. Lunch" className="input-field-modern !py-2.5 !text-xs" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight px-1">Start</label>
+                                        <input id="break-start" type="time" className="input-field-modern !py-2.5 !text-xs" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight px-1">End</label>
+                                        <input id="break-end" type="time" className="input-field-modern !py-2.5 !text-xs" />
+                                    </div>
                                 </div>
                                 <button 
                                     onClick={() => {
@@ -968,9 +981,9 @@ const Timetable: React.FC = () => {
                                         const e = (document.getElementById('break-end') as HTMLInputElement).value;
                                         if (n && s && e) handleCreateBreak({ name: n, start_time: s, end_time: e });
                                     }}
-                                    className="w-full py-3 bg-primary text-white rounded-xl font-black uppercase"
+                                    className="btn-primary w-full !py-3.5"
                                 >
-                                    Add Break
+                                    Register Interval
                                 </button>
                             </div>
                         </div>

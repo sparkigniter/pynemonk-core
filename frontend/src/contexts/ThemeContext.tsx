@@ -33,6 +33,9 @@ export const THEMES: Theme[] = [
             '--ring':            'rgba(79,70,229,0.3)',
             '--page-bg-from':    '#f8fafc',
             '--page-bg-to':      '#f1f5f9',
+            '--surface-dark':    '#0f172a',
+            '--surface-dark-hover': '#1e293b',
+            '--shadow-theme':    'rgba(79,70,229,0.15)',
         },
     },
     {
@@ -59,6 +62,9 @@ export const THEMES: Theme[] = [
             '--ring':            'rgba(5,150,105,0.3)',
             '--page-bg-from':    '#f0fdf4',
             '--page-bg-to':      '#f0fdfa',
+            '--surface-dark':    '#064e3b',
+            '--surface-dark-hover': '#065f46',
+            '--shadow-theme':    'rgba(5,150,105,0.15)',
         },
     },
     {
@@ -85,6 +91,9 @@ export const THEMES: Theme[] = [
             '--ring':            'rgba(225,29,72,0.3)',
             '--page-bg-from':    '#fff1f2',
             '--page-bg-to':      '#fff5f7',
+            '--surface-dark':    '#4c0519',
+            '--surface-dark-hover': '#881337',
+            '--shadow-theme':    'rgba(225,29,72,0.15)',
         },
     },
     {
@@ -111,6 +120,9 @@ export const THEMES: Theme[] = [
             '--ring':            'rgba(217,119,6,0.3)',
             '--page-bg-from':    '#fffbeb',
             '--page-bg-to':      '#fff7ed',
+            '--surface-dark':    '#2d1b00',
+            '--surface-dark-hover': '#451a03',
+            '--shadow-theme':    'rgba(217,119,6,0.15)',
         },
     },
     {
@@ -137,6 +149,9 @@ export const THEMES: Theme[] = [
             '--ring':            'rgba(2,132,199,0.3)',
             '--page-bg-from':    '#f0f9ff',
             '--page-bg-to':      '#f8fafc',
+            '--surface-dark':    '#0c2447',
+            '--surface-dark-hover': '#075985',
+            '--shadow-theme':    'rgba(2,132,199,0.15)',
         },
     },
     {
@@ -163,6 +178,9 @@ export const THEMES: Theme[] = [
             '--ring':            'rgba(109,40,217,0.3)',
             '--page-bg-from':    '#f5f3ff',
             '--page-bg-to':      '#faf9ff',
+            '--surface-dark':    '#13132b',
+            '--surface-dark-hover': '#2e1065',
+            '--shadow-theme':    'rgba(109,40,217,0.15)',
         },
     },
 ];

@@ -30,6 +30,7 @@ class UserValidator extends Validator {
                     "string.min": "Password must be at least 8 characters",
                 }),
             role_id: Joi.number().integer().positive().required(),
+            tenant_id: Joi.number().integer().positive().required(),
             first_name: Joi.string().max(100).optional(),
             last_name: Joi.string().max(100).optional(),
             phone: Joi.string().max(20).optional(),

@@ -20,6 +20,12 @@ router.post("/terms", apiRateLimiter, sensitiveRateLimiter, requirePermission(["
     return controller.createTerm(req, res);
 });
 
+// Stats
+router.get("/stats", apiRateLimiter, requirePermission(["exam:read", "student.academic:read"]), (req, res) => {
+    const controller = container.resolve(ExamController);
+    return controller.getStats(req, res);
+});
+
 // Exams
 router.get("/", apiRateLimiter, requirePermission(["exam:read", "student.academic:read", "self.academic:read", "child.academic:read"]), (req, res) => {
     const controller = container.resolve(ExamController);
@@ -34,6 +40,11 @@ router.post("/", apiRateLimiter, sensitiveRateLimiter, requirePermission(["exam:
 router.get("/:id", apiRateLimiter, requirePermission(["exam:read", "student.academic:read", "self.academic:read", "child.academic:read"]), (req, res) => {
     const controller = container.resolve(ExamController);
     return controller.getExam(req, res);
+});
+
+router.get("/:id/results", apiRateLimiter, requirePermission(["exam:read", "student.academic:read", "self.academic:read", "child.academic:read"]), (req, res) => {
+    const controller = container.resolve(ExamController);
+    return controller.getExamResults(req, res);
 });
 
 router.put("/:id", apiRateLimiter, sensitiveRateLimiter, requirePermission(["exam:write", "student.academic:write"]), (req, res) => {
@@ -80,6 +91,11 @@ router.post("/:id/papers/:paperId/marks", apiRateLimiter, sensitiveRateLimiter, 
 router.patch("/:id/status", apiRateLimiter, sensitiveRateLimiter, requirePermission(["exam:write", "student.academic:write"]), (req, res) => {
     const controller = container.resolve(ExamController);
     return controller.updateStatus(req, res);
+});
+
+router.get("/performance/:studentId", apiRateLimiter, requirePermission(["exam:read", "student.academic:read", "self.academic:read", "child.academic:read"]), (req, res) => {
+    const controller = container.resolve(ExamController);
+    return controller.getStudentPerformance(req, res);
 });
 
 export default router;
