@@ -98,6 +98,7 @@ export default function App() {
           <Route path="students/placement" element={<StudentPlacement />} />
           <Route path="students/:id" element={<StudentProfile />} />
           <Route path="teachers" element={<Teachers />} />
+          <Route path="staff-directory" element={<Teachers />} />
           <Route path="teachers/register" element={<StaffRegistration />} />
           <Route path="grades" element={<Grades />} />
           <Route path="my-classes" element={<MyClasses />} />

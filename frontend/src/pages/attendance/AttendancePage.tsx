@@ -271,6 +271,15 @@ const AttendancePage: React.FC = () => {
                 </div>
             )}
 
+            {/* Pagination Controls */}
+            {roster.length > 0 && (
+                <div className="mt-8 flex items-center justify-between bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Showing <span className="text-slate-900">{filteredRoster.length}</span> students
+                    </p>
+                </div>
+            )}
+
             {/* Empty State */}
             {!loading && filteredRoster.length === 0 && (
                 <div className="py-32 flex flex-col items-center justify-center text-center px-8">

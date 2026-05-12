@@ -1746,6 +1746,139 @@ const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
             </motion.div>
           )}
 
+          {view === 'homework' && (
+            <motion.div key="homework" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="px-6 py-6 space-y-6">
+              <button
+                onClick={() => setView('homework_new')}
+                className="w-full bg-slate-900 text-white p-6 rounded-[2.5rem] flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-transform"
+              >
+                <Plus size={20} />
+                <span className="text-xs font-black uppercase tracking-widest">New Homework</span>
+              </button>
+
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Recent Assignments</h4>
+                {homeworks.map((hw, i) => (
+                  <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="bg-indigo-50 text-indigo-600 text-[8px] font-black uppercase px-2 py-1 rounded-full mb-2 inline-block">{hw.subject_name}</span>
+                        <h5 className="text-lg font-bold text-slate-900">{hw.title}</h5>
+                        <p className="text-slate-400 text-xs font-medium">{hw.classroom_name}</p>
+                      </div>
+                      {hw.attachment_url && <FileImage className="text-slate-200" />}
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                      <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase">
+                        <Clock size={12} /> Due {new Date(hw.due_date).toLocaleDateString()}
+                      </div>
+                      <button className="text-indigo-600 text-[10px] font-black uppercase">View</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {view === 'homework_new' && (
+            <motion.div key="homework_new" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="px-6 py-6 space-y-8 pb-32">
+              <div className="bg-slate-900 p-8 rounded-[3rem] text-white flex flex-col items-center gap-6 text-center overflow-hidden relative">
+                <div className="flex gap-4 p-1 bg-white/10 rounded-2xl relative z-10">
+                  <button 
+                    onClick={() => setHwMode('text')} 
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${hwMode === 'text' ? 'bg-white text-slate-900 shadow-lg' : 'text-white/60'}`}
+                  >
+                    Type
+                  </button>
+                  <button 
+                    onClick={() => setHwMode('snap')} 
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${hwMode === 'snap' ? 'bg-white text-slate-900 shadow-lg' : 'text-white/60'}`}
+                  >
+                    Snap
+                  </button>
+                  <button 
+                    onClick={() => setHwMode('voice')} 
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${hwMode === 'voice' ? 'bg-white text-slate-900 shadow-lg' : 'text-white/60'}`}
+                  >
+                    Voice
+                  </button>
+                </div>
+
+                <div className="relative z-10 flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
+                    {hwMode === 'text' && <ClipboardCheck size={32} className="text-white" />}
+                    {hwMode === 'snap' && <Camera size={32} className="text-white" />}
+                    {hwMode === 'voice' && <Mic size={32} className="text-white" />}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black">
+                      {hwMode === 'text' ? 'Type Instructions' : hwMode === 'snap' ? 'Snap Blackboard' : 'Record Message'}
+                    </h3>
+                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-1">Zero-friction assignment</p>
+                  </div>
+                </div>
+                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-brand-500/20 rounded-full blur-3xl"></div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Class & Subject</label>
+                  <select className="w-full bg-white border-2 border-slate-100 rounded-[1.5rem] p-4 text-sm font-bold appearance-none outline-none focus:border-indigo-500 shadow-sm">
+                    <option>Select Target Class</option>
+                    {data?.assignments.map((a, i) => <option key={i}>{a.classroom_name} - {a.subject_name}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Homework Title</label>
+                  <input type="text" placeholder="e.g. Chapter 4 Practice" className="w-full bg-white border-2 border-slate-100 rounded-[1.5rem] p-4 text-sm font-bold outline-none focus:border-indigo-500 shadow-sm" />
+                </div>
+
+                {hwMode === 'text' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Description</label>
+                    <textarea 
+                      placeholder="Type homework instructions here..." 
+                      className="w-full bg-white border-2 border-slate-100 rounded-[1.5rem] p-6 text-sm font-bold outline-none focus:border-indigo-500 shadow-sm min-h-[150px]"
+                    />
+                  </div>
+                )}
+
+                {hwMode === 'snap' && (
+                  <div className="bg-indigo-50 p-8 rounded-[2.5rem] border-2 border-dashed border-indigo-200 flex flex-col items-center gap-4 transition-all hover:bg-indigo-100/50">
+                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-indigo-500">
+                      <Camera size={24} />
+                    </div>
+                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Tap to capture blackboard</p>
+                  </div>
+                )}
+
+                {hwMode === 'voice' && (
+                  <div className="bg-rose-50 p-8 rounded-[2.5rem] border-2 border-dashed border-rose-200 flex flex-col items-center gap-4 transition-all hover:bg-rose-100/50">
+                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-rose-500 animate-pulse">
+                      <Mic size={24} />
+                    </div>
+                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Hold to record instructions</p>
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="w-1 bg-rose-200 rounded-full" style={{ height: Math.random() * 20 + 10 + 'px' }}></div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="fixed bottom-10 left-6 right-6">
+                <button
+                  onClick={() => navigateTo('homework')}
+                  className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-sm shadow-2xl active:scale-[0.98] transition-transform"
+                >
+                  Publish to Students
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           {view === 'profile' && (
             <motion.div key="profile" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="px-6 py-8 space-y-8">
               {/* Profile Card */}

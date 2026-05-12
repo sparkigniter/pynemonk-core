@@ -171,6 +171,12 @@ export default class StudentHelper {
             paramIndex++;
         }
 
+        if (filters.grade_id) {
+            conditions.push(`c.grade_id = $${paramIndex}`);
+            params.push(filters.grade_id);
+            paramIndex++;
+        }
+
         if (filters.search) {
             conditions.push(
                 `(s.first_name ILIKE $${paramIndex} OR s.last_name ILIKE $${paramIndex} OR s.admission_no ILIKE $${paramIndex})`,

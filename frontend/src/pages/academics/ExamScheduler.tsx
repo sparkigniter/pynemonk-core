@@ -29,6 +29,27 @@ export default function ExamScheduler() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { notify } = useNotification();
+    const { can } = useAuth();
+
+    if (!can('exam:write')) {
+        return (
+            <div className="h-[80vh] flex flex-col items-center justify-center gap-6 text-center px-4">
+                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-rose-500/10 transform rotate-12">
+                    <ShieldCheck size={40} />
+                </div>
+                <div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Access Denied</h2>
+                    <p className="text-slate-400 font-medium mt-2 max-w-sm">You do not have the administrative clearance required to schedule or modify examinations.</p>
+                </div>
+                <button 
+                    onClick={() => navigate('/exams')}
+                    className="mt-4 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                >
+                    Return to Mission Control
+                </button>
+            </div>
+        );
+    }
 
     // Steps Configuration
     const steps: { id: Step; label: string; icon: any; description: string }[] = [
