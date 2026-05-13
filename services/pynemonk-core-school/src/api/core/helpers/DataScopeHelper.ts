@@ -70,7 +70,7 @@ export class DataScopeHelper {
         // 1. Check for Administrative Roles (Tier 0, 1, 2)
         // If user has 'owner', 'principal', or 'school_admin', they get FULL access.
         const isAdmin = user.roles.some((role: string) =>
-            ["owner", "principal", "vice_principal", "school_admin"].includes(role),
+            ["owner", "principal", "vice_principal", "school_admin", "system_admin"].includes(role),
         );
 
         if (isAdmin) {

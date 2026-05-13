@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface StatsCardProps {
@@ -11,17 +12,27 @@ interface StatsCardProps {
     iconBg?: string;
     delay?: string;
     subtitle?: string;
+    path?: string;
 }
 
 const StatsCard: React.FC<StatsCardProps> = ({
-    title, value, icon: Icon, trend, trendUp, delay = '', subtitle
+    title, value, icon: Icon, trend, trendUp, delay = '', subtitle, path
 }) => {
+    const navigate = useNavigate();
     const bgColor = 'bg-primary/5';
     const textColor = 'text-primary';
 
+    const handleClick = () => {
+        if (path) {
+            navigate(path);
+        }
+    };
+
     return (
-        <div className={`group bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 animate-fade-in-up ${delay}`}>
-            <div className="flex items-start justify-between">
+        <div 
+            onClick={handleClick}
+            className={`group bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 animate-fade-in-up ${delay} ${path ? 'cursor-pointer active:scale-95' : ''}`}
+        >            <div className="flex items-start justify-between">
                 <div className="space-y-4">
                     <div className="space-y-1">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{title}</p>

@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
     Plus, Search, Filter,
     Mail, Phone, BookOpen, UserPlus,
-    Calendar, ShieldCheck, X, ChevronRight
+    Calendar, ShieldCheck, X, ChevronRight, MoreVertical
 } from 'lucide-react';
 import * as staffApi from '../../api/staff.api';
 import AdvancedFilters from '../../components/ui/AdvancedFilters';
@@ -250,8 +250,21 @@ export default function Teachers() {
                                             {s.assignments?.length || 0} Subjects
                                         </span>
                                     </div>
-                                    <div className="p-2.5 bg-slate-50 text-[var(--text-muted)] rounded-xl group-hover:text-primary group-hover:bg-primary/5 transition-all">
-                                        <ChevronRight size={18} />
+                                    <div className="flex items-center gap-2">
+                                        {can('staff:write') && (
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(`/teachers/edit/${s.id}`);
+                                                }}
+                                                className="p-2.5 bg-slate-50 text-[var(--text-muted)] rounded-xl hover:text-primary hover:bg-primary/5 transition-all"
+                                            >
+                                                <MoreVertical size={16} />
+                                            </button>
+                                        )}
+                                        <div className="p-2.5 bg-slate-50 text-[var(--text-muted)] rounded-xl group-hover:text-primary group-hover:bg-primary/5 transition-all">
+                                            <ChevronRight size={18} />
+                                        </div>
                                     </div>
                                 </div>
                             </div>

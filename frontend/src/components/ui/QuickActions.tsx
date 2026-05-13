@@ -48,7 +48,7 @@ const QuickActions: React.FC = () => {
     }).slice(0, 8); // Limit to 8 for grid layout
 
     return (
-        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm animate-fade-in-up delay-300">
+        <div id="quick-actions-section" className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm animate-fade-in-up delay-300">
             <div className="flex items-center justify-between mb-8">
                 <h3 className="text-xl font-black text-slate-800 tracking-tight">Fast Track Actions</h3>
                 <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-full">{filteredActions.length} Shortcuts</span>

@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
-import { User, Building2, Bell, Shield, Save, Palette, Sparkles, LayoutGrid, ListChecks, Info } from 'lucide-react';
+import { User, Building2, Bell, Shield, Save, Palette, Sparkles, LayoutGrid, ListChecks, Info, Calendar } from 'lucide-react';
+import LeaveTypeSettings from '../../components/admin/LeaveTypeSettings';
 import { useTheme } from '../../contexts/ThemeContext';
 import * as settingsApi from '../../api/settings.api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const tabs = [
     { id: 'profile', name: 'User Profile', icon: User },
     { id: 'appearance', name: 'Appearance', icon: Palette },
-    { id: 'school', name: 'School Preferences', icon: Building2 },
+    { id: 'school', name: 'School Preferences', icon: Building2, permission: 'settings:write' },
+    { id: 'leave', name: 'Leave & HR', icon: ListChecks, permission: 'staff.leave:read' },
     { id: 'notifications', name: 'Notifications', icon: Bell },
     { id: 'security', name: 'Security', icon: Shield },
 ];
@@ -16,6 +19,7 @@ export default function Settings() {
     const [activeTab, setActiveTab] = useState('profile');
     const { theme: activeTheme, setTheme, themes } = useTheme();
     const { notify } = useNotification();
+    const { can } = useAuth();
     const [schoolSettings, setSchoolSettings] = useState<any>({
         admission_number_format: 'ADM-{YEAR}-{SEQ}',
         attendance_mode: 'DAILY'
@@ -52,7 +56,7 @@ export default function Settings() {
                 {/* Sidebar Nav */}
                 <div className="w-full md:w-64 shrink-0">
                     <nav className="flex md:flex-col gap-1.5 overflow-x-auto pb-2 md:pb-0">
-                        {tabs.map((tab) => {
+                        {tabs.filter(t => !t.permission || can(t.permission)).map((tab) => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;
                             return (
@@ -191,6 +195,17 @@ export default function Settings() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* ── Leave & HR ── */}
+                    {activeTab === 'leave' && (
+                        <div className="flex-1 p-6 space-y-10 overflow-y-auto">
+                            <h2 className="text-lg font-semibold text-[var(--text-main)] font-heading border-b border-[var(--card-border)] pb-4 flex items-center gap-2">
+                                <Calendar size={18} className="text-primary" />
+                                Leave Categories
+                            </h2>
+                            <LeaveTypeSettings />
                         </div>
                     )}
 

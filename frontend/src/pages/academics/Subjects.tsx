@@ -460,7 +460,13 @@ export default function Subjects() {
                                             isAssigned: assignments.some(a => a.subject_id === subject.id)
                                         }} 
                                         onAssign={can('class:write') ? () => {
-                                            setAssignFormData(prev => ({ ...prev, subject_id: subject.id.toString() }));
+                                            const firstAssignment = assignments.find(a => a.subject_id === subject.id);
+                                            setAssignFormData({
+                                                subject_id: subject.id.toString(),
+                                                staff_id: firstAssignment?.staff_id?.toString() || '',
+                                                classroom_id: firstAssignment?.classroom_id?.toString() || '',
+                                                academic_year_id: assignFormData.academic_year_id
+                                            });
                                             setIsAssignModalOpen(true);
                                         } : undefined}
                                     />
@@ -659,7 +665,7 @@ export default function Subjects() {
                         value={assignFormData.classroom_id ? Number(assignFormData.classroom_id) : null}
                         onChange={val => setAssignFormData({ ...assignFormData, classroom_id: val?.toString() || '' })}
                         placeholder="Select Classroom Division"
-                        options={classrooms.filter(c => Number(c.grade_id) === Number(selectedGradeId)).map(c => ({ value: c.id, label: c.name }))}
+                        options={classrooms.filter(c => !selectedGradeId || Number(c.grade_id) === Number(selectedGradeId)).map(c => ({ value: c.id, label: c.name }))}
                     />
 
                     <div className="pt-6 flex gap-4">

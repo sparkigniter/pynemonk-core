@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { container } from "tsyringe";
 import { ExamController } from "./controllers/ExamController.js";
+import { ReportCardController } from "./controllers/ReportCardController.js";
 import { requireAuth } from "../../core/middleware/requireAuth.js";
 import { requirePermission } from "../../core/middleware/requirePermission.js";
 import { apiRateLimiter, sensitiveRateLimiter } from "../../core/middleware/RateLimiter.js";
@@ -96,6 +97,17 @@ router.patch("/:id/status", apiRateLimiter, sensitiveRateLimiter, requirePermiss
 router.get("/performance/:studentId", apiRateLimiter, requirePermission(["exam:read", "student.academic:read", "self.academic:read", "child.academic:read"]), (req, res) => {
     const controller = container.resolve(ExamController);
     return controller.getStudentPerformance(req, res);
+});
+
+// Report Card Routes
+router.get("/:examId/students/:studentId/report", apiRateLimiter, requirePermission(["exam:read", "student.academic:read", "self.academic:read", "child.academic:read"]), (req, res) => {
+    const controller = container.resolve(ReportCardController);
+    return controller.getStudentReport(req, res);
+});
+
+router.get("/:examId/classrooms/:classroomId/reports", apiRateLimiter, requirePermission(["exam:read", "student.academic:read"]), (req, res) => {
+    const controller = container.resolve(ReportCardController);
+    return controller.getClassroomReports(req, res);
 });
 
 export default router;

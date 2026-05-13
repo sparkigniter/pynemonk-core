@@ -13,6 +13,19 @@ class BaseController {
         return user.tenantId;
     }
 
+    /** Get User ID from user context */
+    protected getUserId(req: express.Request): number {
+        const user = (req as AuthenticatedRequest).user;
+        if (!user) throw new Error("Unauthorized: No user context found");
+        return user.userId;
+    }
+
+    /** Get Academic Year ID from header or query */
+    protected getAcademicYearId(req: express.Request): number | undefined {
+        const yearId = req.headers['x-academic-year-id'] || req.query.academic_year_id;
+        return yearId ? parseInt(yearId as string) : undefined;
+    }
+
     public unautharized(res: express.Response, message?: string): express.Response {
         return ApiResponseHandler.unautharized(res, message);
     }

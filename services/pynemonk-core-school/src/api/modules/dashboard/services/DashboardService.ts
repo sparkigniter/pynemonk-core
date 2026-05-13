@@ -1,6 +1,7 @@
 import { injectable, inject } from "tsyringe";
 import { Pool } from "pg";
 import AcademicYearHelper from "../../academics/helpers/AcademicYearHelper.js";
+import { Logger } from "../../../core/utils/Logger.js";
 
 @injectable()
 export class DashboardService {
@@ -9,16 +10,18 @@ export class DashboardService {
         private academicYearHelper: AcademicYearHelper
     ) { }
 
-    public async getDashboardData(tenantId: number, role: string, userId: number) {
+    public async getDashboardData(tenantId: number, role: string, userId: number, data: any = {}) {
         const currentYear = await this.academicYearHelper.findCurrent(tenantId);
         const ayId = currentYear?.id;
+        
+        Logger.info(`Dashboard data requested`, { tenantId, role, userId, academicYearId: ayId });
 
         switch (role.toLowerCase()) {
             case 'principal':
             case 'school_admin':
-                return this.getAdminDashboard(tenantId, ayId);
+                return this.getAdminDashboard(tenantId, ayId, parseInt(data.days || '7'));
             case 'teacher':
-                return this.getTeacherDashboard(tenantId, ayId, userId);
+                return this.getTeacherDashboard(tenantId, ayId, userId, parseInt(data.days || '7'));
             case 'student':
                 return this.getStudentDashboard(tenantId, ayId, userId);
             case 'guardian':
@@ -29,7 +32,7 @@ export class DashboardService {
         }
     }
 
-    private async getAdminDashboard(tenantId: number, ayId?: number) {
+    private async getAdminDashboard(tenantId: number, ayId?: number, days: number = 7) {
         const stats = await this.db.query(`
             SELECT 
                 (SELECT COUNT(*) FROM school.student WHERE tenant_id = $1 AND is_deleted = FALSE) as total_students,
@@ -42,12 +45,12 @@ export class DashboardService {
         const attendanceTrends = await this.db.query(`
             SELECT 
                 TO_CHAR(date, 'Mon DD') as day,
-                ROUND(COUNT(CASE WHEN status = 'present' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as percentage
+                ROUND(COUNT(CASE WHEN status = 'present' THEN 1 END) * 100.0 / NULLIF((SELECT COUNT(*) FROM school.student_enrollment WHERE tenant_id = $1 AND academic_year_id = $2 AND is_deleted = FALSE), 0), 1) as percentage
             FROM school.attendance
-            WHERE tenant_id = $1 AND date > CURRENT_DATE - INTERVAL '7 days'
+            WHERE tenant_id = $1 AND date > CURRENT_DATE - ($3 || ' days')::interval
             GROUP BY date
             ORDER BY date ASC
-        `, [tenantId]);
+        `, [tenantId, ayId, days]);
 
         // 3. Unified Activity Stream
         const activityStream = await this.db.query(`
@@ -119,7 +122,7 @@ export class DashboardService {
         };
     }
 
-    private async getTeacherDashboard(tenantId: number, ayId: number | undefined, userId: number) {
+    private async getTeacherDashboard(tenantId: number, ayId: number | undefined, userId: number, days: number = 7) {
         const staffRes = await this.db.query('SELECT id FROM school.staff WHERE user_id = $1 AND tenant_id = $2', [userId, tenantId]);
         const staffId = staffRes.rows[0]?.id;
 

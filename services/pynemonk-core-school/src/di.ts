@@ -56,6 +56,15 @@ import { IntegrationService } from "./api/modules/integration/services/Integrati
 import IntegrationHelper from "./api/modules/integration/helpers/IntegrationHelper.js";
 import { PluginContextFactory } from "./api/modules/integration/core/PluginContextFactory.js";
 import { KarnatakaSATSAdapter } from "./api/modules/integration/plugins/karnataka-sats/SATSAdapter.js";
+import NotificationService from "./api/modules/notification/services/NotificationService.js";
+import { EmailDispatcher, SMSDispatcher, InAppDispatcher } from "./api/modules/notification/dispatchers/MockDispatchers.js";
+
+import LeaveHelper from "./api/modules/leave/helpers/LeaveHelper.js";
+import LeaveService from "./api/modules/leave/services/LeaveService.js";
+import LeaveController from "./api/modules/leave/controllers/LeaveController.js";
+import PayrollHelper from "./api/modules/payroll/helpers/PayrollHelper.js";
+import PayrollService from "./api/modules/payroll/services/PayrollService.js";
+import PayrollController from "./api/modules/payroll/controllers/PayrollController.js";
 
 import { EventEmitter } from "events";
 
@@ -164,6 +173,22 @@ function setupDI(): void {
     // Register Plugins
     const registry = container.resolve(IntegrationRegistry);
     registry.register(container.resolve(KarnatakaSATSAdapter));
+
+    // ── Notification Module ──────────────────────────────────────────────────
+    container.register("NotificationDispatcher", { useClass: EmailDispatcher });
+    container.register("NotificationDispatcher", { useClass: SMSDispatcher });
+    container.register("NotificationDispatcher", { useClass: InAppDispatcher });
+    container.registerSingleton(NotificationService);
+
+    // ── Leave Module ─────────────────────────────────────────────────────────
+    container.register(LeaveHelper, { useClass: LeaveHelper });
+    container.register(LeaveService, { useClass: LeaveService });
+    container.register(LeaveController, { useClass: LeaveController });
+
+    // ── Payroll Module ───────────────────────────────────────────────────────
+    container.register(PayrollHelper, { useClass: PayrollHelper });
+    container.register(PayrollService, { useClass: PayrollService });
+    container.register(PayrollController, { useClass: PayrollController });
 }
 
 export default setupDI;

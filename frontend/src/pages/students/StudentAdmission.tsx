@@ -50,6 +50,7 @@ export default function StudentAdmission() {
         },
         enrollment: {
             grade_id: '',
+            classroom_id: '',
             section: 'A',
             academic_year_id: '',
             roll_number: '',
@@ -149,8 +150,9 @@ export default function StudentAdmission() {
                 guardian: fullApp.parent_data || formData.guardian,
                 enrollment: {
                     grade_id: fullApp.grade_id?.toString() || '',
-                    academic_year_id: fullApp.academic_year_id?.toString() || '',
+                    classroom_id: fullApp.classroom_id?.toString() || '',
                     section: fullApp.student_data?.section || 'A',
+                    academic_year_id: fullApp.academic_year_id?.toString() || '',
                     roll_number: fullApp.student_data?.roll_number || '',
                 },
                 documents: fullApp.document_data || formData.documents,
@@ -205,7 +207,14 @@ export default function StudentAdmission() {
             }
             await studentApi.updateAdmissionWorkflow(appId!, {
                 stage: 'finance',
-                data: formData.finance
+                data: {
+                    ...formData.finance,
+                    grade_id: formData.enrollment.grade_id,
+                    academic_year_id: formData.enrollment.academic_year_id,
+                    classroom_id: formData.enrollment.classroom_id,
+                    section: formData.enrollment.section,
+                    roll_number: formData.enrollment.roll_number
+                }
             });
             await studentApi.finalizeAdmissionWorkflow(appId!);
             notify('success', 'Admission Finalized', `${formData.student.first_name} has been officially admitted.`);
@@ -224,6 +233,7 @@ export default function StudentAdmission() {
             test: formData.test,
             documents: formData.documents,
             finance: formData.finance,
+            enrollment: formData.enrollment,
         };
         const currentData = stageDataMap[activeStep];
         setIsSaving(true);
@@ -235,7 +245,12 @@ export default function StudentAdmission() {
             } else {
                 await studentApi.updateAdmissionWorkflow(applicationId, {
                     stage: activeStep,
-                    data: currentData
+                    data: { 
+                        ...currentData, 
+                        grade_id: formData.enrollment.grade_id,
+                        academic_year_id: formData.enrollment.academic_year_id,
+                        classroom_id: formData.enrollment.classroom_id
+                    }
                 });
             }
             notify('success', 'Progress Saved', 'Application draft has been securely updated.');
@@ -273,7 +288,11 @@ export default function StudentAdmission() {
                 } else {
                     await studentApi.updateAdmissionWorkflow(applicationId, {
                         stage: activeStep,
-                        data: currentData,
+                        data: {
+                            ...currentData,
+                            grade_id: formData.enrollment.grade_id,
+                            academic_year_id: formData.enrollment.academic_year_id
+                        },
                         next_stage: next
                     });
                 }

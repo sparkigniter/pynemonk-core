@@ -105,7 +105,7 @@ export class AttendanceService {
                     tenantId, 
                     enrollmentId, 
                     date, 
-                    record.status || 'present', 
+                    record.status, // Removed || 'present'
                     record.remarks || '', 
                     staffId
                 ]);

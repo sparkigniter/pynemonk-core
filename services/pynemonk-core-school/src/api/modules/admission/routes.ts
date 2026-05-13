@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { container } from "tsyringe";
 import AdmissionController from "./controllers/AdmissionController.js";
+import { PublicAdmissionController } from "./controllers/PublicAdmissionController.js";
 import { requireAuth } from "../../core/middleware/requireAuth.js";
 import { requirePermission } from "../../core/middleware/requirePermission.js";
 import { apiRateLimiter, sensitiveRateLimiter } from "../../core/middleware/RateLimiter.js";
@@ -8,7 +9,16 @@ import { AuthenticatedRequest } from "../../core/middleware/AuthMiddleware.js";
 
 const router = Router();
 
-// 1. Direct Admission (Legacy/Simple)
+// --- PUBLIC ROUTES (No Auth) ---
+router.get("/public/:slug", apiRateLimiter, (req, res) => {
+    return container.resolve(PublicAdmissionController).getPublicSchoolInfo(req, res);
+});
+
+router.post("/public/submit", apiRateLimiter, sensitiveRateLimiter, (req, res) => {
+    return container.resolve(PublicAdmissionController).submitPublicApplication(req, res);
+});
+
+// --- AUTHENTICATED ROUTES ---
 router.post(
     "/",
     apiRateLimiter,

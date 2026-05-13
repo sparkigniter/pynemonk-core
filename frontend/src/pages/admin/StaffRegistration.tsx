@@ -1,19 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     UserPlus, Mail, Phone, BookOpen, Star, Loader2,
     CheckCircle2, CreditCard, Calendar, ShieldCheck,
     ChevronRight, User, MapPin, ArrowLeft, Sparkles
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import * as staffApi from '../../api/staff.api';
 import { ComboBox } from '../../components/ui/ComboBox';
 import { useNotification } from '../../contexts/NotificationContext';
 
 export default function StaffRegistration() {
+    const { id } = useParams<{ id: string }>();
+    const isEdit = !!id;
     const navigate = useNavigate();
     const { notify } = useNotification();
     const [activeSection, setActiveSection] = useState('identity');
     const [isSaving, setIsSaving] = useState(false);
+    const [loading, setLoading] = useState(isEdit);
     const [formData, setFormData] = useState({
         first_name: '',
         last_name: '',
@@ -42,15 +45,42 @@ export default function StaffRegistration() {
         password: '',
     });
 
-    const handleAddStaff = async (e?: React.FormEvent) => {
+    useEffect(() => {
+        if (isEdit) {
+            const fetchStaff = async () => {
+                try {
+                    const data = await staffApi.getStaffDetails(parseInt(id!));
+                    setFormData({
+                        ...formData,
+                        ...data,
+                        date_of_birth: data.date_of_birth ? new Date(data.date_of_birth).toISOString().split('T')[0] : '',
+                        joining_date: data.joining_date ? new Date(data.joining_date).toISOString().split('T')[0] : '',
+                    } as any);
+                } catch (err) {
+                    notify('error', 'Fetch Failed', 'Could not load staff details.');
+                    navigate('/teachers');
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchStaff();
+        }
+    }, [id, isEdit]);
+
+    const handleSave = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         setIsSaving(true);
         try {
-            await staffApi.createStaff(formData);
-            notify('success', 'Staff Registered', `${formData.first_name} ${formData.last_name} has been added to the system.`);
+            if (isEdit) {
+                await staffApi.updateStaff(parseInt(id!), formData);
+                notify('success', 'Profile Updated', `${formData.first_name}'s profile has been updated.`);
+            } else {
+                await staffApi.createStaff(formData);
+                notify('success', 'Staff Registered', `${formData.first_name} ${formData.last_name} has been added to the system.`);
+            }
             navigate('/teachers');
         } catch (err: any) {
-            notify('error', 'Registration Failed', err.message);
+            notify('error', 'Action Failed', err.message);
         } finally {
             setIsSaving(false);
         }
@@ -62,6 +92,15 @@ export default function StaffRegistration() {
         { id: 'contact', label: 'Contact', icon: Mail, description: 'Communication & address' },
         { id: 'finance', label: 'Finance & ID', icon: CreditCard, description: 'Bank details & verification' },
     ];
+
+    if (loading) {
+        return (
+            <div className="h-[60vh] flex flex-col items-center justify-center gap-4 bg-[var(--card-bg)] rounded-[3rem] border border-[var(--card-border)]">
+                <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                <p className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest">Loading Personnel Data...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -79,7 +118,9 @@ export default function StaffRegistration() {
                             <Sparkles size={16} className="text-theme-primary" />
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Human Resources</span>
                         </div>
-                        <h1 className="text-4xl font-black text-[var(--text-main)] tracking-tight leading-none">Register New Staff</h1>
+                        <h1 className="text-4xl font-black text-[var(--text-main)] tracking-tight leading-none">
+                            {isEdit ? 'Edit Staff Profile' : 'Register New Staff'}
+                        </h1>
                     </div>
                 </div>
 
@@ -387,14 +428,14 @@ export default function StaffRegistration() {
                                                 setActiveSection(sections[currentIndex + 1].id);
                                                 window.scrollTo(0, 0);
                                             } else {
-                                                handleAddStaff();
+                                                handleSave();
                                             }
                                         }}
                                         disabled={isSaving}
                                         className="flex-1 px-10 py-5 rounded-[1.5rem] bg-theme-primary text-white text-sm font-black hover:opacity-90 transition-all shadow-2xl shadow-theme-primary/20 disabled:opacity-50 flex items-center justify-center gap-3 active:scale-[0.98]"
                                     >
                                         {isSaving ? <Loader2 size={20} className="animate-spin" /> : activeSection === 'finance' ? <CheckCircle2 size={20} /> : <ChevronRight size={20} />}
-                                        {activeSection === 'finance' ? 'Complete & Save Profile' : 'Continue to Next Step'}
+                                        {activeSection === 'finance' ? (isEdit ? 'Update Profile' : 'Complete & Save Profile') : 'Continue to Next Step'}
                                     </button>
                                 </div>
                             </div>

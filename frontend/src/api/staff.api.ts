@@ -83,3 +83,9 @@ export async function getStaffDetails(id: number): Promise<Staff> {
 export async function getMyStaffProfile(): Promise<Staff> {
     return request<Staff>(`/school/staff/profile/me`);
 }
+export async function updateStaff(id: number, data: Partial<Staff>): Promise<Staff> {
+    return request<Staff>(`/school/staff/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+}

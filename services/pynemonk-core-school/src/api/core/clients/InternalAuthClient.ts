@@ -71,6 +71,34 @@ export class InternalAuthClient implements IAuthClient {
         return roleRes.rows[0].id;
     }
 
+    public async updateUser(
+        userId: number,
+        data: {
+            email?: string;
+            first_name?: string;
+            last_name?: string;
+        }
+    ): Promise<void> {
+        if (data.email) {
+            await this.db.query(
+                `UPDATE auth.user SET email = $1, updated_at = NOW() WHERE id = $2`,
+                [data.email, userId]
+            );
+        }
+
+        if (data.first_name || data.last_name) {
+            await this.db.query(
+                `INSERT INTO auth.user_profile (user_id, first_name, last_name, created_at, updated_at)
+                 VALUES ($1, $2, $3, NOW(), NOW())
+                 ON CONFLICT (user_id) DO UPDATE SET 
+                    first_name = COALESCE(EXCLUDED.first_name, auth.user_profile.first_name),
+                    last_name = COALESCE(EXCLUDED.last_name, auth.user_profile.last_name),
+                    updated_at = NOW()`,
+                [userId, data.first_name || null, data.last_name || null]
+            );
+        }
+    }
+
     private async provisionDefaultRoles(tenantId: number, db: Pool | any): Promise<void> {
         // Fetch all templates
         const templates = await db.query(`SELECT slug, name, description, tier, is_system, data_scope FROM auth.role_template WHERE is_system = TRUE`);

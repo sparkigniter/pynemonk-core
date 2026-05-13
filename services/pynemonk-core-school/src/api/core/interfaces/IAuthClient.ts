@@ -23,4 +23,16 @@ export interface IAuthClient {
      * Get the role ID for a given slug in a tenant.
      */
     getRoleId(tenantId: number, roleSlug: string): Promise<number>;
+
+    /**
+     * Update an existing user.
+     */
+    updateUser(
+        userId: number,
+        data: {
+            email?: string;
+            first_name?: string;
+            last_name?: string;
+        }
+    ): Promise<void>;
 }
