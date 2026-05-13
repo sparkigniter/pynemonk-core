@@ -124,6 +124,7 @@ export default function ExamResults() {
                                     </th>
                                 ))}
                                 <th className="px-8 py-6 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest border-b border-[var(--card-border)] text-right">Aggregate</th>
+                                <th className="px-8 py-6 w-20 border-b border-[var(--card-border)]"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -176,6 +177,15 @@ export default function ExamResults() {
                                                     {totalObtained}/{totalMax}
                                                 </span>
                                             </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <button 
+                                                onClick={() => navigate(`/exams/${id}/students/${student.student_id}/report`)}
+                                                className="p-2 text-slate-300 hover:text-primary transition-all rounded-lg border border-transparent hover:border-slate-200"
+                                                title="View Report Card"
+                                            >
+                                                <Printer size={18} />
+                                            </button>
                                         </td>
                                     </tr>
                                 );

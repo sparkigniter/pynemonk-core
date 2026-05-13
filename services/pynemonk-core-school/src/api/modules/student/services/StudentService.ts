@@ -143,7 +143,20 @@ export default class StudentService {
     }
 
     public async updateStudentProfile(tenantId: number, studentId: number, data: any): Promise<any> {
+        const studentBefore = await this.studentHelper.getStudentById(tenantId, studentId);
+        if (!studentBefore) throw new Error("Student not found");
+
+        // 1. Update School Record
         const student = await this.studentHelper.updateStudent(tenantId, studentId, data);
+
+        // 2. Update Auth Record if name or email changed
+        if (data.first_name || data.last_name || data.email) {
+            await this.authClient.updateUser(studentBefore.user_id, {
+                first_name: data.first_name,
+                last_name: data.last_name,
+                email: data.email
+            });
+        }
 
         await this.studentHelper.createLog({
             tenant_id: tenantId,

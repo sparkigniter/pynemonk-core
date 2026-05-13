@@ -16,7 +16,7 @@ class DashboardController extends BaseController {
             const role = user.roles[0] || '';
             const userId = user.userId;
 
-            const data = await this.dashboardService.getDashboardData(tenantId, role, userId);
+            const data = await this.dashboardService.getDashboardData(tenantId, role, userId, { days: req.query.days as string });
             return this.ok(res, "Dashboard data retrieved", data);
         } catch (error: any) {
             console.error("[DashboardController] Error:", error);

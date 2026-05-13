@@ -196,6 +196,43 @@ export default class FeeAutomationService {
         }
     }
 
+    public async postPayrollJournal(tenantId: number, userId: number, data: {
+        staffId: number;
+        amount: number;
+        reference: string;
+        month: number;
+        year: number;
+    }) {
+        const expenseAccount = await this.mappingHelper.getMappedAccount(tenantId, 'EXP_SALARY');
+        const bankAccount = await this.mappingHelper.getMappedAccount(tenantId, 'ASSET_BANK');
+
+        if (!expenseAccount || !bankAccount) {
+            throw new Error("Financial mappings missing for Payroll (EXP_SALARY/ASSET_BANK).");
+        }
+
+        await this.glService.postJournal(tenantId, userId, {
+            entry_date: new Date(),
+            reference_no: data.reference,
+            description: `Monthly salary payment - ${data.month}/${data.year}`,
+            transaction_type: 'payroll_payment',
+            metadata: { staff_id: data.staffId, month: data.month, year: data.year },
+            items: [
+                { 
+                    account_id: expenseAccount, 
+                    debit: data.amount, 
+                    credit: 0,
+                    partner_id: data.staffId,
+                    partner_type: 'employee'
+                },
+                { 
+                    account_id: bankAccount, 
+                    debit: 0, 
+                    credit: data.amount
+                }
+            ]
+        });
+    }
+
     private getRevenueKeyForCategory(category: string): string {
         switch (category) {
             case 'admission': return 'REV_ADMISSION';

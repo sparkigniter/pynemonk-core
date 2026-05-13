@@ -5,6 +5,8 @@ import StudentHelper from "../../student/helpers/StudentHelper.js";
 import GuardianHelper from "../../guardian/helpers/GuardianHelper.js";
 import EnrollmentHelper from "../../student/helpers/EnrollmentHelper.js";
 import ClassroomHelper from "../../classroom/helpers/ClassroomHelper.js";
+import NotificationService from "../../notification/services/NotificationService.js";
+import { NotificationChannel } from "../../notification/types.js";
 import { EventEmitter } from "events";
 
 export interface AdmissionRequest {
@@ -60,6 +62,7 @@ export default class AdmissionService {
         private guardianHelper: GuardianHelper,
         private enrollmentHelper: EnrollmentHelper,
         private classroomHelper: ClassroomHelper,
+        private notificationService: NotificationService,
     ) {}
 
     public async admitStudent(tenantId: number, data: AdmissionRequest, userId: number): Promise<any> {
@@ -112,6 +115,7 @@ export default class AdmissionService {
                     tenant_id: tenantId,
                     user_id: studentAuth.id,
                     email: studentEmail,
+                    grade_id: data.enrollment?.grade_id,
                 },
                 client,
             );
@@ -156,6 +160,16 @@ export default class AdmissionService {
 
             await client.query("COMMIT");
 
+            // Send Admission Notification
+            this.notificationService.notify(
+                [NotificationChannel.EMAIL, NotificationChannel.IN_APP],
+                {
+                    to: data.student.email || '',
+                    title: 'Welcome to LuviaEdu!',
+                    body: `Hello ${data.student.first_name}, your admission has been successfully processed with Admission No: ${data.student.admission_no}.`
+                }
+            ).catch((err: any) => console.error('Notification trigger failed:', err));
+
             // 7. Emit Event
             const studentName = `${student.first_name} ${student.last_name}`;
             const academicYearId = enrollment?.academic_year_id || data.enrollment?.academic_year_id;
@@ -177,8 +191,13 @@ export default class AdmissionService {
                 admission_no: student.admission_no,
                 enrollment_id: enrollment?.id,
             };
-        } catch (error) {
+        } catch (error: any) {
             await client.query("ROLLBACK");
+            if (error.code === '23505') {
+                const err: any = new Error(`Admission number "${data.student.admission_no}" is already in use by another student.`);
+                err.statusCode = 409;
+                throw err;
+            }
             throw error;
         } finally {
             client.release();

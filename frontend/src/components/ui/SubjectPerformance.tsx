@@ -1,19 +1,5 @@
 import React from 'react';
-
-interface SubjectData {
-    subject: string;
-    score: number;
-    color: string;
-    gradient: string;
-}
-
-const subjects: SubjectData[] = [
-    { subject: 'Mathematics', score: 87, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
-    { subject: 'Science', score: 92, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
-    { subject: 'English', score: 78, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
-    { subject: 'Social Studies', score: 84, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
-    { subject: 'Computer Science', score: 95, color: 'var(--primary)', gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))' },
-];
+import { TrendingUp } from 'lucide-react';
 
 interface SubjectPerformanceProps {
     data?: any[];
@@ -25,14 +11,16 @@ const SubjectPerformance: React.FC<SubjectPerformanceProps> = ({ data = [] }) =>
         score: Math.round(item.average || item.average_percentage || 0),
         color: 'var(--primary)',
         gradient: 'linear-gradient(90deg, var(--primary), var(--primary-light))'
-    })) : subjects;
+    })) : [];
 
-    const averageScore = Math.round(displaySubjects.reduce((a, b) => a + b.score, 0) / (displaySubjects.length || 1));
+    const averageScore = displaySubjects.length > 0
+        ? Math.round(displaySubjects.reduce((a, b) => a + b.score, 0) / displaySubjects.length)
+        : null;
 
     return (
         <div className="space-y-6">
             <div className="space-y-5">
-                {displaySubjects.slice(0, 5).map((item, idx) => (
+                {displaySubjects.length > 0 ? displaySubjects.slice(0, 5).map((item, idx) => (
                     <div key={idx} className="animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
                         <div className="flex items-center justify-between mb-2 px-1">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.subject}</span>
@@ -48,7 +36,14 @@ const SubjectPerformance: React.FC<SubjectPerformanceProps> = ({ data = [] }) =>
                             />
                         </div>
                     </div>
-                ))}
+                )) : (
+                    <div className="py-12 text-center space-y-3 opacity-40">
+                        <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
+                            <TrendingUp size={24} />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-widest">No exam data available yet</p>
+                    </div>
+                )}
             </div>
 
             {/* Overall Metric Section */}
@@ -57,16 +52,15 @@ const SubjectPerformance: React.FC<SubjectPerformanceProps> = ({ data = [] }) =>
                     <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Global Average</p>
                     <div className="flex items-baseline gap-1">
                         <span className="text-3xl font-black text-slate-900 tracking-tighter">
-                            {averageScore}
+                            {averageScore !== null ? averageScore : '--'}
                         </span>
                         <span className="text-sm font-black text-primary/40">%</span>
                     </div>
                 </div>
                 <div className="text-right">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Institutional Rank</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
                     <div className="flex items-center justify-end gap-2">
-                        <span className="text-xl font-black text-slate-900 tracking-tight">#3</span>
-                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">of 12 Schools</span>
+                        <span className="text-xl font-black text-emerald-600 tracking-tight">Active</span>
                     </div>
                 </div>
             </div>

@@ -45,7 +45,9 @@ export default function StudentPlacement() {
             // 2. Get Unassigned Students (admitted but not yet placed in any classroom)
             const studentsRes = await getStudentList({
                 unenrolled: true,
-                search: searchQuery
+                search: searchQuery,
+                grade_id: selectedGradeId || undefined,
+                academic_year_id: currentYear?.id
             });
             setUnassignedStudents(studentsRes.data);
 

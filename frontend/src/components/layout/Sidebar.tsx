@@ -5,7 +5,7 @@ import {
     Settings, School, BookOpen, DollarSign, BarChart2,
     ChevronRight, LogOut, ChevronDown, Building2, Layers,
     Calendar, RefreshCw, X, ClipboardList, Clock, Sparkles,
-    StickyNote, Zap, Shield, BookCheck
+    StickyNote, Zap, Shield, BookCheck, Activity, Terminal
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAvailableIntegrations } from '../../api/integration.api';
@@ -37,6 +37,13 @@ const navigation = {
             roleFilter: 'teacher' 
         },
         { 
+            name: 'My Schedule', 
+            path: '/my-timetable', 
+            icon: Calendar, 
+            permissions: ['student.academic:read'],
+            roleFilter: 'student' 
+        },
+        { 
             name: 'Grades', 
             path: '/grades', 
             icon: Layers, 
@@ -49,13 +56,16 @@ const navigation = {
         { name: 'Timetable', path: '/timetable', icon: Clock, permissions: ['timetable:read'], roleFilter: 'admin' },
         { name: 'Exams', path: '/exams', icon: ClipboardList, permissions: ['exam:read'] },
         { name: 'Teacher Diary', path: '/teacher-diary', icon: StickyNote, permissions: ['teacher_note:read'] },
+        { name: 'Knowledge Hub', path: '/lms/library', icon: BookOpen, permissions: ['assignment:read'] },
         { name: 'Homework', path: '/homework', icon: BookCheck, permissions: ['assignment:read'] },
+        { name: 'Leave Management', path: '/leaves', icon: Calendar, permissions: ['staff.leave:read'], roleFilter: 'teacher' },
         { name: 'Calendar', path: '/calendar', icon: Calendar, permissions: ['class:read'] },
     ],
     people: [
         { name: 'Students', path: '/students', icon: GraduationCap, permissions: ['student:read', 'student.directory:read'] },
         { name: 'Faculty Records', path: '/teachers', icon: Users, permissions: ['staff:read', 'staff.directory:read'] },
         { name: 'Attendance', path: '/attendance', icon: CalendarCheck, permissions: ['student.attendance:read'] },
+        { name: 'Leave Approvals', path: '/admin/leaves', icon: CalendarCheck, permissions: ['staff.leave:write'], roleFilter: 'admin' },
     ],
     operations: [
         {
@@ -76,9 +86,11 @@ const navigation = {
                 { name: 'Workspace Hub', path: '/accounting/hub', permissions: ['fee:read'] },
                 { name: 'Accounts Payable', path: '/accounting/ap', permissions: ['accounting:read'] },
                 { name: 'Accounts Receivable', path: '/finance', permissions: ['fee:read'] },
+                { name: 'Institutional Fees', path: '/admin/finance', permissions: ['fee:write'], roleFilter: 'admin' },
                 { name: 'General Ledger', path: '/accounting/coa', permissions: ['coa:read'] },
                 { name: 'Banking & Cash', path: '/accounting/banking', permissions: ['accounting:read'] },
                 { name: 'Financial Reports', path: '/accounting/reports', permissions: ['report.financial:read'] },
+                { name: 'Payroll & Salary', path: '/accounting/payroll', permissions: ['staff.payroll:read'] },
                 { name: 'Fixed Assets', path: '#', permissions: ['accounting:write'], isPro: true },
                 { name: 'Journal Entries', path: '/accounting/journals', permissions: ['journal:read'] },
             ]
@@ -88,6 +100,11 @@ const navigation = {
         { name: 'IAM Settings', path: '/iam', icon: Shield, permissions: ['settings:write'] },
         { name: 'Rollover', path: '/rollover', icon: RefreshCw, permissions: ['settings:write'] },
     ],
+    system: [
+        { name: 'Metrics', path: '/admin/metrics', icon: Activity, permissions: ['settings:write'], roleFilter: 'admin' },
+        { name: 'System Logs', path: '/admin/logs', icon: Terminal, permissions: ['settings:read'], roleFilter: 'admin' },
+        { name: 'Master Settings', path: '/admin/settings', icon: Settings, permissions: ['settings:write'], roleFilter: 'admin' },
+    ]
 };
 
 const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobileOpen?: (open: boolean) => void }) => {
@@ -146,9 +163,13 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
 
     const hasPermission = (item: any) => {
         if (item.roleFilter) {
-            const isTeacher = user?.roles.includes('teacher');
-            if (item.roleFilter === 'teacher' && !isTeacher) return false;
-            if (item.roleFilter === 'admin' && isTeacher) return false;
+            const roles = user?.roles || [];
+            const isTeacher = roles.includes('teacher');
+            const isPrincipal = roles.includes('principal');
+            const isAdmin = roles.includes('school_admin') || roles.includes('system_admin');
+
+            if (item.roleFilter === 'teacher' && !isTeacher && !isPrincipal) return false;
+            if (item.roleFilter === 'admin' && isTeacher && !isPrincipal && !isAdmin) return false;
         }
         
         if (!item.permissions || item.permissions.length === 0) return true;
@@ -383,6 +404,16 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                     )}
                     {navigation.operations.map((item) => renderNavItem(item))}
                     {dynamicItems.filter(i => i.group === 'operations' || !i.group).map((item) => renderNavItem(item))}
+                </div>
+                
+                {/* System */}
+                <div className="space-y-1">
+                    {!collapsed && (
+                        <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                            System
+                        </p>
+                    )}
+                    {navigation.system.map((item) => renderNavItem(item))}
                 </div>
 
                 <div className="pt-4 border-t border-white/5">

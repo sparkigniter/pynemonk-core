@@ -40,10 +40,10 @@ export default class AdmissionWorkflowService {
     public async updateApplication(tenantId: number, id: number, stage: string, data: any, nextStage?: string): Promise<any> {
         const updateData: any = {};
 
-        if (stage === 'enrollment') {
-            if (data.grade_id) updateData.grade_id = parseInt(data.grade_id);
-            if (data.academic_year_id) updateData.academic_year_id = parseInt(data.academic_year_id);
-        } else {
+        if (data.grade_id) updateData.grade_id = parseInt(data.grade_id);
+        if (data.academic_year_id) updateData.academic_year_id = parseInt(data.academic_year_id);
+
+        if (stage !== 'enrollment') {
             const stageColumn = this.getStageColumn(stage);
             if (!stageColumn) throw new Error(`Invalid stage: ${stage}`);
             updateData[stageColumn] = JSON.stringify(data);

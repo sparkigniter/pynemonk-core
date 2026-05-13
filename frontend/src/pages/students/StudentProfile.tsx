@@ -15,14 +15,18 @@ import {
 } from 'recharts';
 import * as studentApi from '../../api/student.api';
 import * as gradeApi from '../../api/grade.api';
+import * as classroomApi from '../../api/classroom.api';
 import * as integrationApi from '../../api/integration.api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 
 export default function StudentProfile() {
     const { user, can } = useAuth();
+    const { notify } = useNotification();
     const { id } = useParams<{ id: string }>();
     const [student, setStudent] = useState<any>(null);
     const [grades, setGrades] = useState<gradeApi.Grade[]>([]);
+    const [classrooms, setClassrooms] = useState<any[]>([]);
     const [performance, setPerformance] = useState<any[]>([]);
     const [attendance, setAttendance] = useState<any>(null);
     const [integrations, setIntegrations] = useState<integrationApi.IntegrationManifest[]>([]);
@@ -42,6 +46,8 @@ export default function StudentProfile() {
         occupation: '',
         is_emergency: false
     });
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editForm, setEditForm] = useState<any>({});
 
     const handleSATSExport = async () => {
         if (!student) return;
@@ -62,12 +68,13 @@ export default function StudentProfile() {
         const fetchData = async () => {
             try {
                 const studentId = parseInt(id!);
-                const [studentData, gradeRes, perfData, attrData, integrationsData] = await Promise.all([
+                const [studentData, gradeRes, perfData, attrData, integrationsData, classroomRes] = await Promise.all([
                     studentApi.getStudentProfile(studentId),
                     gradeApi.getGrades(),
                     studentApi.getStudentPerformance(studentId),
                     studentApi.getStudentAttendanceStats(studentId),
-                    integrationApi.getAvailableIntegrations()
+                    integrationApi.getAvailableIntegrations(),
+                    classroomApi.getClassrooms({ limit: 100 })
                 ]);
                 
                 setStudent(studentData);
@@ -75,6 +82,7 @@ export default function StudentProfile() {
                 setPerformance(perfData);
                 setAttendance(attrData);
                 setIntegrations(integrationsData.filter(i => i.isEnabled));
+                setClassrooms(classroomRes.data);
             } catch (err) {
                 console.error('Failed to fetch profile data', err);
             } finally {
@@ -171,7 +179,25 @@ export default function StudentProfile() {
                     )}
                     {can('student:write') && (
                         <>
-                            <button className="bg-[var(--card-bg)] text-[var(--text-main)] px-6 py-3 rounded-2xl text-xs font-black hover:bg-[var(--background)] transition-all shadow-sm border border-[var(--card-border)] active:scale-95">Edit Profile</button>
+                            <button 
+                                onClick={() => {
+                                    setEditForm({
+                                        first_name: student.first_name,
+                                        last_name: student.last_name,
+                                        email: student.email,
+                                        phone: student.phone,
+                                        address: student.address,
+                                        blood_group: student.blood_group,
+                                        date_of_birth: student.date_of_birth ? new Date(student.date_of_birth).toISOString().split('T')[0] : '',
+                                        classroom_id: student.classroom_id,
+                                        academic_year_id: student.enrollment_year_id || (grades.length > 0 ? grades[0].id : '')
+                                    });
+                                    setShowEditModal(true);
+                                }}
+                                className="bg-[var(--card-bg)] text-[var(--text-main)] px-6 py-3 rounded-2xl text-xs font-black hover:bg-[var(--background)] transition-all shadow-sm border border-[var(--card-border)] active:scale-95"
+                            >
+                                Edit Profile
+                            </button>
                             <button 
                                 onClick={() => setShowIDCard(true)}
                                 className="bg-surface-dark text-white px-6 py-3 rounded-2xl text-xs font-black hover:opacity-90 transition-all shadow-xl active:scale-95 flex items-center gap-2"
@@ -800,6 +826,108 @@ export default function StudentProfile() {
                                     type="button"
                                     onClick={() => setShowAddGuardian(false)}
                                     className="px-8 bg-slate-100 text-slate-600 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Edit Student Modal */}
+            {showEditModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full shadow-2xl relative overflow-hidden">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Edit <span className="text-primary">Student</span></h3>
+                                <p className="text-xs font-medium text-slate-500">Update academic profile and institutional placement.</p>
+                            </div>
+                            <button onClick={() => setShowEditModal(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-all">
+                                <X size={20} className="text-slate-500" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            setSyncing(true);
+                            try {
+                                const { classroom_id, academic_year_id, ...profileData } = editForm;
+                                await studentApi.updateStudentProfile(student.id, profileData);
+                                
+                                if (classroom_id && classroom_id !== '0') {
+                                    await studentApi.enrollStudent(student.id, {
+                                        classroom_id: parseInt(classroom_id),
+                                        academic_year_id: academic_year_id ? parseInt(academic_year_id) : 1 
+                                    });
+                                }
+                                
+                                const updatedStudent = await studentApi.getStudentProfile(student.id);
+                                setStudent(updatedStudent);
+                                notify('success', 'Profile Updated', 'Student records have been successfully synchronized.');
+                                setShowEditModal(false);
+                            } catch (err: any) {
+                                console.error('Failed to update student:', err);
+                                notify('error', 'Update Failed', err.message || 'An unexpected error occurred.');
+                            } finally {
+                                setSyncing(false);
+                            }
+                        }} className="space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">First Name</label>
+                                    <input 
+                                        type="text" required
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
+                                        value={editForm.first_name}
+                                        onChange={e => setEditForm({...editForm, first_name: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Last Name</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
+                                        value={editForm.last_name}
+                                        onChange={e => setEditForm({...editForm, last_name: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Mobile Phone</label>
+                                    <input 
+                                        type="tel"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
+                                        value={editForm.phone}
+                                        onChange={e => setEditForm({...editForm, phone: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Classroom Assignment</label>
+                                    <select 
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all appearance-none"
+                                        value={editForm.classroom_id || ''}
+                                        onChange={e => setEditForm({...editForm, classroom_id: e.target.value})}
+                                    >
+                                        <option value="">Unassigned</option>
+                                        {classrooms.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name} ({c.section})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <button 
+                                    type="submit"
+                                    disabled={syncing}
+                                    className="flex-1 bg-slate-900 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                    {syncing ? 'Saving...' : 'Update Records'}
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowEditModal(false)}
+                                    className="px-10 bg-slate-100 text-slate-600 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
                                 >
                                     Cancel
                                 </button>

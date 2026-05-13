@@ -22,6 +22,7 @@ import { getClassrooms } from '../../api/classroom.api';
 import { getSubjectList } from '../../api/subject.api';
 import { getStaffList } from '../../api/staff.api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 type Step = 'details' | 'classes' | 'subjects' | 'schedule' | 'review';
 

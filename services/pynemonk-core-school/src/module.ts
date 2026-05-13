@@ -21,6 +21,10 @@ import integrationRouter from "./api/modules/integration/routes.js";
 import guardianRouter from "./api/modules/guardian/routes.js";
 import homeworkRouter from "./api/modules/homework/routes.js";
 import settingsRouter from "./api/modules/settings/routes.js";
+import leaveRouter from "./api/modules/leave/routes.js";
+import payrollRouter from "./api/modules/payroll/routes.js";
+import systemRouter from "./api/modules/system/routes.js";
+import feeRouter from "./api/modules/finance/routes.js";
 import { AcademicYearMiddleware } from "./api/core/middleware/AcademicYearMiddleware.js";
 import { requireAuth } from "./api/core/middleware/requireAuth.js";
 
@@ -63,3 +67,7 @@ router.use("/school/guardian", guardianRouter);
 router.use("/school/settings", settingsRouter);
 router.use("/school/homework", homeworkRouter);
 router.use("/school/attendance", attendanceRouter);
+router.use("/school/leaves", leaveRouter);
+router.use("/school/payroll", payrollRouter);
+router.use("/school/system", systemRouter);
+router.use("/school/finance", feeRouter);

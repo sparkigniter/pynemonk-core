@@ -13,9 +13,9 @@ export default class StudentHelper {
             `INSERT INTO school.student
                 (tenant_id, user_id, admission_no, first_name, last_name, gender, date_of_birth,
                  blood_group, nationality, religion, mother_tongue, id_number, previous_school, 
-                 medical_notes, phone, address, avatar_url, admission_date)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
-             RETURNING id, admission_no, first_name, last_name, created_at`,
+                 medical_notes, phone, address, avatar_url, admission_date, grade_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+             RETURNING id, admission_no, first_name, last_name, created_at, grade_id`,
             [
                 data.tenant_id,
                 data.user_id,
@@ -35,6 +35,7 @@ export default class StudentHelper {
                 data.address ?? null,
                 data.avatar_url ?? null,
                 data.admission_date ?? new Date(),
+                data.grade_id ?? null,
             ],
         );
         return res.rows[0];
@@ -63,7 +64,13 @@ export default class StudentHelper {
     }
 
     public async updateStudent(tenantId: number, studentId: number, data: any): Promise<any> {
-        const keys = Object.keys(data).filter((k) => k !== "id" && k !== "tenant_id");
+        const validColumns = [
+            'first_name', 'last_name', 'gender', 'date_of_birth', 'blood_group', 
+            'nationality', 'religion', 'mother_tongue', 'id_number', 
+            'previous_school', 'medical_notes', 'phone', 'address', 
+            'avatar_url', 'admission_date', 'grade_id'
+        ];
+        const keys = Object.keys(data).filter((k) => validColumns.includes(k));
         if (keys.length === 0) return null;
 
         const setClause = keys.map((k, i) => `${k} = $${i + 3}`).join(", ");
@@ -156,23 +163,17 @@ export default class StudentHelper {
         }
 
         if (filters.classroom_id) {
-            if (filters.classroom_id === 'none' || filters.classroom_id === 0) {
+            if (filters.classroom_id === 'none' || filters.classroom_id === 0 || filters.classroom_id === '0') {
                 conditions.push(`se.classroom_id IS NULL`);
             } else {
-                enrollJoinConditions.push(`se.classroom_id = $${paramIndex}`);
+                conditions.push(`se.classroom_id = $${paramIndex}`);
                 params.push(filters.classroom_id);
                 paramIndex++;
             }
         }
 
         if (filters.grade_id) {
-            conditions.push(`c.grade_id = $${paramIndex}`);
-            params.push(filters.grade_id);
-            paramIndex++;
-        }
-
-        if (filters.grade_id) {
-            conditions.push(`c.grade_id = $${paramIndex}`);
+            conditions.push(`(c.grade_id = $${paramIndex} OR s.grade_id = $${paramIndex})`);
             params.push(filters.grade_id);
             paramIndex++;
         }
@@ -198,14 +199,14 @@ export default class StudentHelper {
         }
 
         if (filters.religion) {
-            conditions.push(`s.religion = $${paramIndex}`);
-            params.push(filters.religion);
+            conditions.push(`s.religion ILIKE $${paramIndex}`);
+            params.push(`%${filters.religion}%`);
             paramIndex++;
         }
 
         if (filters.nationality) {
-            conditions.push(`s.nationality = $${paramIndex}`);
-            params.push(filters.nationality);
+            conditions.push(`s.nationality ILIKE $${paramIndex}`);
+            params.push(`%${filters.nationality}%`);
             paramIndex++;
         }
 

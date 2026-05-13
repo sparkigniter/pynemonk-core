@@ -22,11 +22,13 @@ const Dashboard = () => {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [attendanceTimeframe, setAttendanceTimeframe] = useState('30d');
     
     useEffect(() => {
         const fetchDashboard = async () => {
+            setLoading(true);
             try {
-                const res = await getDashboardData();
+                const res = await getDashboardData(attendanceTimeframe.replace('d', ''));
                 setData(res);
             } catch (err: any) {
                 console.error('Failed to fetch dashboard', err);
@@ -36,7 +38,7 @@ const Dashboard = () => {
             }
         };
         fetchDashboard();
-    }, []);
+    }, [attendanceTimeframe]);
 
     if (loading) {
         return (
@@ -91,6 +93,7 @@ const Dashboard = () => {
                     gradient: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
                     subtitle: 'Enrolled this year',
                     delay: 'delay-100',
+                    path: '/students'
                 },
                 {
                     title: 'Total Staff',
@@ -101,6 +104,7 @@ const Dashboard = () => {
                     gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     subtitle: 'Current payroll',
                     delay: 'delay-150',
+                    path: '/teachers'
                 },
                 {
                     title: "Today's Attendance",
@@ -111,6 +115,7 @@ const Dashboard = () => {
                     gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                     subtitle: 'Real-time presence',
                     delay: 'delay-200',
+                    path: '/attendance'
                 },
                 {
                     title: 'Total Subjects',
@@ -121,6 +126,7 @@ const Dashboard = () => {
                     gradient: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
                     subtitle: 'Active courses',
                     delay: 'delay-300',
+                    path: '/subjects'
                 },
             ];
         }
@@ -287,7 +293,10 @@ const Dashboard = () => {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-4 pt-4">
-                            <button className="px-8 py-4 bg-[var(--card-bg)] text-surface-dark rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl shadow-white/5 active:scale-95">
+                            <button 
+                                onClick={() => document.getElementById('quick-actions-section')?.scrollIntoView({ behavior: 'smooth' })}
+                                className="px-8 py-4 bg-[var(--card-bg)] text-surface-dark rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl shadow-white/5 active:scale-95"
+                            >
                                 Home Shortcuts
                             </button>
                         </div>
@@ -324,7 +333,10 @@ const Dashboard = () => {
             <div className="space-y-6">
                 <div className="flex items-center justify-between px-4">
                     <h2 className="text-xl font-bold text-[var(--text-main)] tracking-tight">System <span className="text-primary">Intelligence</span></h2>
-                    <button className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-2">
+                    <button 
+                        onClick={() => navigate('/reports')}
+                        className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-2"
+                    >
                         View Detailed Records <ChevronRight size={14} />
                     </button>
                 </div>
@@ -344,16 +356,18 @@ const Dashboard = () => {
                                         <h3 className="text-xl font-bold text-[var(--text-main)] tracking-tight">Attendance Dynamics</h3>
                                         <p className="text-xs font-medium text-[var(--text-muted)] mt-1">Real-time presence metrics across institutional levels.</p>
                                     </div>
-                                    <ComboBox
-                                        value="Last 30 Days"
-                                        onChange={() => {}}
-                                        options={[
-                                            { value: 'Last 30 Days', label: 'Last 30 Days' },
-                                            { value: 'This Term', label: 'This Term' },
-                                            { value: 'Academic Year', label: 'Academic Year' },
-                                        ]}
-                                        className="w-48"
-                                    />
+                                    <div className="w-48 relative z-10">
+                                        <ComboBox
+                                            value={attendanceTimeframe}
+                                            onChange={(val) => setAttendanceTimeframe(val as string)}
+                                            options={[
+                                                { value: '7d', label: 'Last 7 Days' },
+                                                { value: '30d', label: 'Last 30 Days' },
+                                                { value: '90d', label: 'Last 90 Days' },
+                                            ]}
+                                            variant="glass"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="h-[300px]">
                                     <AttendanceChart data={data.attendanceTrends || []} />

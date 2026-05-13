@@ -132,5 +132,16 @@ export default class AccountingAutomationSubscriber {
                 console.error(`[Accounting] Payment collection error: ${err.message}`);
             }
         });
+        /**
+         * 6. PAYROLL PAYMENT (Expense Recognition)
+         */
+        this.eventBus.on('PAYROLL_PAID', async (data) => {
+            try {
+                console.log(`[Accounting] Processing payroll payment for staff ${data.staffId}`);
+                await this.feeAutomation.postPayrollJournal(data.tenantId, data.userId, data);
+            } catch (err: any) {
+                console.error(`[Accounting] Payroll integration error: ${err.message}`);
+            }
+        });
     }
 }

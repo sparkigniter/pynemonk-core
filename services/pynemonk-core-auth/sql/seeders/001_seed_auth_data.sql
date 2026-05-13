@@ -23,6 +23,10 @@ BEGIN
     ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
     RETURNING id INTO v_tenant_id;
 
+    -- 1.5 Update Role Templates (Ensure latest permissions)
+    UPDATE auth.role_template SET data_scope = '["student:read","student:write","student.academic:read","student.academic:write","student.attendance:read","student.attendance:write","staff:read","staff:write","class:read","class:write","exam:read","exam:write","mark:read","mark:write","timetable:read","timetable:write","user:invite","user:deactivate","announcement:write","settings:read","settings:write","report:read","report:export","coa:read","journal:read","invoice:read","invoice:write","payment:read","payment:write","accounting:read"]'::jsonb WHERE slug = 'school_admin';
+    UPDATE auth.role_template SET data_scope = '["student:read","student.academic:read","student.academic:write","student.attendance:read","student.attendance:write","class:read","assignment:read","assignment:write","exam:read","exam:write","mark:read","mark:write","report.class:read","teacher_note:read","teacher_note:write","timetable:read","staff:read","staff.academic:read"]'::jsonb WHERE slug = 'teacher';
+
     -- 2. Instantiate System Roles for Tenant
     INSERT INTO auth.role (tenant_id, slug, name, description, tier, is_system, data_scope)
     SELECT v_tenant_id, slug, name, description, tier, is_system, data_scope

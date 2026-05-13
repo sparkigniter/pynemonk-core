@@ -53,6 +53,17 @@ import VendorForm from './pages/accounting/VendorForm';
 import TrialBalance from './pages/accounting/TrialBalance';
 import ProfitAndLoss from './pages/accounting/ProfitAndLoss';
 import CreateInvoice from './pages/accounting/CreateInvoice';
+import LeaveManagement from './pages/teachers/LeaveManagement';
+import LeaveApprovals from './pages/admin/LeaveApprovals';
+import Payroll from './pages/accounting/Payroll';
+import AdminMetrics from './pages/admin/AdminMetrics';
+import LogViewer from './pages/admin/LogViewer';
+import AdminFinance from './pages/admin/AdminFinance';
+import ReportCardView from './pages/academics/ReportCardView';
+import PublicAdmission from './pages/onboarding/PublicAdmission';
+import StudentTimetable from './pages/academics/StudentTimetable';
+import LMSLibrary from './pages/lms/LMSLibrary';
+import SettingsHub from './pages/settings/SettingsHub';
 import { useAuth } from './contexts/AuthContext';
 
 const HomeRedirect = () => {
@@ -79,6 +90,7 @@ export default function App() {
         {/* Public */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/apply/:slug" element={<PublicAdmission />} />
 
         {/* Protected — all app pages live under Layout */}
         <Route
@@ -100,6 +112,7 @@ export default function App() {
           <Route path="teachers" element={<Teachers />} />
           <Route path="staff-directory" element={<Teachers />} />
           <Route path="teachers/register" element={<StaffRegistration />} />
+          <Route path="teachers/edit/:id" element={<StaffRegistration />} />
           <Route path="grades" element={<Grades />} />
           <Route path="my-classes" element={<MyClasses />} />
           <Route path="my-timetable" element={<TeacherTimetable />} />
@@ -131,6 +144,15 @@ export default function App() {
           <Route path="homework/:id/edit" element={<HomeworkForm />} />
           <Route path="integrations" element={<Integrations />} />
           <Route path="iam" element={<IAM />} />
+          <Route path="leaves" element={<LeaveManagement />} />
+          <Route path="admin/leaves" element={<LeaveApprovals />} />
+          <Route path="admin/metrics" element={<AdminMetrics />} />
+          <Route path="admin/logs" element={<LogViewer />} />
+          <Route path="admin/finance" element={<AdminFinance />} />
+          <Route path="exams/:examId/students/:studentId/report" element={<ReportCardView />} />
+          <Route path="my-timetable" element={<StudentTimetable />} />
+          <Route path="lms/library" element={<LMSLibrary />} />
+          <Route path="admin/settings" element={<SettingsHub />} />
           
           {/* Accounting Module */}
           <Route path="accounting/hub" element={<AccountingHub />} />
@@ -149,6 +171,7 @@ export default function App() {
           <Route path="accounting/reports/profit-loss" element={<ProfitAndLoss />} />
           <Route path="accounting/settings" element={<AccountingSettings />} />
           <Route path="accounting/invoices/new" element={<CreateInvoice />} />
+          <Route path="accounting/payroll" element={<Payroll />} />
         </Route>
 
         {/* Catch-all */}

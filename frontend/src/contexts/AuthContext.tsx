@@ -16,6 +16,11 @@ export interface AuthUser {
     roles: string[];    // role slugs
     permissions: string[]; // specific permission keys (scopes)
     tenant_id?: number;
+    student_profile?: {
+        id: number;
+        classroom_id?: number;
+        classroom_name?: string;
+    };
 }
 
 interface AuthSession {
@@ -79,7 +84,8 @@ function parseUser(accessToken: string): AuthUser | null {
             role_id: payload.role_id,
             roles: payload.roles || [],
             permissions: typeof payload.scope === 'string' ? payload.scope.split(' ') : [],
-            tenant_id: payload.tenant_id
+            tenant_id: payload.tenant_id,
+            student_profile: payload.student_profile
         };
     } catch {
         return null;
