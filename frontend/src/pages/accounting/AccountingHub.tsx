@@ -129,7 +129,7 @@ export default function AccountingHub() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-extrabold text-[var(--text-main)] tracking-tight">Accounting Workspace</h1>
-                    <p className="text-[var(--text-muted)] font-medium mt-1">Real-time financial pulse for Pynemonk School</p>
+                    <p className="text-[var(--text-muted)] font-medium mt-1">Real-time financial pulse for LuviaEdu School</p>
                 </div>
                 
                 <div className="flex items-center gap-3">

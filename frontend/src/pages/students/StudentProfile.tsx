@@ -595,7 +595,7 @@ export default function StudentProfile() {
                                 <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-2">
                                     <GraduationCap size={20} />
                                 </div>
-                                <h3 className="text-sm font-black tracking-widest uppercase">Pynemonk Academic</h3>
+                                <h3 className="text-sm font-black tracking-widest uppercase">LuviaEdu Academic</h3>
                                 <p className="text-[8px] font-bold opacity-60 uppercase tracking-widest mt-0.5">Excellence in Pedagogy</p>
                             </div>
 

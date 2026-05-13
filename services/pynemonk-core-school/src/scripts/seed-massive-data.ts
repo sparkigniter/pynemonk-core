@@ -41,7 +41,7 @@ async function seed() {
         await client.query('TRUNCATE school.student_guardian, school.guardian, school.student_enrollment, school.student, school.timetable, school.teacher_assignment, school.class_subject, school.staff, school.classroom, school.subject, school.grade, school.academic_year CASCADE');
         await client.query('TRUNCATE auth.refresh_token, auth.user_role, auth.user_credential, auth.user_profile, auth.user, auth.role, auth.client, auth.tenant CASCADE');
 
-        await client.query(`INSERT INTO auth.client (name, description, client_id, client_secret) VALUES ('Pynemonk Web Frontend', 'Main web interface', '03458d1b77bf121e', '838086db215b5a9dca34194d3d5d3fbe')`);
+        await client.query(`INSERT INTO auth.client (name, description, client_id, client_secret) VALUES ('LuviaEdu Web Frontend', 'Main web interface', '03458d1b77bf121e', '838086db215b5a9dca34194d3d5d3fbe')`);
 
         const packageRes = await client.query('SELECT id FROM auth.package LIMIT 1');
         const packageId = packageRes.rows[0]?.id || 1;

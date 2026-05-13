@@ -50,7 +50,7 @@ const TEMPLATES: Record<string, { title: string; blocks: Block[] }> = {
         title: 'Reading Reflection Task',
         blocks: [
             { id: '1', type: 'instructions', content: 'Read Chapter 4 of the textbook and answer the reflection questions below.' },
-            { id: '2', type: 'link', content: { url: 'https://pynemonk.com/library', label: 'E-Library Access' } },
+            { id: '2', type: 'link', content: { url: 'https://luviaedu.com/library', label: 'E-Library Access' } },
             { id: '3', type: 'question', content: 'Summarize the main conflict in the chapter.' }
         ]
     },

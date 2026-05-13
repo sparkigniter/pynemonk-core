@@ -24,12 +24,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Custom Scheme Deep Link: pynemonk://app -->
+            <!-- Custom Scheme Deep Link: luviaedu://app -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="pynemonk" android:host="app" />
+                <data android:scheme="luviaedu" android:host="app" />
             </intent-filter>
 
             <!-- App Link for API communication -->
@@ -39,7 +39,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="http" />
                 <data android:scheme="https" />
-                <data android:host="1localhost" />
+                <data android:host="localhost" />
             </intent-filter>
 
         </activity>
