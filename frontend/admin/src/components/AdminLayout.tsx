@@ -9,7 +9,7 @@ const AdminLayout: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const sessionRaw = localStorage.getItem('eduerp_session');
     const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-    const user = session?.user || { email: 'admin@pynemonk.com', name: 'Super Admin' };
+    const user = session?.user || { email: 'admin@luviaedu.com', name: 'Super Admin' };
 
     const handleLogout = () => {
         localStorage.removeItem('eduerp_session');
@@ -35,7 +35,7 @@ const AdminLayout: React.FC = () => {
                     </div>
                     {isSidebarOpen && (
                         <div className="min-w-0">
-                            <h2 className="text-sm font-bold text-slate-900 truncate">Pynemonk</h2>
+                            <h2 className="text-sm font-bold text-slate-900 truncate">LuviaEdu</h2>
                             <p className="text-[10px] text-indigo-600 font-bold tracking-widest uppercase">Admin App</p>
                         </div>
                     )}

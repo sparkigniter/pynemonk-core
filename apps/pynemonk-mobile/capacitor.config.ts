@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.pynemonk.app',
-  appName: 'pynemonk',
+  appName: 'LuviaEdu',
   webDir: 'dist',
   plugins: {
     CapacitorHttp: {

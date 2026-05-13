@@ -523,7 +523,7 @@ export default function AccountsPayable() {
             )}
 
             <footer className="mt-8 pt-8 border-t border-[var(--card-border)] text-center">
-                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Pynemonk Accounting Engine v2.0</p>
+                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">LuviaEdu Accounting Engine v2.0</p>
             </footer>
         </div>
     );

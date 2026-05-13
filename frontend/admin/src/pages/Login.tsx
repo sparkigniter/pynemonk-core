@@ -53,7 +53,7 @@ const Login: React.FC = () => {
                         <ShieldCheck size={40} />
                     </div>
                     <h1 className="text-3xl font-black text-white tracking-tight">System Control Plane</h1>
-                    <p className="text-slate-400 mt-2">Pynemonk Platform Administration</p>
+                    <p className="text-slate-400 mt-2">LuviaEdu Platform Administration</p>
                 </div>
 
                 <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl animate-in fade-in zoom-in duration-500 delay-200">
@@ -75,7 +75,7 @@ const Login: React.FC = () => {
                                     value={email}
                                     onChange={e => setEmail(e.target.value)}
                                     className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-900 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
-                                    placeholder="admin@pynemonk.com"
+                                    placeholder="admin@luviaedu.com"
                                 />
                             </div>
                         </div>
@@ -113,7 +113,7 @@ const Login: React.FC = () => {
                 </div>
 
                 <p className="text-center text-slate-500 text-xs mt-10 font-medium">
-                    Protected by Pynemonk Security Layer
+                    Protected by LuviaEdu Security Layer
                 </p>
             </div>
         </div>

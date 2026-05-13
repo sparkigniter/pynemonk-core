@@ -162,7 +162,7 @@ export default function AccountingSettings() {
                 </div>
                 <h3 className="text-lg font-bold text-indigo-900 mb-2">How it works</h3>
                 <p className="text-sm text-indigo-700/80 leading-relaxed max-w-2xl">
-                    When you link a system event (like Admission) to a GL account, Pynemonk will automatically post balanced journal entries to your ledger whenever that event occurs. 
+                    When you link a system event (like Admission) to a GL account, LuviaEdu will automatically post balanced journal entries to your ledger whenever that event occurs. 
                     This keeps your P&L and Balance Sheet up-to-date in real-time, eliminating the need for manual year-end reconciliation.
                 </p>
             </div>

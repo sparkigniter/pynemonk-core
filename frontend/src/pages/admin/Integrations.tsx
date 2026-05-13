@@ -87,7 +87,7 @@ export default function Integrations() {
         <div className="max-w-7xl mx-auto space-y-6">
             <div className="animate-fade-in-up">
                 <h1 className="text-2xl font-bold text-[var(--text-main)] font-heading">Integration Hub</h1>
-                <p className="text-sm text-[var(--text-muted)] mt-1">Connect Pynemonk with government portals and third-party systems.</p>
+                <p className="text-sm text-[var(--text-muted)] mt-1">Connect LuviaEdu with government portals and third-party systems.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

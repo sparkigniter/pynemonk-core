@@ -10,5 +10,5 @@ const PORT = process.env.PORT || 3001;
 const app = createApp();
 
 app.listen(PORT, () => {
-    console.log(`[pynemonk-core-school] running → http://localhost:${PORT}`);
+    console.log(`[luviaedu-core-school] running → http://localhost:${PORT}`);
 });

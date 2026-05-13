@@ -29,7 +29,7 @@ export default class StudentService {
             await client.query("BEGIN");
 
             const studentData = data.student;
-            const userEmail = studentData.email || `${studentData.admission_no.replace(/[^a-zA-Z0-9]/g, '')}@pynemonk.internal`;
+            const userEmail = studentData.email || `${studentData.admission_no.replace(/[^a-zA-Z0-9]/g, '')}@luviaedu.internal`;
 
             const authUser = await this.authClient.createUser({
                 email: userEmail,
@@ -166,7 +166,7 @@ export default class StudentService {
             }
 
             // 1. Create Auth User for Guardian
-            const userEmail = data.email || `grd_${Math.random().toString(36).substring(7)}@pynemonk.internal`;
+            const userEmail = data.email || `grd_${Math.random().toString(36).substring(7)}@luviaedu.internal`;
             
             const authUser = await this.authClient.createUser({
                 email: userEmail,

@@ -82,7 +82,7 @@ export default class AdmissionService {
             }
 
             // 1. Create Student Auth User
-            const studentEmail = data.student.email || `std_${data.student.admission_no.toLowerCase().replace(/[^a-z0-9]/g, '_')}@pynemonk.internal`;
+            const studentEmail = data.student.email || `std_${data.student.admission_no.toLowerCase().replace(/[^a-z0-9]/g, '_')}@luviaedu.internal`;
             const studentAuth = await this.authClient.createUser(
                 {
                     tenant_id: tenantId,
@@ -94,7 +94,7 @@ export default class AdmissionService {
             );
 
             // 2. Create Guardian Auth User
-            const guardianEmail = data.guardian.email || `grd_${data.student.admission_no.toLowerCase().replace(/[^a-z0-9]/g, '_')}@pynemonk.internal`;
+            const guardianEmail = data.guardian.email || `grd_${data.student.admission_no.toLowerCase().replace(/[^a-z0-9]/g, '_')}@luviaedu.internal`;
             const guardianAuth = await this.authClient.createUser(
                 {
                     tenant_id: tenantId,

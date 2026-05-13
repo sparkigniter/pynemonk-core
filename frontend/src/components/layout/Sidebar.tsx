@@ -265,7 +265,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                     <div className="flex-1 min-w-0 cursor-pointer group" onClick={() => setShowSwitcher(!showSwitcher)}>
                         <div className="flex items-center gap-1">
                             <span className="text-sm font-bold text-[var(--sidebar-text-active)] font-heading tracking-tight truncate">
-                                {currentTenant?.name || 'Pynemonk'}
+                                {currentTenant?.name || 'LuviaEdu'}
                             </span>
                             {tenants.length > 1 && <ChevronDown size={14} className="text-slate-400 transition-transform group-hover:text-primary" />}
                         </div>

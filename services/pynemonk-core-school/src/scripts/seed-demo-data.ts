@@ -104,7 +104,7 @@ async function seed() {
         // Ensure Tenant 1 exists
         const existingTenant = await client.query('SELECT id FROM auth.tenant WHERE id = $1', [tenantId]);
         if (existingTenant.rows.length === 0) {
-            await client.query(`INSERT INTO auth.tenant (id, name, slug, email, package_id) VALUES (1, 'Pynemonk Demo School', 'demo-school', 'admin@pynemonk.com', 1)`);
+            await client.query(`INSERT INTO auth.tenant (id, name, slug, email, package_id) VALUES (1, 'LuviaEdu Demo School', 'demo-school', 'admin@luviaedu.com', 1)`);
         }
 
         await cleanup(client, tenantId);
@@ -174,7 +174,7 @@ async function seed() {
         const getRole = (slug: string) => roleMap[slug] || Object.values(roleMap)[0];
 
         console.log('👑 Creating Management Staff...');
-        await createUser(client, tenantId, 'admin@pynemonk.com', getRole('system_admin'));
+        await createUser(client, tenantId, 'admin@luviaedu.com', getRole('system_admin'));
         const schoolAdminUserId = await createUser(client, tenantId, 'office@demo.edu', getRole('school_admin'));
         await client.query('INSERT INTO school.staff (tenant_id, user_id, first_name, last_name, employee_code, designation) VALUES ($1, $2, $3, $4, $5, $6)',
             [tenantId, schoolAdminUserId, 'Sanjay', 'Gupta', 'ADM-001', 'School Administrator']);

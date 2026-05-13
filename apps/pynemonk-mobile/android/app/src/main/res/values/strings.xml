@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">pynemonk</string>
-    <string name="title_activity_main">pynemonk</string>
+    <string name="app_name">LuviaEdu</string>
+    <string name="title_activity_main">LuviaEdu</string>
     <string name="package_name">com.pynemonk.app</string>
     <string name="custom_url_scheme">com.pynemonk.app</string>
 </resources>
