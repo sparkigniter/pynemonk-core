@@ -851,10 +851,23 @@ const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
         api.get('/school/staff/profile/me')
       ])
 
-      const yearsList = yearsData.data?.success ? yearsData.data.data : (yearsData.data || [])
-      const gradesList = gradesData.data?.success ? gradesData.data.data : (gradesData.data?.items || gradesData.data || [])
-      const subjectsList = subjectsData.data?.success ? subjectsData.data.data : (subjectsData.data?.items || subjectsData.data || [])
-      const staffList = staffData.data?.success ? staffData.data.data : (staffData.data?.items || staffData.data || [])
+      const extractArray = (res: any) => {
+        if (!res) return []
+        if (Array.isArray(res)) return res
+        if (res.success && res.data) {
+          if (Array.isArray(res.data)) return res.data
+          if (res.data.data && Array.isArray(res.data.data)) return res.data.data
+          if (res.data.items && Array.isArray(res.data.items)) return res.data.items
+        }
+        if (res.data && Array.isArray(res.data)) return res.data
+        if (res.items && Array.isArray(res.items)) return res.items
+        return []
+      }
+
+      const yearsList = extractArray(yearsData.data)
+      const gradesList = extractArray(gradesData.data)
+      const subjectsList = extractArray(subjectsData.data)
+      const staffList = extractArray(staffData.data)
       const profileObj = profileRes.data?.success ? profileRes.data.data : null
 
       setAcademicYears(yearsList)

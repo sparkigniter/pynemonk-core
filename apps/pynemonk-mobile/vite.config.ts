@@ -11,6 +11,13 @@ export default defineConfig({
       '/api': {
         target: 'http://13.61.11.86:3000',
         changeOrigin: true,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, _req, _res) => {
+            // Remove the origin header to bypass remote CORS checks
+            proxyReq.removeHeader('origin');
+            proxyReq.removeHeader('Origin');
+          });
+        }
       }
     }
   }
