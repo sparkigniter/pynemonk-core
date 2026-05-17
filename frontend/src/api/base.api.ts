@@ -3,7 +3,11 @@
  * Shared helper for authenticated requests to the school service.
  */
 
-const BASE_URL = (import.meta as any).env?.VITE_SCHOOL_API_URL ?? 'http://localhost:3000/api/v1';
+const BASE_URL = (import.meta as any).env?.VITE_SCHOOL_API_URL ?? (
+    typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:3000/api/v1`
+        : 'http://localhost:3000/api/v1'
+);
 
 export function getBaseURL(): string {
     return BASE_URL;
@@ -39,7 +43,11 @@ async function performTokenRefresh(): Promise<string | null> {
         const refreshToken = session?.refreshToken;
         if (!refreshToken) return null;
 
-        const authUrl = (import.meta as any).env?.VITE_AUTH_API_URL ?? 'http://localhost:3000';
+        const authUrl = (import.meta as any).env?.VITE_AUTH_API_URL ?? (
+            typeof window !== 'undefined'
+                ? `${window.location.protocol}//${window.location.hostname}:3000`
+                : 'http://localhost:3000'
+        );
         const clientId = (import.meta as any).env?.VITE_CLIENT_ID ?? 'frontend_client';
         const clientSecret = (import.meta as any).env?.VITE_CLIENT_SECRET ?? 'frontend_secret';
 

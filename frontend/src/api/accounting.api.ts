@@ -29,7 +29,11 @@ export interface JournalEntry {
     items: JournalItem[];
 }
 
-const BASE_URL = (import.meta as any).env?.VITE_AUTH_API_URL ?? 'http://localhost:3000';
+const BASE_URL = (import.meta as any).env?.VITE_AUTH_API_URL ?? (
+    typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:3000`
+        : 'http://localhost:3000'
+);
 const API_PREFIX = '/api/v1/accounting';
 
 const getAuthToken = () => {

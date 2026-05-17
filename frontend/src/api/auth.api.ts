@@ -5,7 +5,11 @@
  * (defaults to http://localhost:3000 for local dev).
  */
 
-const BASE_URL = (import.meta as any).env?.VITE_AUTH_API_URL ?? 'http://localhost:3000';
+const BASE_URL = (import.meta as any).env?.VITE_AUTH_API_URL ?? (
+    typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:3000`
+        : 'http://localhost:3000'
+);
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

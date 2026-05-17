@@ -163,7 +163,7 @@ export default function IAM() {
                 };
                 const targets = presetMap[action] || [];
                 const targetIds = scopes.filter(s => targets.some(t => s.value.startsWith(t))).map(s => s.id);
-                
+
                 // For a production system, we'd have a single bulk-grant-list endpoint.
                 // For now, we perform sequential grants.
                 for (const sid of targetIds) {

@@ -3,7 +3,11 @@
  * Typed wrapper around the tenant/school registration endpoints.
  */
 
-const BASE_URL = (import.meta as any).env?.VITE_AUTH_API_URL ?? 'http://localhost:3000';
+const BASE_URL = (import.meta as any).env?.VITE_AUTH_API_URL ?? (
+    typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:3000`
+        : 'http://localhost:3000'
+);
 
 async function get<T>(path: string): Promise<T> {
     const res = await fetch(`${BASE_URL}${path}`);
