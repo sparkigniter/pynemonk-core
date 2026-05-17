@@ -11,6 +11,7 @@ COPY services/pynemonk-core-accounting/package.json ./services/pynemonk-core-acc
 COPY services/pynemonk-core-system/package.json     ./services/pynemonk-core-system/
 COPY apps/pynemonk-monolith/package.json      ./apps/pynemonk-monolith/
 
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 RUN npm ci --workspaces --include-workspace-root
 
 # Copy source and compile
@@ -48,6 +49,9 @@ COPY --from=builder /repo/services/pynemonk-core-school/package.json    ./servic
 COPY --from=builder /repo/services/pynemonk-core-accounting/package.json ./services/pynemonk-core-accounting/package.json
 COPY --from=builder /repo/services/pynemonk-core-system/package.json     ./services/pynemonk-core-system/package.json
 COPY --from=builder /repo/apps/pynemonk-monolith/package.json           ./apps/pynemonk-monolith/package.json
+
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Let npm wire up the workspace properly (correct hoisting, no symlink hacks)
 RUN npm ci --omit=dev --workspaces --include-workspace-root
