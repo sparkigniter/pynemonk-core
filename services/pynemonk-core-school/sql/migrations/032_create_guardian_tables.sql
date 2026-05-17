@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS school.exam_term (
 CREATE INDEX IF NOT EXISTS idx_exam_term_tenant ON school.exam_term (tenant_id, academic_year_id) WHERE is_deleted = FALSE;
 
 ALTER TABLE school.exam ADD COLUMN IF NOT EXISTS exam_term_id INTEGER REFERENCES school.exam_term(id);
+ALTER TABLE school.exam ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Exam Result View Bridge
