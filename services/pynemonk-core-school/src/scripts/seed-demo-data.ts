@@ -156,7 +156,8 @@ async function seed() {
 
             // Invoice Lines (DB Level)
             await client.query(`INSERT INTO accounting.invoice_line (tenant_id, invoice_id, description, quantity, unit_price, amount, ledger_account_id)
-                VALUES ($1, $2, 'Tuition Fee - Term 1', 1, 5000, 5000, $3), ($1, $2, 'Tuition Fee - Term 2', 1, 5000, 5000, $3)`,
+                VALUES ($1, $2, 'Tuition Fee - Term 1', 1, 5000, 5000, (SELECT ledger_account_id FROM school.fee_head WHERE id = $3)), 
+                       ($1, $2, 'Tuition Fee - Term 2', 1, 5000, 5000, (SELECT ledger_account_id FROM school.fee_head WHERE id = $3))`,
                 [tenantId, invId, feeHeadId]);
 
             await client.query("INSERT INTO school.fee_installment (allocation_id, fee_structure_item_id, invoice_id, amount_due, status, due_date) VALUES ($1, (SELECT id FROM school.fee_structure_item WHERE fee_structure_id = $2 LIMIT 1), $3, 5000, 'UNPAID', CURRENT_DATE)", [sfaId, fsId, invId]);
