@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS auth.role (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_role_tenant_slug ON auth.role (tenant_id, slug) WHERE is_deleted = FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_role_global_slug ON auth.role (slug) WHERE tenant_id IS NULL AND is_deleted = FALSE;
 
 -- 3. Junction & Relationship Tables
 -- ─────────────────────────────────────────────────────────────────────────────
