@@ -876,8 +876,12 @@ const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
       setTeachers(staffList)
 
       // Auto-select current active year
-      const activeYear = yearsList.find((y: any) => y.status === 'active')
-      if (activeYear) setSelectedYearId(activeYear.id.toString())
+      const activeYear = yearsList.find((y: any) => y.status === 'active' || y.status === 'ACTIVE' || y.is_active || y.is_current)
+      if (activeYear) {
+        setSelectedYearId(activeYear.id.toString())
+      } else if (yearsList.length > 0) {
+        setSelectedYearId(yearsList[0].id.toString())
+      }
 
       // Auto-select current teacher profile
       if (profileObj) {
@@ -918,10 +922,10 @@ const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
     e.preventDefault()
     try {
       const payload = {
-        academic_year_id: parseInt(selectedYearId),
-        staff_id: parseInt(selectedTeacherId),
-        subject_id: parseInt(selectedSubjectId),
-        grade_id: parseInt(selectedGradeId),
+        academic_year_id: parseInt(selectedYearId) || (academicYears[0]?.id ? parseInt(academicYears[0].id) : null),
+        staff_id: parseInt(selectedTeacherId) || (teachers[0]?.id ? parseInt(teachers[0].id) : null),
+        subject_id: parseInt(selectedSubjectId) || (subjects[0]?.id ? parseInt(subjects[0].id) : null),
+        grade_id: parseInt(selectedGradeId) || (grades[0]?.id ? parseInt(grades[0].id) : null),
         start_date: initData.start_date,
         end_date: initData.end_date
       }
