@@ -41,16 +41,16 @@ export default class SystemMappingHelper {
 
         switch (event.type) {
             case 'ADMISSION':
-                debitAccountId = await this.getMappedAccount(tenantId, 'ASSET_CASH');
-                creditAccountId = await this.getMappedAccount(tenantId, 'REV_ADMISSION');
+                debitAccountId = await this.getMappedAccount(tenantId, 'FEE_COLLECTION_DEBIT');
+                creditAccountId = await this.getMappedAccount(tenantId, 'INVOICE_REVENUE');
                 break;
             case 'SALARY_PAYMENT':
-                debitAccountId = await this.getMappedAccount(tenantId, 'EXP_SALARY');
-                creditAccountId = await this.getMappedAccount(tenantId, 'ASSET_BANK');
+                debitAccountId = await this.getMappedAccount(tenantId, 'SALARY_EXPENSE');
+                creditAccountId = await this.getMappedAccount(tenantId, 'BANK_BALANCE');
                 break;
             case 'FEE_COLLECTION':
-                debitAccountId = await this.getMappedAccount(tenantId, 'ASSET_BANK');
-                creditAccountId = await this.getMappedAccount(tenantId, 'ASSET_RECEIVABLE');
+                debitAccountId = await this.getMappedAccount(tenantId, 'FEE_COLLECTION_DEBIT');
+                creditAccountId = await this.getMappedAccount(tenantId, 'FEE_COLLECTION_CREDIT');
                 break;
         }
 
@@ -73,9 +73,21 @@ export default class SystemMappingHelper {
         const res = await this.db.query(
             `SELECT m.*, a.name as account_name, a.code as account_code 
              FROM accounting.system_account_mapping m
-             JOIN accounting.chart_of_accounts a ON m.account_id = a.id
-             WHERE m.tenant_id = $1`,
+             LEFT JOIN accounting.chart_of_accounts a ON m.account_id = a.id
+             WHERE m.tenant_id = $1
+             ORDER BY m.category, m.label`,
             [tenantId]
+        );
+        return res.rows;
+    }
+
+    public async getMappingsByCategory(tenantId: number, category: string): Promise<any[]> {
+        const res = await this.db.query(
+            `SELECT m.*, a.name as account_name, a.code as account_code 
+             FROM accounting.system_account_mapping m
+             LEFT JOIN accounting.chart_of_accounts a ON m.account_id = a.id
+             WHERE m.tenant_id = $1 AND m.category = $2`,
+            [tenantId, category]
         );
         return res.rows;
     }

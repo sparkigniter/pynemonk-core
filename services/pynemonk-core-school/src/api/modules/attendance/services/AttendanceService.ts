@@ -1,9 +1,14 @@
 import { injectable, inject } from "tsyringe";
 import { Pool } from "pg";
 
+import ReminderService from "../../notification/services/ReminderService.js";
+
 @injectable()
 export class AttendanceService {
-    constructor(@inject("DB") private db: Pool) { }
+    constructor(
+        @inject("DB") private db: Pool,
+        private reminderService: ReminderService
+    ) { }
 
     /**
      * Get students enrolled in a classroom for attendance taking.
@@ -29,6 +34,22 @@ export class AttendanceService {
         `;
         const res = await this.db.query(query, [tenantId, classroomId, date]);
         return res.rows;
+    }
+
+    /**
+     * Notify parents about student absence (Bulk)
+     */
+    public async sendAbsenceAlerts(tenantId: number, absentRecords: any[], date: string): Promise<void> {
+        for (const record of absentRecords) {
+            await this.sendAbsenceAlert(tenantId, record.student_id, date);
+        }
+    }
+
+    /**
+     * Notify parents about student absence (Single)
+     */
+    public async sendAbsenceAlert(tenantId: number, studentId: number, date: string): Promise<void> {
+        await this.reminderService.sendAbsenceAlert(tenantId, studentId, date);
     }
 
     /**
@@ -105,13 +126,20 @@ export class AttendanceService {
                     tenantId, 
                     enrollmentId, 
                     date, 
-                    record.status, // Removed || 'present'
+                    record.status, 
                     record.remarks || '', 
                     staffId
                 ]);
             }
 
             await client.query('COMMIT');
+
+            // 4. Trigger Absence Alerts (Post-Commit, Async)
+            const absentStudents = records.filter(r => r.status === 'absent');
+            if (absentStudents.length > 0) {
+                this.sendAbsenceAlerts(tenantId, absentStudents, date);
+            }
+
             return { success: true, count: records.length };
         } catch (error) {
             await client.query('ROLLBACK');

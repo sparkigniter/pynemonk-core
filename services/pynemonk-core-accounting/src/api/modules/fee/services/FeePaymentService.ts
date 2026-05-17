@@ -22,13 +22,29 @@ export default class FeePaymentService {
     }
 
     public async recordPayment(tenantId: number, userId: number, data: any) {
+        let invoiceId = data.invoice_id;
+
+        // Handle unified string IDs from the frontend (e.g., "GEN-461", "ALLOC-123")
+        if (typeof invoiceId === 'string') {
+            if (invoiceId.startsWith('GEN-') || invoiceId.startsWith('ALLOC-')) {
+                invoiceId = parseInt(invoiceId.split('-')[1]);
+            } else {
+                invoiceId = parseInt(invoiceId);
+            }
+        }
+
+        if (isNaN(invoiceId)) {
+            throw new Error(`Invalid Invoice ID format: ${data.invoice_id}`);
+        }
+
         // Use the robust automation service to handle Ledger, Allocations, and Invoice updates
         return this.feeAutomation.processFeePayment(tenantId, userId, {
             studentId: data.student_id,
             studentName: data.student_name || 'Student',
-            invoiceId: data.invoice_id,
+            invoiceId: invoiceId,
             amount: data.amount,
             paymentMethod: data.payment_method,
+            bankAccountId: data.bank_account_id,
             reference: data.receipt_no || data.reference_no || `RCPT-${Date.now()}`
         });
     }

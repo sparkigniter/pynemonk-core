@@ -6,7 +6,7 @@ export enum NotificationChannel {
 }
 
 export interface NotificationPayload {
-    to: string | number;
+    to?: string | number;
     title: string;
     body: string;
     data?: any;

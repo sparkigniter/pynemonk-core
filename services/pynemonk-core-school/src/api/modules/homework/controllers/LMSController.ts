@@ -12,7 +12,27 @@ export class LMSController extends BaseController {
     async getResources(req: Request, res: Response) {
         try {
             const tenantId = this.getTenantId(req);
-            const resources = await this.lmsService.listResources(tenantId, req.query);
+            const user = (req as any).user;
+            const userId = user?.userId;
+            const roles = user?.roles || [];
+
+            const isStudent = roles.includes('student');
+            const isTeacher = roles.includes('teacher') || roles.includes('staff');
+            const isAdmin = roles.includes('admin') || roles.includes('superadmin');
+
+            let studentGradeId: number | null = null;
+            if (isStudent && userId) {
+                const studentGrade = await this.lmsService.getStudentGrade(tenantId, userId);
+                studentGradeId = studentGrade?.grade_id || null;
+            }
+
+            const resources = await this.lmsService.listResources(tenantId, {
+                ...req.query,
+                isStudent,
+                isTeacher,
+                isAdmin,
+                studentGradeId
+            });
             return this.ok(res, "Resources retrieved", resources);
         } catch (error: any) {
             return this.internalservererror(res, error.message);

@@ -26,6 +26,11 @@ leaveRouter.post("/:id/approve", requireAuth, requirePermission(["staff.leave:wr
     return ctrl.approveLeave(req, res);
 });
 
+leaveRouter.post("/:id/reject", requireAuth, requirePermission(["staff.leave:write"]), (req, res) => {
+    const ctrl = container.resolve(LeaveController);
+    return ctrl.rejectLeave(req, res);
+});
+
 leaveRouter.get("/types", requireAuth, requirePermission(["staff.leave:read"]), (req, res) => {
     const ctrl = container.resolve(LeaveController);
     return ctrl.getLeaveTypes(req, res);

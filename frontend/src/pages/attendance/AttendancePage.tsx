@@ -20,6 +20,7 @@ const AttendancePage: React.FC = () => {
     const classIdFromUrl = searchParams.get('classId');
     
     const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+    const [myStaffProfile, setMyStaffProfile] = useState<any>(null);
     const [selectedClass, setSelectedClass] = useState<number | null>(
         classIdFromUrl ? parseInt(classIdFromUrl) : null
     );
@@ -33,9 +34,24 @@ const AttendancePage: React.FC = () => {
     const today = new Date().toISOString().split('T')[0];
     const isHistoryMode = selectedDate < today;
 
+    const selectedClassroom = classrooms.find(c => c.id === selectedClass);
+    const isClassTeacher = selectedClassroom?.class_teacher_id === myStaffProfile?.id;
+    const canMarkAttendance = !isHistoryMode && can('student.attendance:write') && isClassTeacher;
+
     useEffect(() => {
         fetchClassrooms();
+        fetchMyStaffProfile();
     }, []);
+
+    const fetchMyStaffProfile = async () => {
+        try {
+            const { getMyStaffProfile } = await import('../../api/staff.api');
+            const profile = await getMyStaffProfile();
+            setMyStaffProfile(profile);
+        } catch (err) {
+            // User might not have a staff profile
+        }
+    };
 
     useEffect(() => {
         if (selectedClass) {
@@ -63,7 +79,7 @@ const AttendancePage: React.FC = () => {
             // Default to present if no status yet
             const enrichedRoster = res.map((s: any) => ({
                 ...s,
-                status: s.attendance_status || 'present'
+                status: s.attendance_status || 'not_marked'
             }));
             setRoster(enrichedRoster);
             setHasChanges(false);
@@ -75,7 +91,7 @@ const AttendancePage: React.FC = () => {
     };
 
     const toggleStatus = (studentId: number) => {
-        if (isHistoryMode || !can('student.attendance:write')) return;
+        if (!canMarkAttendance) return;
         setRoster(prev => prev.map(s => {
             if (s.student_id === studentId) {
                 const statuses = ['present', 'absent', 'late'];
@@ -107,7 +123,7 @@ const AttendancePage: React.FC = () => {
     };
 
     const markAllPresent = () => {
-        if (isHistoryMode) return;
+        if (!canMarkAttendance) return;
         setRoster(prev => prev.map(s => ({ ...s, status: 'present' })));
         setHasChanges(true);
     };
@@ -142,7 +158,7 @@ const AttendancePage: React.FC = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                    {can('student.attendance:write') && !isHistoryMode && (
+                    {canMarkAttendance && (
                         <button 
                             onClick={markAllPresent}
                             className="btn-ghost flex items-center gap-2 !px-5 !py-3"
@@ -223,11 +239,12 @@ const AttendancePage: React.FC = () => {
                             onClick={() => toggleStatus(student.student_id)}
                             className={`
                                 group relative overflow-hidden rounded-[2rem] p-5 transition-all duration-300 transform 
-                                ${(isHistoryMode || !can('student.attendance:write')) ? 'cursor-default' : 'cursor-pointer active:scale-95'}
+                                ${(isHistoryMode || !canMarkAttendance) ? 'cursor-default' : 'cursor-pointer active:scale-95'}
                                 border-2
                                 ${student.status === 'present' ? 'bg-[var(--card-bg)] border-emerald-100 hover:border-emerald-300 shadow-emerald-500/5' : ''}
                                 ${student.status === 'absent' ? 'bg-[var(--card-bg)] border-rose-100 hover:border-rose-300 shadow-rose-500/5' : ''}
                                 ${student.status === 'late' ? 'bg-[var(--card-bg)] border-amber-100 hover:border-amber-300 shadow-amber-500/5' : ''}
+                                ${student.status === 'not_marked' ? 'bg-[var(--card-bg)] border-slate-100 hover:border-slate-300' : ''}
                                 shadow-sm hover:shadow-md
                             `}
                         >
@@ -237,6 +254,7 @@ const AttendancePage: React.FC = () => {
                                         ${student.status === 'present' ? 'bg-emerald-500 shadow-emerald-500/20' : ''}
                                         ${student.status === 'absent' ? 'bg-rose-500 shadow-rose-500/20' : ''}
                                         ${student.status === 'late' ? 'bg-amber-500 shadow-amber-500/20' : ''}
+                                        ${student.status === 'not_marked' ? 'bg-slate-300 text-slate-500 shadow-slate-200' : ''}
                                     `}>
                                         {student.first_name[0]}{student.last_name?.[0]}
                                     </div>
@@ -244,6 +262,7 @@ const AttendancePage: React.FC = () => {
                                         ${student.status === 'present' ? 'bg-emerald-500' : ''}
                                         ${student.status === 'absent' ? 'bg-rose-500' : ''}
                                         ${student.status === 'late' ? 'bg-amber-500' : ''}
+                                        ${student.status === 'not_marked' ? 'bg-slate-300' : ''}
                                     `}>
                                         {student.status === 'present' && <CheckCircle2 size={12} className="text-white" />}
                                         {student.status === 'absent' && <XCircle size={12} className="text-white" />}

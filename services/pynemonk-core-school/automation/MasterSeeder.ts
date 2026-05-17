@@ -16,6 +16,7 @@ class ERPSeeder {
     async request(url: string, method: string, body?: any, headers: any = {}) {
         const fullHeaders: any = { 
             'Content-Type': 'application/json',
+            'x-bypass-rate-limit': 'true',
             ...headers
         };
         if (this.token) fullHeaders['Authorization'] = `Bearer ${this.token}`;
@@ -115,8 +116,9 @@ class ERPSeeder {
             console.log('✅ Configured Financial Structures.');
 
             // 5. Admissions & Enrollment
-            console.log('⚡ Bulk Admitting Students...');
-            for (let i = 1; i <= 6; i++) {
+            const totalStudents = 500;
+            console.log(`⚡ Bulk Admitting ${totalStudents} Students...`);
+            for (let i = 1; i <= totalStudents; i++) {
                 const workflow = await this.request(`${SCHOOL_URL}/admissions/workflow/start`, 'POST', {
                     first_name: `Student`,
                     last_name: `${i}`,
@@ -126,18 +128,18 @@ class ERPSeeder {
                 
                 await this.request(`${SCHOOL_URL}/admissions/workflow/${workflow.id}`, 'PATCH', {
                     stage: 'guardian',
-                    data: { first_name: 'Parent', last_name: `${i}`, relation: 'Father', phone: `555100${i}` },
+                    data: { first_name: 'Parent', last_name: `${i}`, relation: 'Father', phone: `555${Math.floor(100000 + Math.random() * 900000)}` },
                     next_stage: 'documents'
                 });
 
                 const student = await this.request(`${SCHOOL_URL}/admissions/workflow/${workflow.id}/finalize`, 'POST');
                 
-                // Enroll in grade/classroom (Grade 1 for all in this demo)
-                const targetClass = classrooms[0]; 
+                // Distribute students across classrooms
+                const targetClass = classrooms[i % classrooms.length]; 
                 await this.request(`${SCHOOL_URL}/students/${student.student_id}/enroll`, 'POST', {
                     classroom_id: targetClass.id,
                     academic_year_id: academicYear.id,
-                    roll_number: `R-2026-00${i}`
+                    roll_number: `R-2026-${String(i).padStart(3, '0')}`
                 });
 
                 // Allocate Fees
@@ -145,8 +147,10 @@ class ERPSeeder {
                     student_id: student.student_id,
                     fee_structure_id: structure.id
                 }, { 'x-academic-year-id': academicYear.id.toString() });
+
+                if (i % 50 === 0) console.log(`   ... Processed ${i} students`);
             }
-            console.log('✅ Admitted, Enrolled & Invoiced 6 Students.');
+            console.log(`✅ Admitted, Enrolled & Invoiced ${totalStudents} Students.`);
 
             // 6. LMS Resources
             await this.request(`${SCHOOL_URL}/homework/lms/library`, 'POST', {

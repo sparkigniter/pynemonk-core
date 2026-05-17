@@ -222,10 +222,21 @@ export default function StaffRegistration() {
                                     </div>
 
                                     <div className="grid grid-cols-3 gap-8">
-                                        <div className="space-y-3 group">
-                                            <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Blood Group</label>
-                                            <input className="input-field-premium" value={formData.blood_group} onChange={e => setFormData({ ...formData, blood_group: e.target.value })} placeholder="O+" />
-                                        </div>
+                                        <ComboBox
+                                            label="Blood Group"
+                                            value={formData.blood_group}
+                                            onChange={val => setFormData({ ...formData, blood_group: val as string })}
+                                            options={[
+                                                { value: 'A+', label: 'A+' },
+                                                { value: 'A-', label: 'A-' },
+                                                { value: 'B+', label: 'B+' },
+                                                { value: 'B-', label: 'B-' },
+                                                { value: 'AB+', label: 'AB+' },
+                                                { value: 'AB-', label: 'AB-' },
+                                                { value: 'O+', label: 'O+' },
+                                                { value: 'O-', label: 'O-' },
+                                            ]}
+                                        />
                                         <div className="space-y-3 group">
                                             <label className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest group-focus-within:text-theme-primary transition-colors">Nationality</label>
                                             <input className="input-field-premium" value={formData.nationality} onChange={e => setFormData({ ...formData, nationality: e.target.value })} />
@@ -456,6 +467,9 @@ export default function StaffRegistration() {
                     color: #1E293B;
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     outline: none;
+                }
+                .input-field-premium.pl-14 {
+                    padding-left: 3.5rem !important;
                 }
                 .input-field-premium:focus {
                     background: white;

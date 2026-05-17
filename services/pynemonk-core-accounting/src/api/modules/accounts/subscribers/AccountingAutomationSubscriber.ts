@@ -133,14 +133,26 @@ export default class AccountingAutomationSubscriber {
             }
         });
         /**
-         * 6. PAYROLL PAYMENT (Expense Recognition)
+         * 6. PAYROLL GENERATED (AP Bill Generation)
+         */
+        this.eventBus.on('PAYROLL_GENERATED', async (data) => {
+            try {
+                console.log(`[Accounting] Processing payroll bill generation for staff ${data.staffId}`);
+                await this.feeAutomation.processPayrollBillGeneration(data.tenantId, data);
+            } catch (err: any) {
+                console.error(`[Accounting] Payroll bill generation error: ${err.message}`);
+            }
+        });
+
+        /**
+         * 7. PAYROLL PAYMENT (Expense Recognition & AP matching)
          */
         this.eventBus.on('PAYROLL_PAID', async (data) => {
             try {
                 console.log(`[Accounting] Processing payroll payment for staff ${data.staffId}`);
-                await this.feeAutomation.postPayrollJournal(data.tenantId, data.userId, data);
+                await this.feeAutomation.processPayrollPayment(data.tenantId, data.userId, data);
             } catch (err: any) {
-                console.error(`[Accounting] Payroll integration error: ${err.message}`);
+                console.error(`[Accounting] Payroll payment integration error: ${err.message}`);
             }
         });
     }

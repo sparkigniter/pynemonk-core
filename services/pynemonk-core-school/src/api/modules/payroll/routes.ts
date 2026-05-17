@@ -21,6 +21,11 @@ payrollRouter.post("/generate", requireAuth, requirePermission(["staff.payroll:w
     return ctrl.generatePayslip(req, res);
 });
 
+payrollRouter.post("/bulk-generate", requireAuth, requirePermission(["staff.payroll:write"]), (req, res) => {
+    const ctrl = container.resolve(PayrollController);
+    return ctrl.generateBulk(req, res);
+});
+
 payrollRouter.post("/:id/pay", requireAuth, requirePermission(["staff.payroll:write"]), (req, res) => {
     const ctrl = container.resolve(PayrollController);
     return ctrl.pay(req, res);

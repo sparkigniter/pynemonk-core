@@ -160,6 +160,15 @@ export default class VendorHelper {
                      WHERE id = $2`,
                     [alloc.amount, alloc.bill_id]
                 );
+
+                // Vice-versa sync to payslip
+                await client.query(
+                    `UPDATE school.payslip
+                     SET status = CASE WHEN (SELECT status FROM accounting.vendor_bill WHERE id = $1) = 'paid' THEN 'paid' ELSE status END,
+                         paid_at = CASE WHEN (SELECT status FROM accounting.vendor_bill WHERE id = $1) = 'paid' THEN NOW() ELSE paid_at END
+                     WHERE accounting_entry_id = $1`,
+                    [alloc.bill_id]
+                );
             }
 
             await client.query('COMMIT');

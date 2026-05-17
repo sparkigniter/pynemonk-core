@@ -4,15 +4,16 @@ import {
     ArrowLeft, Loader2, Calendar, Hash, 
     DollarSign, FileText, User, CheckCircle2,
     Tag, Briefcase, Plus, Trash2, Zap, Save,
-    CreditCard, Sparkles, Building2,
+    CreditCard, Building2,
     Percent, Link as LinkIcon,
-    Settings, Command
+    Settings, X
 } from 'lucide-react';
-import { createInvoice, getPartners } from '../../api/accounting.api';
+import { createInvoice, getPartners, getCOA, getFiscalYears } from '../../api/accounting.api';
+import SearchableSelect from '../../components/accounting/SearchableSelect';
 
 interface LineItem {
     id: string;
-    category: string;
+    account_id: string;
     description: string;
     quantity: number;
     rate: number;
@@ -23,7 +24,6 @@ interface LineItem {
 export default function CreateInvoice() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const [partners, setPartners] = useState<any[]>([]);
     const [success, setSuccess] = useState(false);
     
     const [formData, setFormData] = useState({
@@ -38,11 +38,14 @@ export default function CreateInvoice() {
     });
 
     const [lineItems, setLineItems] = useState<LineItem[]>([
-        { id: '1', category: 'Tuition', description: 'Term 1 Tuition Fee', quantity: 1, rate: 25000, tax: 0, discount: 0 }
+        { id: '1', account_id: '', description: '', quantity: 1, rate: 0, tax: 0, discount: 0 }
     ]);
+    const [activeDescriptionId, setActiveDescriptionId] = useState<string | null>(null);
+    const [fiscalYears, setFiscalYears] = useState<any[]>([]);
 
     useEffect(() => {
-        getPartners().then(setPartners).catch(console.error);
+        // Partners loaded via SearchableSelect dynamically
+        getFiscalYears().then(setFiscalYears).catch(console.error);
     }, []);
 
     const totals = useMemo(() => {
@@ -67,10 +70,16 @@ export default function CreateInvoice() {
     }, [lineItems]);
 
     const handleAddLine = () => {
-        setLineItems([
-            ...lineItems, 
-            { id: Math.random().toString(), category: 'Misc', description: '', quantity: 1, rate: 0, tax: 0, discount: 0 }
-        ]);
+        const newLine: LineItem = {
+            id: Math.random().toString(36).substr(2, 9),
+            account_id: '',
+            description: '',
+            quantity: 1,
+            rate: 0,
+            tax: 0,
+            discount: 0
+        };
+        setLineItems([...lineItems, newLine]);
     };
 
     const handleRemoveLine = (id: string) => {
@@ -103,8 +112,6 @@ export default function CreateInvoice() {
             setLoading(false);
         }
     };
-
-    const selectedPartner = useMemo(() => partners.find(p => p.id.toString() === formData.partner_id), [partners, formData.partner_id]);
 
     if (success) {
         return (
@@ -142,10 +149,6 @@ export default function CreateInvoice() {
                 </div>
                 
                 <div className="flex items-center gap-4">
-                    <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-slate-50 border border-[var(--card-border)] rounded-xl text-[var(--text-muted)] text-xs font-bold">
-                        <Command size={14} />
-                        <span>K for quick actions</span>
-                    </div>
                     <button className="px-6 py-2.5 bg-[var(--card-bg)] border-2 border-[var(--card-border)] text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2">
                         <Save size={16} />
                         Save Draft
@@ -172,28 +175,18 @@ export default function CreateInvoice() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest flex items-center gap-2">
-                                        <User size={12} /> Bill To (Customer / Student)
+                                        <User size={12} /> Recipient / Institutional Partner
                                     </label>
-                                    <select
-                                        required
-                                        className="w-full px-5 py-4 bg-slate-50 border-2 border-[var(--card-border)] rounded-2xl outline-none focus:bg-[var(--card-bg)] focus:border-indigo-500 transition-all font-black text-slate-800 text-lg appearance-none cursor-pointer"
-                                        value={formData.partner_id}
-                                        onChange={e => setFormData({ ...formData, partner_id: e.target.value })}
-                                    >
-                                        <option value="">Search customer, parent, or student...</option>
-                                        {partners.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
-                                        ))}
-                                    </select>
-                                    {!formData.partner_id && (
-                                        <div className="flex gap-2 mt-3">
-                                            {['Recent: John Doe', 'Class 10-A Bulk', '+ New Parent'].map(s => (
-                                                <button key={s} className="px-3 py-1.5 bg-slate-50 text-[var(--text-muted)] rounded-lg text-[10px] font-bold hover:bg-slate-100 transition-colors border border-[var(--card-border)]/50">
-                                                    {s}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
+                                    <div className="relative group">
+                                        <SearchableSelect 
+                                            icon={User}
+                                            placeholder="Select Recipient / Institutional Partner..."
+                                            value={formData.partner_id}
+                                            onSearch={(q) => getPartners('customer', q)}
+                                            formatOption={(p) => ({ id: p.id, label: p.name, sublabel: p.type, original: p })}
+                                            onSelect={(opt) => setFormData(p => ({ ...p, partner_id: opt.id.toString() }))}
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -203,22 +196,24 @@ export default function CreateInvoice() {
                                         </label>
                                         <input
                                             type="text"
-                                            className="w-full px-5 py-4 bg-slate-50 border-2 border-[var(--card-border)] rounded-2xl font-bold text-slate-700 outline-none focus:border-indigo-500 focus:bg-[var(--card-bg)] transition-all"
+                                            className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 text-base outline-none focus:border-indigo-500 focus:bg-[var(--card-bg)] transition-all shadow-sm hover:border-slate-300"
                                             value={formData.invoice_no}
                                             onChange={e => setFormData({ ...formData, invoice_no: e.target.value })}
                                         />
                                     </div>
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest flex items-center gap-2">
-                                            <Tag size={12} /> Academic Year
+                                            <Tag size={12} /> Fiscal Period
                                         </label>
                                         <select
-                                            className="w-full px-5 py-4 bg-slate-50 border-2 border-[var(--card-border)] rounded-2xl font-bold text-slate-700 outline-none focus:border-indigo-500 focus:bg-[var(--card-bg)] transition-all appearance-none"
+                                            className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 text-base outline-none focus:border-indigo-500 focus:bg-[var(--card-bg)] transition-all appearance-none shadow-sm hover:border-slate-300"
                                             value={formData.academic_year}
                                             onChange={e => setFormData({ ...formData, academic_year: e.target.value })}
                                         >
-                                            <option>2026-2027</option>
-                                            <option>2025-2026</option>
+                                            <option value="">Select Period...</option>
+                                            {fiscalYears.map(fy => (
+                                                <option key={fy.id} value={fy.year_name}>{fy.year_name}</option>
+                                            ))}
                                         </select>
                                     </div>
                                     <div className="space-y-3">
@@ -227,7 +222,7 @@ export default function CreateInvoice() {
                                         </label>
                                         <input
                                             type="date"
-                                            className="w-full px-5 py-4 bg-slate-50 border-2 border-[var(--card-border)] rounded-2xl font-bold text-slate-700 outline-none focus:border-indigo-500 focus:bg-[var(--card-bg)] transition-all"
+                                            className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 text-base outline-none focus:border-indigo-500 focus:bg-[var(--card-bg)] transition-all shadow-sm hover:border-slate-300"
                                             value={formData.invoice_date}
                                             onChange={e => setFormData({ ...formData, invoice_date: e.target.value })}
                                         />
@@ -238,7 +233,7 @@ export default function CreateInvoice() {
                                         </label>
                                         <input
                                             type="date"
-                                            className="w-full px-5 py-4 bg-slate-50 border-2 border-[var(--card-border)] rounded-2xl font-bold text-slate-700 outline-none focus:border-indigo-500 focus:bg-[var(--card-bg)] transition-all"
+                                            className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 text-base outline-none focus:border-indigo-500 focus:bg-[var(--card-bg)] transition-all shadow-sm hover:border-slate-300"
                                             value={formData.due_date}
                                             onChange={e => setFormData({ ...formData, due_date: e.target.value })}
                                         />
@@ -248,96 +243,91 @@ export default function CreateInvoice() {
                         </div>
 
                         {/* Line Items Table */}
-                        <div className="bg-[var(--card-bg)] rounded-[2rem] border border-[var(--card-border)]/60 shadow-sm overflow-hidden">
-                            <div className="p-6 border-b border-[var(--card-border)] flex items-center justify-between bg-slate-50/50">
+                        <div className="bg-[var(--card-bg)] rounded-[2rem] border border-[var(--card-border)]/60 shadow-sm overflow-visible pb-24">
+                            <div className="p-6 border-b border-[var(--card-border)] flex items-center justify-between bg-slate-50/50 rounded-t-[2rem]">
                                 <h3 className="text-sm font-black text-[var(--text-main)] tracking-tight flex items-center gap-2">
                                     <Briefcase size={16} className="text-indigo-500" />
-                                    Fee Breakdown & Line Items
+                                    Itemized Revenue & Service Details
                                 </h3>
-                                <button className="flex items-center gap-2 px-4 py-2 bg-primary/5 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 transition-colors">
-                                    <Sparkles size={14} />
-                                    AI Suggestions
-                                </button>
                             </div>
                             
-                            <div className="overflow-x-auto">
+                            <div className="overflow-visible min-h-[300px]">
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="bg-[var(--card-bg)] border-b border-[var(--card-border)]">
-                                            <th className="px-6 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-48">Category</th>
-                                            <th className="px-6 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Description</th>
-                                            <th className="px-6 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-24 text-right">Qty</th>
-                                            <th className="px-6 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-32 text-right">Rate</th>
-                                            <th className="px-6 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-24 text-right">Tax %</th>
-                                            <th className="px-6 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-32 text-right">Discount</th>
-                                            <th className="px-6 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-32 text-right">Amount</th>
+                                            <th className="px-4 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-[25%]">Revenue Account</th>
+                                            <th className="px-4 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Description</th>
+                                            <th className="px-4 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-28 text-right">Qty</th>
+                                            <th className="px-4 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-40 text-right">Rate</th>
+                                            <th className="px-4 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-28 text-right">Tax %</th>
+                                            <th className="px-4 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-32 text-right">Discount</th>
+                                            <th className="px-4 py-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest w-40 text-right">Amount</th>
                                             <th className="px-4 py-4 w-12"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50 bg-slate-50/20">
                                         {lineItems.map((item) => (
-                                            <tr key={item.id} className="group">
-                                                <td className="px-6 py-3">
-                                                    <select 
-                                                        className="w-full bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500"
-                                                        value={item.category}
-                                                        onChange={(e) => updateLineItem(item.id, 'category', e.target.value)}
-                                                    >
-                                                        <option>Tuition</option>
-                                                        <option>Transport</option>
-                                                        <option>Hostel</option>
-                                                        <option>Library</option>
-                                                        <option>Misc</option>
-                                                    </select>
-                                                </td>
-                                                <td className="px-6 py-3">
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="Item description..."
-                                                        className="w-full bg-transparent border border-transparent group-hover:bg-[var(--card-bg)] group-hover:border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:bg-[var(--card-bg)] focus:border-indigo-500 transition-all placeholder-slate-300"
-                                                        value={item.description}
-                                                        onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
+                                            <tr key={item.id} className="group hover:bg-slate-50/30 transition-colors">
+                                                <td className="px-4 py-4">
+                                                    <SearchableSelect 
+                                                        compact
+                                                        placeholder="Select Account..."
+                                                        value={item.account_id}
+                                                        onSearch={getCOA}
+                                                        formatOption={(acc) => ({ id: acc.id, label: acc.name, sublabel: acc.code, original: acc })}
+                                                        onSelect={(opt) => updateLineItem(item.id, 'account_id', opt.id.toString())}
                                                     />
                                                 </td>
-                                                <td className="px-6 py-3">
+                                                <td className="px-4 py-4 relative">
+                                                    <div 
+                                                        onClick={() => setActiveDescriptionId(item.id)}
+                                                        className="w-full min-h-[44px] bg-[var(--card-bg)] border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-600 cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all shadow-sm flex items-center line-clamp-1 break-all"
+                                                    >
+                                                        {item.description || <span className="text-slate-400 italic">Add log description...</span>}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4">
                                                     <input 
                                                         type="number" 
-                                                        className="w-full bg-transparent border border-transparent group-hover:bg-[var(--card-bg)] group-hover:border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 text-right outline-none focus:bg-[var(--card-bg)] focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-[var(--card-bg)] border border-slate-200 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 text-right outline-none focus:border-indigo-500 transition-all shadow-sm"
                                                         value={item.quantity}
                                                         onChange={(e) => updateLineItem(item.id, 'quantity', parseInt(e.target.value) || 0)}
                                                     />
                                                 </td>
-                                                <td className="px-6 py-3">
-                                                    <input 
-                                                        type="number" 
-                                                        className="w-full bg-transparent border border-transparent group-hover:bg-[var(--card-bg)] group-hover:border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 text-right outline-none focus:bg-[var(--card-bg)] focus:border-indigo-500 transition-all"
-                                                        value={item.rate}
-                                                        onChange={(e) => updateLineItem(item.id, 'rate', parseFloat(e.target.value) || 0)}
-                                                    />
+                                                <td className="px-4 py-4">
+                                                    <div className="relative">
+                                                        <input 
+                                                            type="number" 
+                                                            className="w-full bg-[var(--card-bg)] border border-slate-200 rounded-xl pl-8 pr-4 py-3 text-sm font-bold text-slate-700 text-right outline-none focus:border-indigo-500 transition-all shadow-sm"
+                                                            value={item.rate}
+                                                            onChange={(e) => updateLineItem(item.id, 'rate', parseFloat(e.target.value) || 0)}
+                                                        />
+                                                        <DollarSign size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                    </div>
                                                 </td>
-                                                <td className="px-6 py-3">
+                                                <td className="px-4 py-4">
                                                     <input 
                                                         type="number" 
-                                                        className="w-full bg-transparent border border-transparent group-hover:bg-[var(--card-bg)] group-hover:border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 text-right outline-none focus:bg-[var(--card-bg)] focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-[var(--card-bg)] border border-slate-200 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 text-right outline-none focus:border-indigo-500 transition-all shadow-sm"
                                                         value={item.tax}
                                                         onChange={(e) => updateLineItem(item.id, 'tax', parseFloat(e.target.value) || 0)}
                                                     />
                                                 </td>
-                                                <td className="px-6 py-3">
+                                                <td className="px-4 py-4">
                                                     <input 
                                                         type="number" 
-                                                        className="w-full bg-transparent border border-transparent group-hover:bg-[var(--card-bg)] group-hover:border-[var(--card-border)] rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 text-right outline-none focus:bg-[var(--card-bg)] focus:border-indigo-500 transition-all"
+                                                        className="w-full bg-[var(--card-bg)] border border-slate-200 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 text-right outline-none focus:border-indigo-500 transition-all shadow-sm"
                                                         value={item.discount}
                                                         onChange={(e) => updateLineItem(item.id, 'discount', parseFloat(e.target.value) || 0)}
                                                     />
                                                 </td>
-                                                <td className="px-6 py-3 text-right font-black text-[var(--text-main)] text-base">
+                                                <td className="px-6 py-4 text-right font-black text-[var(--text-main)] text-base">
                                                     ${((item.quantity * item.rate) - item.discount).toFixed(2)}
                                                 </td>
-                                                <td className="px-4 py-3 text-center">
+                                                <td className="px-4 py-4 text-center">
                                                     <button 
                                                         onClick={() => handleRemoveLine(item.id)}
-                                                        className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                                        className="w-9 h-9 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>
@@ -464,31 +454,39 @@ export default function CreateInvoice() {
                                 </p>
                             </div>
 
-                            {/* Customer Snapshot */}
-                            {selectedPartner && (
-                                <div className="bg-[var(--card-bg)] p-6 rounded-[2rem] border border-[var(--card-border)]/60 shadow-sm">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Customer Snapshot</h4>
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-[var(--text-muted)]">
-                                            {selectedPartner.name.substring(0,2).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-black text-[var(--text-main)]">{selectedPartner.name}</p>
-                                            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{selectedPartner.type}</p>
-                                        </div>
-                                    </div>
-                                    <div className="p-3 bg-slate-50 rounded-xl flex justify-between items-center">
-                                        <span className="text-xs font-bold text-[var(--text-muted)]">Current Balance</span>
-                                        <span className="text-sm font-black text-[var(--text-main)]">$1,250.00</span>
-                                    </div>
-                                </div>
-                            )}
+                            {/* Customer Snapshot Removed */}
 
                         </div>
                     </div>
 
                 </div>
             </div>
+
+            {/* Description Modal */}
+            {activeDescriptionId && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-[var(--card-bg)] w-full max-w-lg rounded-[2rem] shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-[var(--card-border)]/60">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-black text-lg text-[var(--text-main)]">Item Description</h3>
+                            <button onClick={() => setActiveDescriptionId(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-slate-600">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <textarea
+                            autoFocus
+                            className="w-full h-32 p-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium text-slate-700 text-sm outline-none focus:border-indigo-500 focus:bg-[var(--card-bg)] transition-all resize-none shadow-inner"
+                            placeholder="Enter detailed description or log notes..."
+                            value={lineItems.find(i => i.id === activeDescriptionId)?.description || ''}
+                            onChange={e => updateLineItem(activeDescriptionId, 'description', e.target.value)}
+                        />
+                        <div className="flex justify-end mt-6">
+                            <button onClick={() => setActiveDescriptionId(null)} className="px-8 py-3 bg-primary text-white font-bold text-sm rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all">
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

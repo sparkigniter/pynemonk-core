@@ -214,7 +214,7 @@ export default function Teachers() {
                                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-2xl uppercase shadow-lg group-hover:scale-105 transition-transform duration-300">
                                         {s.first_name[0]}{s.last_name[0]}
                                     </div>
-                                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-white ${s.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-white ${s.status === 'active' ? 'bg-emerald-500' : s.status === 'on_leave' ? 'bg-amber-500' : 'bg-slate-400'}`}></div>
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <h3 className="font-bold text-[var(--text-main)] tracking-tight text-[16px] truncate group-hover:text-primary transition-colors">{s.first_name} {s.last_name}</h3>
@@ -225,6 +225,11 @@ export default function Teachers() {
                                         {s.is_class_teacher && (
                                             <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 text-[9px] font-bold uppercase tracking-wider">
                                                 Class Teacher
+                                            </span>
+                                        )}
+                                        {s.status === 'on_leave' && (
+                                            <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-600 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1">
+                                                On Leave: {new Date(s.leave_start_date!).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - {new Date(s.leave_end_date!).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                             </span>
                                         )}
                                     </div>
@@ -347,8 +352,8 @@ export default function Teachers() {
                                             <span className="px-3 py-1 bg-primary/5 text-primary text-[10px] font-bold uppercase rounded-full tracking-wider border border-primary/10">
                                                 {selectedStaff.designation}
                                             </span>
-                                            <span className={`px-3 py-1 ${selectedStaff.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'} text-[10px] font-bold uppercase rounded-full tracking-wider border`}>
-                                                {selectedStaff.status}
+                                            <span className={`px-3 py-1 ${selectedStaff.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : selectedStaff.status === 'on_leave' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-slate-100 text-slate-600 border-slate-200'} text-[10px] font-bold uppercase rounded-full tracking-wider border`}>
+                                                {selectedStaff.status === 'on_leave' ? 'On Leave' : selectedStaff.status}
                                             </span>
                                             {selectedStaff.is_class_teacher && (
                                                 <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase rounded-full tracking-wider border border-blue-100">
@@ -359,6 +364,21 @@ export default function Teachers() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* On Leave Alerts */}
+                            {selectedStaff.status === 'on_leave' && (
+                                <div className="premium-card p-6 bg-gradient-to-r from-amber-50/50 to-amber-100/30 border border-amber-200/60 rounded-3xl flex items-center gap-5 shadow-sm shadow-amber-100/20">
+                                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 shadow-inner">
+                                        <Calendar size={22} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-extrabold text-amber-600 uppercase tracking-widest">Currently On Leave</p>
+                                        <p className="text-sm font-bold text-amber-900 mt-1">
+                                            Out of Office: {new Date(selectedStaff.leave_start_date!).toLocaleDateString(undefined, { dateStyle: 'medium' })} to {new Date(selectedStaff.leave_end_date!).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {/* Academic Load */}

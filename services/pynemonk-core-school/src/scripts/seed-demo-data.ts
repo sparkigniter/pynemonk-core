@@ -3,7 +3,6 @@ const { Pool } = pkg;
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
 import fs from 'fs';
 
 // Setup __dirname for ESM
@@ -18,79 +17,30 @@ const isDocker = fs.existsSync('/.dockerenv');
 
 const pool = new Pool({
     user: process.env.PGUSER || 'postgres',
-    // Inside Docker, force 'postgres' hostname to avoid localhost/127.0.0.1 conflicts from .env
     host: isDocker ? 'postgres' : (process.env.PGHOST || 'localhost'),
     database: process.env.PGDATABASE || 'pynemonk_core',
     password: process.env.PGPASSWORD || 'password',
     port: parseInt(process.env.PGPORT || '5432'),
-    ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false
 });
 
-const FIRST_NAMES_MALE = [
-    'Aarav', 'Vihaan', 'Aditya', 'Arjun', 'Sai', 'Ishaan', 'Aaryan', 'Krishna', 'Shaurya', 'Kabir',
-    'Aryan', 'Rohan', 'Ansh', 'Vivaan', 'Pranav', 'Dev', 'Ayaan', 'Rishi', 'Atharv', 'Ayush',
-    'Rahul', 'Rohit', 'Amit', 'Sanjay', 'Vikram', 'Deepak', 'Rajesh', 'Sunil', 'Kiran', 'Prakash'
-];
-
-const FIRST_NAMES_FEMALE = [
-    'Ananya', 'Diya', 'Pari', 'Saanvi', 'Angel', 'Ishani', 'Aanya', 'Myra', 'Kavya', 'Riya',
-    'Neha', 'Pooja', 'Sneha', 'Anjali', 'Megha', 'Shweta', 'Tanvi', 'Roshni', 'Jyoti', 'Komal'
-];
-
-const LAST_NAMES = [
-    'Sharma', 'Verma', 'Gupta', 'Singh', 'Kumar', 'Patel', 'Reddy', 'Iyer', 'Nair', 'Joshi',
-    'Malhotra', 'Kapoor', 'Khan', 'Mishra', 'Yadav', 'Choudhury', 'Deshmukh', 'Kulkarni', 'Bose', 'Chatterjee'
-];
+const FIRST_NAMES_MALE = ['Aarav', 'Vihaan', 'Aditya', 'Arjun', 'Sai', 'Ishaan', 'Aaryan', 'Krishna', 'Shaurya', 'Kabir'];
+const FIRST_NAMES_FEMALE = ['Ananya', 'Diya', 'Pari', 'Saanvi', 'Angel', 'Ishani', 'Aanya', 'Myra', 'Kavya', 'Riya'];
+const LAST_NAMES = ['Sharma', 'Verma', 'Gupta', 'Singh', 'Kumar', 'Patel', 'Reddy', 'Iyer', 'Nair', 'Joshi'];
 
 const RELIGIONS = ['Hindu', 'Muslim', 'Sikh', 'Christian', 'Jain'];
-const COMMON_SUBJECTS = ['Mathematics', 'English', 'Kannada', 'Hindi', 'PlayTime (PT)', 'Music', 'Craft'];
+const COMMON_SUBJECTS = ['Mathematics', 'English', 'Science', 'Social Studies'];
 
 async function cleanup(client: any, tenantId: number) {
-    console.log('🧹 Clearing existing data for tenant 1...');
-    await client.query('DELETE FROM school.attendance WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.exam_student WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.exam_paper WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.exam_invitation WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.exam WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.timetable WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.teacher_assignment WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.student_guardian WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.guardian WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.student_enrollment WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.student WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.classroom WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.staff WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.subject WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.grade WHERE tenant_id = $1', [tenantId]);
-    await client.query('DELETE FROM school.settings WHERE tenant_id = $1', [tenantId]);
+    console.log('🧹 Clearing institutional data...');
+    await client.query('TRUNCATE school.academic_year, school.student, school.staff, school.classroom, school.grade, school.subject, school.student_enrollment, school.fee_installment, school.student_fee_allocation, school.exam, school.exam_paper, school.exam_marks, accounting.invoice, accounting.invoice_line, accounting.journal_entry, accounting.journal_item, accounting.partner CASCADE');
 }
 
 async function createUser(client: any, tenantId: number, email: string, roleId: number) {
-    // 1. Check if user exists
     const existing = await client.query('SELECT id FROM auth.user WHERE email = $1', [email]);
-    let userId;
-
-    if (existing.rows.length > 0) {
-        userId = existing.rows[0].id;
-        await client.query('UPDATE auth.user SET role_id = $1 WHERE id = $2', [roleId, userId]);
-    } else {
-        const userRes = await client.query(
-            'INSERT INTO auth.user (tenant_id, email, role_id) VALUES ($1, $2, $3) RETURNING id',
-            [tenantId, email, roleId]
-        );
-        userId = userRes.rows[0].id;
-    }
-
-    // 2. Ensure credentials exist
-    const existingCred = await client.query('SELECT user_id FROM auth.user_credential WHERE user_id = $1', [userId]);
-    if (existingCred.rows.length === 0) {
-        await client.query(
-            'INSERT INTO auth.user_credential (tenant_id, user_id, password_hash) VALUES ($1, $2, $3)',
-            [tenantId, userId, '$2b$12$Wbkdx61wwjKAQwohUBsGVe76p6K4Nxl/OfVhTXkU1b6lf6gXl5CYG']
-        );
-    }
-
-    return userId;
+    if (existing.rows[0]) return existing.rows[0].id;
+    
+    const userRes = await client.query('INSERT INTO auth.user (tenant_id, email, role_id) VALUES ($1, $2, $3) RETURNING id', [tenantId, email, roleId]);
+    return userRes.rows[0].id;
 }
 
 async function seed() {
@@ -100,162 +50,114 @@ async function seed() {
     try {
         client = await pool.connect();
         await client.query('BEGIN');
-
-        // Ensure Tenant 1 exists
-        const existingTenant = await client.query('SELECT id FROM auth.tenant WHERE id = $1', [tenantId]);
-        if (existingTenant.rows.length === 0) {
-            await client.query(`INSERT INTO auth.tenant (id, name, slug, email, package_id) VALUES (1, 'LuviaEdu Demo School', 'demo-school', 'admin@luviaedu.com', 1)`);
-        }
-
         await cleanup(client, tenantId);
 
-        // 1. Ensure Academic Year exists
-        let ayRes = await client.query('SELECT id FROM school.academic_year WHERE tenant_id = $1 AND is_current = TRUE LIMIT 1', [tenantId]);
-
-        if (ayRes.rows.length === 0) {
-            console.log('📅 No academic year found. Creating default: 2026-27...');
-            ayRes = await client.query(
-                'INSERT INTO school.academic_year (tenant_id, name, start_date, end_date, is_current) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-                [tenantId, '2026-27', '2026-04-01', '2027-03-31', true]
-            );
-        }
+        // 1. Academic Year
+        console.log('📅 Creating Academic Year 2026-27...');
+        const ayRes = await client.query("INSERT INTO school.academic_year (tenant_id, name, start_date, end_date, is_current) VALUES ($1, '2026-27', '2026-04-01', '2027-03-31', true) RETURNING id", [tenantId]);
         const ayId = ayRes.rows[0].id;
-        
-        // 1.2 Ensure School Settings exist
-        const settingsRes = await client.query("SELECT 1 FROM school.settings WHERE tenant_id = $1 AND key = 'attendance_mode'", [tenantId]);
-        if (settingsRes.rows.length === 0) {
-            console.log('⚙️ Initializing school settings (attendance_mode)...');
-            await client.query(`
-                INSERT INTO school.settings (tenant_id, key, value)
-                VALUES ($1, 'attendance_mode', 'DAILY')
-            `, [tenantId]);
-        }
 
-        // 1.3 Ensure Default Periods exist (Required for Timetable Auto-Gen)
-        const periodCheck = await client.query('SELECT 1 FROM school.period_config WHERE tenant_id = $1 LIMIT 1', [tenantId]);
-        if (periodCheck.rows.length === 0) {
-            console.log('⏰ Initializing default school periods...');
-            const defaultPeriods = [
-                { name: 'Period 1', start: '08:00', end: '09:00', is_break: false },
-                { name: 'Period 2', start: '09:00', end: '10:00', is_break: false },
-                { name: 'Breakfast', start: '10:00', end: '10:30', is_break: true },
-                { name: 'Period 3', start: '10:30', end: '11:30', is_break: false },
-                { name: 'Period 4', start: '11:30', end: '12:30', is_break: false },
-                { name: 'Lunch', start: '12:30', end: '13:30', is_break: true },
-                { name: 'Period 5', start: '13:30', end: '14:30', is_break: false },
-                { name: 'Period 6', start: '14:30', end: '15:30', is_break: false }
-            ];
-            for (const p of defaultPeriods) {
-                await client.query(
-                    'INSERT INTO school.period_config (tenant_id, name, start_time, end_time, is_break) VALUES ($1, $2, $3, $4, $5)',
-                    [tenantId, p.name, p.start, p.end, p.is_break]
-                );
-            }
-        }
-
-        // 1.5 Ensure Roles exist
-        console.log('🎭 Initializing tenant roles from templates...');
-        const templates = await client.query('SELECT * FROM auth.role_template');
-        for (const tmpl of templates.rows) {
-            const existingRole = await client.query('SELECT id FROM auth.role WHERE tenant_id = $1 AND slug = $2 AND is_deleted = FALSE', [tenantId, tmpl.slug]);
-            if (existingRole.rows.length === 0) {
-                const dataScope = typeof tmpl.data_scope === 'string' ? tmpl.data_scope : JSON.stringify(tmpl.data_scope);
-                await client.query(`
-                    INSERT INTO auth.role (tenant_id, slug, name, description, tier, is_system, data_scope)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7)
-                `, [tenantId, tmpl.slug, tmpl.name, tmpl.description, tmpl.tier, tmpl.is_system, dataScope]);
-            }
-        }
-
-        // 2. Get Roles
-        const roleRes = await client.query('SELECT id, slug FROM auth.role WHERE tenant_id = $1 OR tenant_id IS NULL', [tenantId]);
+        // 2. Roles
+        const roleRes = await client.query("SELECT id, slug FROM auth.role WHERE tenant_id = $1 OR tenant_id IS NULL", [tenantId]);
         const roleMap = Object.fromEntries(roleRes.rows.map(r => [r.slug, r.id]));
-        
-        const getRole = (slug: string) => roleMap[slug] || Object.values(roleMap)[0];
 
-        console.log('👑 Creating Management Staff...');
-        await createUser(client, tenantId, 'admin@luviaedu.com', getRole('system_admin'));
-        const schoolAdminUserId = await createUser(client, tenantId, 'office@demo.edu', getRole('school_admin'));
+        // 2.5 Staff
+        console.log('👑 Creating Management & Faculty...');
+        const adminId = await createUser(client, tenantId, 'office@demo.edu', roleMap['school_admin']);
         await client.query('INSERT INTO school.staff (tenant_id, user_id, first_name, last_name, employee_code, designation) VALUES ($1, $2, $3, $4, $5, $6)',
-            [tenantId, schoolAdminUserId, 'Sanjay', 'Gupta', 'ADM-001', 'School Administrator']);
-        const principalUserId = await createUser(client, tenantId, 'principal@demo.edu', getRole('principal'));
-        await client.query('INSERT INTO school.staff (tenant_id, user_id, first_name, last_name, employee_code, designation) VALUES ($1, $2, $3, $4, $5, $6)',
-            [tenantId, principalUserId, 'Dr. Rajesh', 'Khanna', 'PRN-001', 'Principal']);
+            [tenantId, adminId, 'Sanjay', 'Gupta', 'ADM-001', 'School Administrator']);
 
-        // 3. Create 20 Teachers
-        console.log('👨‍🏫 Creating 20 Teachers...');
-        const teacherIds = [];
-        for (let i = 1; i <= 20; i++) {
-            const isMale = Math.random() > 0.4;
-            const fName = isMale ? FIRST_NAMES_MALE[Math.floor(Math.random() * FIRST_NAMES_MALE.length)] : FIRST_NAMES_FEMALE[Math.floor(Math.random() * FIRST_NAMES_FEMALE.length)];
-            const lName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
-            const email = `teacher${i}@demo.edu`;
-            const userId = await createUser(client, tenantId, email, getRole('teacher'));
-            const staffRes = await client.query('INSERT INTO school.staff (tenant_id, user_id, first_name, last_name, employee_code, designation, phone) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                [tenantId, userId, fName, lName, `TCH-${100 + i}`, 'TGT Teacher', `99887766${i.toString().padStart(2, '0')}`]);
-            teacherIds.push(staffRes.rows[0].id);
+        const principalId = await createUser(client, tenantId, 'principal@demo.edu', roleMap['principal']);
+        await client.query('INSERT INTO school.staff (tenant_id, user_id, first_name, last_name, employee_code, designation) VALUES ($1, $2, $3, $4, $5, $6)',
+            [tenantId, principalId, 'Dr. Rajesh', 'Khanna', 'PRN-001', 'Principal']);
+
+        for (let i = 1; i <= 5; i++) {
+            const tId = await createUser(client, tenantId, `teacher${i}@demo.edu`, roleMap['teacher']);
+            await client.query('INSERT INTO school.staff (tenant_id, user_id, first_name, last_name, employee_code, designation) VALUES ($1, $2, $3, $4, $5, $6)',
+                [tenantId, tId, `Teacher`, `${i}`, `TCH-${i.toString().padStart(3, '0')}`, 'Senior Faculty']);
         }
 
-        // 4. Create Grades and Classrooms
-        console.log('🏫 Setting up Grades and Classrooms...');
+        // 3. Grades & Subjects
+        console.log('🏫 Setting up Grades & Subjects...');
         const gradeIds = [];
-        const classroomIdsByGrade: Record<number, number[]> = {};
-        for (let i = 1; i <= 10; i++) {
-            const gradeRes = await client.query('INSERT INTO school.grade (tenant_id, name, slug, sequence_order) VALUES ($1, $2, $3, $4) RETURNING id', [tenantId, `Grade ${i}`, `grade-${i}`, i]);
-            const gId = gradeRes.rows[0].id;
+        const classroomIds = [];
+        const subjectIds: number[] = [];
+        for (let i = 1; i <= 5; i++) {
+            const gRes = await client.query('INSERT INTO school.grade (tenant_id, name, slug, sequence_order) VALUES ($1, $2, $3, $4) RETURNING id', [tenantId, `Grade ${i}`, `grade-${i}`, i]);
+            const gId = gRes.rows[0].id;
             gradeIds.push(gId);
-            classroomIdsByGrade[gId] = [];
-            const sectionCount = i === 10 ? 3 : 2;
-            for (let s = 0; s < sectionCount; s++) {
-                const section = String.fromCharCode(65 + s);
-                const classRes = await client.query('INSERT INTO school.classroom (tenant_id, academic_year_id, grade_id, name, section) VALUES ($1, $2, $3, $4, $5) RETURNING id', [tenantId, ayId, gId, `Class ${i}-${section}`, section]);
-                classroomIdsByGrade[gId].push(classRes.rows[0].id);
-            }
-            const gradeSubjects = [...COMMON_SUBJECTS, i >= 8 ? 'Physics' : 'Science', i >= 8 ? 'Chemistry' : null, i >= 8 ? 'Biology' : null].filter(Boolean);
-            for (const subName of gradeSubjects) {
-                await client.query('INSERT INTO school.subject (tenant_id, grade_id, name, code) VALUES ($1, $2, $3, $4)', [tenantId, gId, subName, `${(subName as string).substring(0, 3).toUpperCase()}-${i}`]);
+            
+            const cRes = await client.query('INSERT INTO school.classroom (tenant_id, academic_year_id, grade_id, name, section) VALUES ($1, $2, $3, $4, $5) RETURNING id', [tenantId, ayId, gId, `Class ${i}-A`, 'A']);
+            classroomIds.push(cRes.rows[0].id);
+
+            for (const sub of COMMON_SUBJECTS) {
+                const sRes = await client.query('INSERT INTO school.subject (tenant_id, grade_id, name, code) VALUES ($1, $2, $3, $4) RETURNING id', [tenantId, gId, sub, `${sub.substring(0,3).toUpperCase()}-${i}`]);
+                subjectIds.push(sRes.rows[0].id);
             }
         }
 
-        // 5. Create 500 Students
-        console.log('👶 Enrolling 500 Students...');
-        let studentCount = 0;
-        for (const gId of gradeIds) {
-            const classrooms = classroomIdsByGrade[gId];
-            const gradeNum = gradeIds.indexOf(gId) + 1;
-            for (let s = 0; s < 50; s++) {
-                studentCount++;
-                const isMale = Math.random() > 0.5;
-                const fName = isMale ? FIRST_NAMES_MALE[Math.floor(Math.random() * FIRST_NAMES_MALE.length)] : FIRST_NAMES_FEMALE[Math.floor(Math.random() * FIRST_NAMES_FEMALE.length)];
-                const lName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
-                const email = `student${studentCount}@demo.edu`;
-                const userId = await createUser(client, tenantId, email, getRole('student'));
-                const studentRes = await client.query('INSERT INTO school.student (tenant_id, user_id, admission_no, first_name, last_name, gender, date_of_birth, religion) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-                    [tenantId, userId, `ADM-2026-${studentCount.toString().padStart(4, '0')}`, fName, lName, isMale ? 'male' : 'female', `${2026 - (gradeNum + 5)}-05-20`, RELIGIONS[Math.floor(Math.random() * RELIGIONS.length)]]);
-                const studentId = studentRes.rows[0].id;
-                const classroomId = classrooms[s % classrooms.length];
-                await client.query('INSERT INTO school.student_enrollment (tenant_id, academic_year_id, student_id, classroom_id, roll_number, status) VALUES ($1, $2, $3, $4, $5, $6)',
-                    [tenantId, ayId, studentId, classroomId, ((s % (50 / classrooms.length)) + 1).toString(), 'active']);
+        // 4. Fee Setup
+        console.log('💰 Configuring Fee Structures...');
+        const feeHeadRes = await client.query("INSERT INTO school.fee_head (tenant_id, name, ledger_account_id) VALUES ($1, 'Tuition Fee', (SELECT id FROM accounting.chart_of_accounts WHERE code = '400000' LIMIT 1)) RETURNING id", [tenantId]);
+        const feeHeadId = feeHeadRes.rows[0].id;
 
-                // 6. Create Parent for this student
-                const parentFName = isMale ? FIRST_NAMES_MALE[Math.floor(Math.random() * FIRST_NAMES_MALE.length)] : FIRST_NAMES_FEMALE[Math.floor(Math.random() * FIRST_NAMES_FEMALE.length)];
-                const parentEmail = `parent${studentCount}@demo.edu`;
-                const parentUserId = await createUser(client, tenantId, parentEmail, getRole('parent'));
+        const fsRes = await client.query("INSERT INTO school.fee_structure (tenant_id, academic_year_id, name) VALUES ($1, $2, 'Standard Annual Fee') RETURNING id", [tenantId, ayId]);
+        const fsId = fsRes.rows[0].id;
 
-                const guardianRes = await client.query(
-                    'INSERT INTO school.guardian (tenant_id, user_id, first_name, last_name, gender, phone, email) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                    [tenantId, parentUserId, parentFName, lName, Math.random() > 0.5 ? 'male' : 'female', `900000${studentCount.toString().padStart(4, '0')}`, parentEmail]
-                );
+        await client.query("INSERT INTO school.fee_structure_item (fee_structure_id, fee_head_id, amount, installment_name) VALUES ($1, $2, 5000, 'Term 1'), ($1, $2, 5000, 'Term 2')", [fsId, feeHeadId]);
 
-                await client.query(
-                    'INSERT INTO school.student_guardian (tenant_id, student_id, guardian_id, relation, is_emergency) VALUES ($1, $2, $3, $4, $5)',
-                    [tenantId, studentId, guardianRes.rows[0].id, 'Father', true]
-                );
-            }
-            console.log(`... Grade ${gradeNum} complete`);
+        // 5. Students
+        console.log('👶 Enrolling 50 Students & Generating Invoices...');
+        for (let i = 1; i <= 50; i++) {
+            const isMale = Math.random() > 0.5;
+            const fName = isMale ? FIRST_NAMES_MALE[i % 10] : FIRST_NAMES_FEMALE[i % 10];
+            const lName = LAST_NAMES[i % 10];
+            const email = `student_${i}_${Date.now()}@demo.edu`;
+            
+            const uId = await createUser(client, tenantId, email, roleMap['student']);
+            const sRes = await client.query('INSERT INTO school.student (tenant_id, user_id, admission_no, first_name, last_name, gender, religion) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id', 
+                [tenantId, uId, `ADM-26-${1000+i}`, fName, lName, isMale ? 'male' : 'female', RELIGIONS[i % 5]]);
+            const sId = sRes.rows[0].id;
+
+            const cId = classroomIds[i % classroomIds.length];
+            await client.query('INSERT INTO school.student_enrollment (tenant_id, academic_year_id, student_id, classroom_id, status) VALUES ($1, $2, $3, $4, $5)', [tenantId, ayId, sId, cId, 'active']);
+
+            // Accounting Sync
+            const pRes = await client.query('INSERT INTO accounting.partner (tenant_id, name, type, external_ref_type, external_ref_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                [tenantId, `${fName} ${lName}`, 'customer', 'student', sId]);
+            const pId = pRes.rows[0].id;
+
+            // Allocation & Invoice
+            const sfaRes = await client.query('INSERT INTO school.student_fee_allocation (tenant_id, student_id, fee_structure_id, academic_year_id) VALUES ($1, $2, $3, $4) RETURNING id', [tenantId, sId, fsId, ayId]);
+            const sfaId = sfaRes.rows[0].id;
+
+            const invRes = await client.query(`INSERT INTO accounting.invoice (tenant_id, partner_id, invoice_no, total_amount, net_amount, due_amount, status, source_type, source_id) 
+                VALUES ($1, $2, $3, 10000, 10000, 10000, 'unpaid', 'fee_group', $4) RETURNING id`, [tenantId, pId, `INV-26-${2000+i}`, sfaId]);
+            const invId = invRes.rows[0].id;
+
+            // Invoice Lines (DB Level)
+            await client.query(`INSERT INTO accounting.invoice_line (tenant_id, invoice_id, description, quantity, unit_price, amount, ledger_account_id)
+                VALUES ($1, $2, 'Tuition Fee - Term 1', 1, 5000, 5000, $3), ($1, $2, 'Tuition Fee - Term 2', 1, 5000, 5000, $3)`,
+                [tenantId, invId, feeHeadId]);
+
+            await client.query("INSERT INTO school.fee_installment (allocation_id, fee_structure_item_id, invoice_id, amount_due, status, due_date) VALUES ($1, (SELECT id FROM school.fee_structure_item WHERE fee_structure_id = $2 LIMIT 1), $3, 5000, 'UNPAID', CURRENT_DATE)", [sfaId, fsId, invId]);
         }
+
+        // 6. Exams
+        console.log('📝 Seeding Mid-Term Results...');
+        const exRes = await client.query("INSERT INTO school.exam (tenant_id, academic_year_id, name, exam_type, start_date, end_date, is_published, status) VALUES ($1, $2, 'Mid-Term 2026', 'periodic', CURRENT_DATE, CURRENT_DATE + 7, true, 'published') RETURNING id", [tenantId, ayId]);
+        const exId = exRes.rows[0].id;
+
+        for (let i = 0; i < 3; i++) {
+            const paperRes = await client.query("INSERT INTO school.exam_paper (tenant_id, exam_id, subject_id, max_marks, passing_marks, exam_date, start_time, end_time) VALUES ($1, $2, $3, 100, 35, CURRENT_DATE, '09:00', '12:00') RETURNING id", [tenantId, exId, subjectIds[i]]);
+            const paperId = paperRes.rows[0].id;
+
+            await client.query(`INSERT INTO school.exam_marks (tenant_id, exam_id, paper_id, student_id, marks_obtained) 
+                SELECT 1, $1, $2, id, floor(random() * 50 + 50) FROM school.student`, [exId, paperId]);
+        }
+
         await client.query('COMMIT');
-        console.log('✅ Seeding Completed!');
+        console.log('✅ Seeding Completed Successfully!');
     } catch (error) {
         if (client) await client.query('ROLLBACK');
         console.error('❌ Seeding failed:', error);

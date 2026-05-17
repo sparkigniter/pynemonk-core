@@ -22,6 +22,11 @@ export default class LeaveService {
     }
 
     public async approveLeave(tenantId: number, applicationId: number, adminStaffId: number, remarks: string) {
+        const app = await this.leaveHelper.getApplication(tenantId, applicationId);
+        if (!app) throw new Error("Leave application not found");
+        if (app.staff_id === adminStaffId) {
+            throw new Error("You cannot approve your own leave application.");
+        }
         return this.leaveHelper.updateStatus(tenantId, applicationId, {
             status: 'approved',
             approved_by: adminStaffId,
@@ -30,6 +35,11 @@ export default class LeaveService {
     }
 
     public async rejectLeave(tenantId: number, applicationId: number, adminStaffId: number, remarks: string) {
+        const app = await this.leaveHelper.getApplication(tenantId, applicationId);
+        if (!app) throw new Error("Leave application not found");
+        if (app.staff_id === adminStaffId) {
+            throw new Error("You cannot reject your own leave application.");
+        }
         return this.leaveHelper.updateStatus(tenantId, applicationId, {
             status: 'rejected',
             approved_by: adminStaffId,

@@ -33,6 +33,7 @@ export const AcademicsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             const active = data.find((y: any) => y.is_current);
             if (active) {
                 setCurrentYear(active);
+                localStorage.setItem('active_academic_year_id', active.id.toString());
             }
         } catch (err) {
             console.error('Failed to fetch academic years:', err);

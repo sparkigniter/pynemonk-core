@@ -25,6 +25,7 @@ import leaveRouter from "./api/modules/leave/routes.js";
 import payrollRouter from "./api/modules/payroll/routes.js";
 import systemRouter from "./api/modules/system/routes.js";
 import feeRouter from "./api/modules/finance/routes.js";
+import plannerRouter from "./api/modules/planner/routes.js";
 import { AcademicYearMiddleware } from "./api/core/middleware/AcademicYearMiddleware.js";
 import { requireAuth } from "./api/core/middleware/requireAuth.js";
 
@@ -71,3 +72,4 @@ router.use("/school/leaves", leaveRouter);
 router.use("/school/payroll", payrollRouter);
 router.use("/school/system", systemRouter);
 router.use("/school/finance", feeRouter);
+router.use("/school/planners", plannerRouter);

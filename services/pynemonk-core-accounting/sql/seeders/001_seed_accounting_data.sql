@@ -136,7 +136,7 @@ BEGIN
         -- 7. Register Bank Accounts
         INSERT INTO accounting.bank_account (tenant_id, name, bank_name, account_no, gl_account_id, opening_balance)
         VALUES (r_tenant.id, 'School Main Account', 'National Education Bank', '9988776655', v_coa_bank_id, 250000.00)
-        ON CONFLICT DO NOTHING;
+        ON CONFLICT (tenant_id, name) DO NOTHING;
 
         -- Only add realistic samples for demo-like tenants
         IF r_tenant.slug IN ('demo', 'school-1') THEN

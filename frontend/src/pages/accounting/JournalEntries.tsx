@@ -3,7 +3,7 @@ import {
     Plus, Search, Filter, Download, 
     Calendar, MoreVertical, CheckCircle2,
     Clock, ArrowRightLeft, FileText,
-    Loader2, AlertCircle
+    Loader2, AlertCircle, TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getJournals, type JournalEntry } from '../../api/accounting.api';
@@ -45,23 +45,25 @@ export default function JournalEntries() {
     if (loading && journals.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                <p className="text-[var(--text-muted)] font-medium">Loading ledger transactions...</p>
+                <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Mapping Ledger Transactions...</p>
             </div>
         );
     }
 
     if (error && journals.length === 0) {
         return (
-            <div className="card p-12 flex flex-col items-center justify-center text-center gap-4 border-rose-100 bg-rose-50/20">
-                <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center text-rose-500">
-                    <AlertCircle size={32} />
+            <div className="premium-card p-12 flex flex-col items-center justify-center text-center gap-6 border-rose-100 bg-rose-50/20">
+                <div className="w-20 h-20 rounded-[2rem] bg-[var(--card-bg)] flex items-center justify-center text-rose-500 shadow-xl shadow-rose-100">
+                    <AlertCircle size={40} />
                 </div>
-                <h3 className="text-lg font-bold text-slate-800">Connection Error</h3>
-                <p className="text-[var(--text-muted)] max-w-sm">{error}</p>
+                <div>
+                    <h3 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Sync Disruption</h3>
+                    <p className="text-[var(--text-muted)] max-w-sm font-medium mt-1">{error}</p>
+                </div>
                 <button 
                     onClick={() => fetchJournals()}
-                    className="mt-2 px-6 py-2 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 transition-colors"
+                    className="mt-2 px-8 py-4 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/20"
                 >
                     Retry Connection
                 </button>
@@ -70,11 +72,11 @@ export default function JournalEntries() {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in-up">
+        <div className="p-8 space-y-10 max-w-[1600px] mx-auto animate-in fade-in duration-500">
             {isFormOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 modal-overlay backdrop-blur-sm" onClick={() => setIsFormOpen(false)} />
-                    <div className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden bg-[var(--card-bg)] rounded-3xl shadow-2xl animate-in slide-in-from-bottom-8 duration-500">
+                    <div className="relative w-full max-w-5xl max-h-[90vh] overflow-hidden bg-[var(--card-bg)] rounded-[3rem] shadow-2xl animate-in slide-in-from-bottom-8 duration-500 border border-[var(--card-border)]/50">
                         <JournalEntryForm 
                             onClose={() => setIsFormOpen(false)} 
                             onSuccess={fetchJournals} 
@@ -83,23 +85,28 @@ export default function JournalEntries() {
                 </div>
             )}
 
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 font-heading tracking-tight">Journal Entries</h1>
-                    <p className="text-[var(--text-muted)] text-sm mt-1">Record and manage all manual accounting entries and adjustments.</p>
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-4">
+                <div className="space-y-1">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                        <ArrowRightLeft size={12} className="text-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Double-Entry Ledger</span>
+                    </div>
+                    <h1 className="text-4xl font-black text-[var(--text-main)] tracking-tight">Journal Entries</h1>
+                    <p className="text-[var(--text-muted)] font-medium text-sm mt-1">Manual accounting entries and adjustments for LuviaEdu.</p>
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] text-slate-600 rounded-xl hover:bg-slate-50 transition-colors shadow-sm font-medium text-sm">
-                        <Download size={16} />
+                
+                <div className="flex items-center gap-3">
+                    <button className="flex items-center gap-2 px-6 py-3 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all">
+                        <Download size={18} />
                         Export
                     </button>
                     {can('journal:write') && (
                         <button 
                             onClick={() => setIsFormOpen(true)}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-theme-primary text-white rounded-xl hover:bg-theme-primary/90 transition-colors shadow-sm font-medium text-sm"
+                            className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                         >
-                            <Plus size={16} />
+                            <Plus size={18} />
                             New Entry
                         </button>
                     )}
@@ -107,119 +114,119 @@ export default function JournalEntries() {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="card p-5 border-l-4 border-l-theme-primary">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="premium-card p-6 border-l-4 border-l-primary group">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">Posted Entries</p>
-                            <h3 className="text-2xl font-bold text-slate-800">{stats.posted} Entries</h3>
+                            <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">Posted Entries</p>
+                            <h3 className="text-3xl font-black text-[var(--text-main)] tracking-tight">{stats.posted} <span className="text-xs text-[var(--text-muted)] uppercase tracking-widest">Active</span></h3>
                         </div>
-                        <div className="w-10 h-10 rounded-xl bg-theme-primary/10 text-theme-primary flex items-center justify-center">
-                            <CheckCircle2 size={20} />
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <CheckCircle2 size={24} />
                         </div>
                     </div>
                 </div>
-                <div className="card p-5 border-l-4 border-l-amber-500">
+                <div className="premium-card p-6 border-l-4 border-l-amber-500 group">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">Draft Entries</p>
-                            <h3 className="text-2xl font-bold text-slate-800">{stats.drafts} Drafts</h3>
+                            <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">Draft Entries</p>
+                            <h3 className="text-3xl font-black text-[var(--text-main)] tracking-tight">{stats.drafts} <span className="text-xs text-[var(--text-muted)] uppercase tracking-widest">Pending</span></h3>
                         </div>
-                        <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                            <Clock size={20} />
+                        <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Clock size={24} />
                         </div>
                     </div>
                 </div>
-                <div className="card p-5 border-l-4 border-l-emerald-500">
+                <div className="premium-card p-6 border-l-4 border-l-emerald-500 group">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">Total Transaction Volume</p>
-                            <h3 className="text-2xl font-bold text-slate-800">{formatCurrency(stats.totalVolume)}</h3>
+                            <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">Total Volume</p>
+                            <h3 className="text-3xl font-black text-[var(--text-main)] tracking-tight font-mono">{formatCurrency(stats.totalVolume)}</h3>
                         </div>
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                            <ArrowRightLeft size={20} />
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <TrendingUp size={24} />
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className="card overflow-hidden">
-                <div className="p-4 border-b border-[var(--card-border)] bg-slate-50/50 flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="premium-card overflow-hidden border-none shadow-2xl shadow-slate-200/50">
+                <div className="p-6 border-b border-[var(--card-border)]/50 bg-slate-50/50 flex flex-col sm:flex-row gap-6 items-center justify-between">
                     <div className="flex items-center gap-4 w-full sm:w-auto">
-                        <div className="relative flex-1 sm:w-64">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                            <input type="text" placeholder="Search entries..." className="w-full pl-9 pr-4 py-2 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                        <div className="relative flex-1 sm:w-80">
+                            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                            <input type="text" placeholder="Search entries by ID or reference..." className="w-full pl-12 pr-6 py-3.5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-primary/5 transition-all" />
                         </div>
-                        <button className="flex items-center gap-2 px-3 py-2 bg-[var(--card-bg)] border border-[var(--card-border)] text-slate-600 rounded-xl text-sm hover:bg-[var(--card-bg)] transition-colors">
-                            <Filter size={14} />
+                        <button className="flex items-center gap-2 px-6 py-3.5 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all shadow-sm">
+                            <Filter size={16} />
                             Filter
                         </button>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase tracking-wider">All</button>
-                        <button className="px-3 py-1.5 text-[var(--text-muted)] hover:text-slate-600 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">Posted</button>
-                        <button className="px-3 py-1.5 text-[var(--text-muted)] hover:text-slate-600 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors">Drafts</button>
+                    <div className="flex items-center gap-2 bg-[var(--card-bg)] p-1.5 rounded-2xl border border-[var(--card-border)]/50 shadow-inner overflow-x-auto no-scrollbar">
+                        <button className="px-6 py-2.5 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">All</button>
+                        <button className="px-6 py-2.5 text-[var(--text-muted)] hover:text-primary rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Posted</button>
+                        <button className="px-6 py-2.5 text-[var(--text-muted)] hover:text-primary rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Drafts</button>
                     </div>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50/50 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] border-b border-[var(--card-border)]">
-                                <th className="py-4 px-6">Date & ID</th>
-                                <th className="py-4 px-6">Description / Ref</th>
-                                <th className="py-4 px-6 text-right">Amount</th>
-                                <th className="py-4 px-6">Status</th>
-                                <th className="py-4 px-6">Created By</th>
-                                <th className="py-4 px-6 w-10"></th>
+                            <tr className="bg-slate-50/50 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] border-b border-[var(--card-border)]/50">
+                                <th className="py-6 px-8">Date & ID</th>
+                                <th className="py-6 px-8">Description / Ref</th>
+                                <th className="py-6 px-8 text-right">Debit Balance</th>
+                                <th className="py-6 px-8">Status</th>
+                                <th className="py-6 px-8">Created By</th>
+                                <th className="py-6 px-8 w-10"></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-[var(--card-border)]/10">
                             {journals.map((journal) => {
                                 const totalAmount = journal.items?.reduce((sum, item) => sum + (Number(item.debit) || 0), 0) || 0;
                                 return (
-                                    <tr key={journal.id} className="hover:bg-slate-50/50 transition-colors group">
-                                        <td className="py-4 px-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-[var(--text-muted)]">
-                                                    <FileText size={18} />
+                                    <tr key={journal.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
+                                        <td className="py-6 px-8">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
+                                                    <FileText size={20} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold text-slate-800">JV-{journal.id}</p>
-                                                    <p className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
-                                                        <Calendar size={10} />
+                                                    <p className="text-sm font-black text-[var(--text-main)] tracking-tight uppercase">JV-{journal.id}</p>
+                                                    <p className="text-[10px] font-black text-[var(--text-muted)] flex items-center gap-1.5 uppercase mt-1">
+                                                        <Calendar size={12} className="text-primary" />
                                                         {new Date(journal.entry_date).toLocaleDateString()}
                                                     </p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="py-4 px-6">
-                                            <p className="text-sm font-medium text-slate-700 truncate max-w-xs">{journal.description}</p>
-                                            <p className="text-[10px] font-mono text-[var(--text-muted)] uppercase">{journal.reference_no || 'NO REF'}</p>
+                                        <td className="py-6 px-8">
+                                            <p className="text-sm font-bold text-[var(--text-main)] truncate max-w-xs">{journal.description}</p>
+                                            <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-1">{journal.reference_no || 'NO EXTERNAL REF'}</p>
                                         </td>
-                                        <td className="py-4 px-6 text-right">
-                                            <span className="text-sm font-mono font-bold text-[var(--text-main)]">${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        <td className="py-6 px-8 text-right">
+                                            <span className="text-sm font-black text-[var(--text-main)] font-mono">{formatCurrency(totalAmount)}</span>
                                         </td>
-                                        <td className="py-4 px-6">
-                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                                journal.status === 'posted' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                                        <td className="py-6 px-8">
+                                            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
+                                                journal.status === 'posted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'
                                             }`}>
-                                                {journal.status === 'posted' ? <CheckCircle2 size={10} /> : <Clock size={10} />}
+                                                <div className={`w-2 h-2 rounded-full ${journal.status === 'posted' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                                                 {journal.status || 'posted'}
                                             </span>
                                         </td>
-                                        <td className="py-4 px-6">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                                        <td className="py-6 px-8">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400">
                                                     S
                                                 </div>
-                                                <span className="text-xs text-slate-600 font-medium">System</span>
+                                                <span className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-widest">System</span>
                                             </div>
                                         </td>
-                                        <td className="py-4 px-6 text-right">
-                                            <button className="p-1.5 text-slate-300 hover:text-slate-600 rounded-lg hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-all">
-                                                <MoreVertical size={16} />
+                                        <td className="py-6 px-8 text-right">
+                                            <button className="p-2 text-[var(--text-muted)] hover:text-primary hover:bg-primary/5 rounded-xl transition-all">
+                                                <MoreVertical size={18} />
                                             </button>
                                         </td>
                                     </tr>
@@ -229,14 +236,15 @@ export default function JournalEntries() {
                     </table>
                 </div>
 
-                <div className="p-4 bg-slate-50/50 border-t border-[var(--card-border)] flex items-center justify-between">
-                    <p className="text-xs text-[var(--text-muted)]">Showing 1 to 4 of 128 entries</p>
-                    <div className="flex items-center gap-2">
-                        <button className="px-3 py-1.5 border border-[var(--card-border)] rounded-lg text-xs font-bold text-[var(--text-muted)] cursor-not-allowed">Previous</button>
-                        <button className="px-3 py-1.5 border border-[var(--card-border)] rounded-lg text-xs font-bold text-slate-600 hover:bg-[var(--card-bg)]">Next</button>
+                <div className="p-6 bg-slate-50/50 border-t border-[var(--card-border)]/50 flex items-center justify-between">
+                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Institutional Ledger Audit History</p>
+                    <div className="flex items-center gap-3">
+                        <button className="px-6 py-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest hover:bg-white transition-all shadow-sm">Previous</button>
+                        <button className="px-6 py-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest hover:bg-white transition-all shadow-sm">Next</button>
                     </div>
                 </div>
             </div>
         </div>
     );
 }
+

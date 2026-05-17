@@ -21,14 +21,14 @@ export interface Student {
     previous_school?: string;
     medical_notes?: string;
     admission_date?: string;
-    status?: 'active' | 'pending' | 'withdrawn';
+    status?: 'active' | 'pending' | 'withdrawn' | 'transferred';
     classroom_name?: string;
     classroom_section?: string;
     enrollment_year_id?: number;
     logs?: any[];
     documents?: any[];
     avatar_url?: string;
-    fee_status?: 'paid' | 'unpaid' | 'partial' | 'overdue';
+    fee_status?: 'paid' | 'unpaid' | 'partial' | 'overdue' | 'no_invoices';
     classroom_id?: number;
     outstanding_balance?: number;
 }
@@ -45,6 +45,7 @@ export async function getStudentList(params?: {
     nationality?: string;
     grade_id?: number;
     unenrolled?: boolean;
+    unallocated_only?: boolean;
 }): Promise<PaginatedResponse<Student>> {
     const query = new URLSearchParams();
     if (params) {
@@ -129,9 +130,10 @@ export async function updateAdmissionWorkflow(id: number, data: { stage: string;
     });
 }
 
-export async function finalizeAdmissionWorkflow(id: number): Promise<any> {
+export async function finalizeAdmissionWorkflow(id: number, data?: any): Promise<any> {
     return request<any>(`/school/admissions/workflow/${id}/finalize`, {
         method: 'POST',
+        body: JSON.stringify(data)
     });
 }
 
@@ -145,6 +147,21 @@ export async function getAdmissionApplication(id: number): Promise<any> {
 
 export async function addGuardian(studentId: number, data: any): Promise<any> {
     return request<any>(`/school/students/${studentId}/guardians`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function getStudentAnalytics(studentId: number): Promise<any> {
+    return request<any>(`/school/students/${studentId}/analytics`);
+}
+
+export async function getCertificateTemplate(type: string): Promise<any> {
+    return request<any>(`/school/admissions/templates/${type}`);
+}
+
+export async function saveCertificateTemplate(data: { name: string; type: string; html_content: string }): Promise<any> {
+    return request<any>('/school/admissions/templates', {
         method: 'POST',
         body: JSON.stringify(data),
     });

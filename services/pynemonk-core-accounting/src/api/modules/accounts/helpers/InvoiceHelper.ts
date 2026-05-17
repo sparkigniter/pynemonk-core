@@ -12,12 +12,12 @@ export default class InvoiceHelper {
     ) {}
 
     public async list(tenantId: number, options: any = {}): Promise<any[]> {
-        // Base query using a CTE to unify manual and fee-based invoices
+        // Base query using a CTE to unify formal invoices and uninvoiced installments
         let query = `
             WITH all_invoices AS (
-                -- 1. Manual/Generic Invoices
+                -- 1. Formal Invoices (Unified Generic + Migrated Fees)
                 SELECT 
-                    i.id, i.tenant_id, i.invoice_no, i.total_amount, i.net_amount, i.paid_amount, i.due_amount, 
+                    'GEN-' || i.id as id, i.tenant_id, i.invoice_no, i.total_amount, i.net_amount, i.paid_amount, i.due_amount, 
                     i.status, i.source_type, i.created_at, i.due_date,
                     p.name as partner_name, p.type as partner_type
                 FROM accounting.invoice i
@@ -26,14 +26,24 @@ export default class InvoiceHelper {
 
                 UNION ALL
 
-                -- 2. Fee Invoices (Joined with students as partners)
+                -- 2. Uninvoiced Fee Installments (Grouped by Allocation)
+                -- These represent 'Recognized' but not yet formally 'Invoiced' receivables
                 SELECT 
-                    fi.id, fi.tenant_id, fi.invoice_no, fi.total_amount, fi.net_amount, fi.paid_amount, fi.due_amount, 
-                    fi.status, COALESCE(fi.source_type, 'fee') as source_type, fi.created_at, fi.due_date,
+                    'ALLOC-' || sfa.id as id, sfa.tenant_id, 'ALLOC-' || sfa.id as invoice_no, 
+                    SUM(fi.amount_due) as total_amount, SUM(fi.amount_due) as net_amount, 
+                    SUM(fi.amount_paid) as paid_amount, SUM(fi.amount_due - fi.amount_paid) as due_amount,
+                    CASE 
+                        WHEN SUM(fi.amount_due - fi.amount_paid) <= 0 THEN 'paid'
+                        WHEN SUM(fi.amount_paid) > 0 THEN 'partial'
+                        ELSE 'unpaid'
+                    END as status,
+                    'fee_allocation' as source_type, MIN(fi.created_at) as created_at, MIN(fi.due_date) as due_date,
                     s.first_name || ' ' || s.last_name as partner_name, 'student' as partner_type
-                FROM accounting.fee_invoice fi
-                JOIN school.student s ON fi.student_id = s.id
-                WHERE fi.tenant_id = $1 AND fi.is_deleted = FALSE
+                FROM school.fee_installment fi
+                JOIN school.student_fee_allocation sfa ON fi.allocation_id = sfa.id
+                JOIN school.student s ON sfa.student_id = s.id
+                WHERE sfa.tenant_id = $1 AND fi.invoice_id IS NULL
+                GROUP BY sfa.id, sfa.tenant_id, s.first_name, s.last_name
             )
             SELECT * FROM all_invoices WHERE 1=1
         `;
@@ -126,19 +136,34 @@ export default class InvoiceHelper {
     public async getSummary(tenantId: number): Promise<any> {
         const query = `
             WITH all_receivables AS (
-                -- Generic Invoices
+                -- 1. Generic/Manual Invoices
                 SELECT due_amount, paid_amount, due_date, status 
                 FROM accounting.invoice 
                 WHERE tenant_id = $1 AND is_deleted = FALSE
+                
                 UNION ALL
-                -- Fee Invoices
+                
+                -- 2. Fee Invoices (Raised)
                 SELECT due_amount, paid_amount, due_date, status 
                 FROM accounting.fee_invoice 
                 WHERE tenant_id = $1 AND is_deleted = FALSE
+
+                UNION ALL
+
+                -- 3. Uninvoiced Fee Installments (Allocated but not yet raised as accounting invoices)
+                -- This ensures that 'Allocation' immediately reflects in AR
+                SELECT 
+                    (amount_due - amount_paid) as due_amount, 
+                    amount_paid, 
+                    due_date, 
+                    fi.status
+                FROM school.fee_installment fi
+                JOIN school.student_fee_allocation sfa ON fi.allocation_id = sfa.id
+                WHERE sfa.tenant_id = $1 AND fi.invoice_id IS NULL
             )
             SELECT 
                 COALESCE(SUM(due_amount), 0) as total_outstanding,
-                COALESCE(SUM(CASE WHEN due_date < CURRENT_DATE AND status != 'paid' THEN due_amount ELSE 0 END), 0) as overdue_amount,
+                COALESCE(SUM(CASE WHEN due_date < CURRENT_DATE AND LOWER(status) NOT IN ('paid', 'settled') THEN due_amount ELSE 0 END), 0) as overdue_amount,
                 COALESCE(SUM(paid_amount), 0) as total_collected,
                 COUNT(*) as invoice_count
             FROM all_receivables

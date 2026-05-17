@@ -5,13 +5,16 @@ import App from './App.tsx'
 import { ThemeProvider } from './contexts/ThemeContext.tsx'
 import { NotificationProvider } from './contexts/NotificationContext.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
+import { AcademicsProvider } from './contexts/AcademicsContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <NotificationProvider>
         <AuthProvider>
-          <App />
+          <AcademicsProvider>
+            <App />
+          </AcademicsProvider>
         </AuthProvider>
       </NotificationProvider>
     </ThemeProvider>

@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, Users, GraduationCap, CalendarCheck,
-    Settings, School, BookOpen, DollarSign, BarChart2,
+    Settings, School, BookOpen, BarChart2,
     ChevronRight, LogOut, ChevronDown, Building2, Layers,
     Calendar, RefreshCw, X, ClipboardList, Clock, Sparkles,
-    StickyNote, Zap, Shield, BookCheck, Activity, Terminal
+    StickyNote, Zap, Shield, BookCheck, Activity, Terminal,
+    Wallet, Gift, FileText, Landmark, Upload,
+    BarChart3, Scale
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAvailableIntegrations } from '../../api/integration.api';
@@ -38,7 +40,7 @@ const navigation = {
         },
         { 
             name: 'My Schedule', 
-            path: '/my-timetable', 
+            path: '/student/timetable', 
             icon: Calendar, 
             permissions: ['student.academic:read'],
             roleFilter: 'student' 
@@ -54,17 +56,33 @@ const navigation = {
         { name: 'Courses', path: '/courses', icon: BookOpen, permissions: ['class:read'], roleFilter: 'admin' },
         { name: 'Classrooms', path: '/classrooms', icon: Building2, permissions: ['class:read'], roleFilter: 'admin' },
         { name: 'Timetable', path: '/timetable', icon: Clock, permissions: ['timetable:read'], roleFilter: 'admin' },
+        { name: 'My Diary', path: '/student/diary', icon: StickyNote, permissions: ['student.academic:read'], roleFilter: 'student' },
         { name: 'Exams', path: '/exams', icon: ClipboardList, permissions: ['exam:read'] },
         { name: 'Teacher Diary', path: '/teacher-diary', icon: StickyNote, permissions: ['teacher_note:read'] },
-        { name: 'Knowledge Hub', path: '/lms/library', icon: BookOpen, permissions: ['assignment:read'] },
         { name: 'Homework', path: '/homework', icon: BookCheck, permissions: ['assignment:read'] },
-        { name: 'Leave Management', path: '/leaves', icon: Calendar, permissions: ['staff.leave:read'], roleFilter: 'teacher' },
-        { name: 'Calendar', path: '/calendar', icon: Calendar, permissions: ['class:read'] },
+        { name: 'Knowledge Hub', path: '/lms/library', icon: BookOpen, permissions: ['assignment:read'] },
+        { name: 'Academic Planner', path: '/academic-planner', icon: Calendar, permissions: ['assignment:read'] },
+        { name: 'School Calendar', path: '/calendar', icon: Calendar, permissions: ['timetable:read'] },
+    ],
+    fees: [
+        { name: 'Fee Collection', path: '/fee-management?tab=overview', icon: Wallet, permissions: ['fee:read'] },
+        { name: 'Fee Structures', path: '/fee-management?tab=structures', icon: Layers, permissions: ['fee:read'] },
+        { name: 'Concessions', path: '/fee-management?tab=concessions', icon: Gift, permissions: ['fee:read'] },
+        { name: 'Fee Receipts', path: '/fee-management?tab=receipts', icon: FileText, permissions: ['fee:read'] },
+    ],
+    accounting: [
+        { name: 'Accounts Receivable', path: '/accounting/ar', icon: Wallet, permissions: ['accounting:read'] },
+        { name: 'Accounts Payable', path: '/accounting/ap', icon: Upload, permissions: ['accounting:read'] },
+        { name: 'Banking & Cash', path: '/accounting/banking', icon: Landmark, permissions: ['accounting:read'] },
+        { name: 'General Ledger', path: '/accounting/coa', icon: Scale, permissions: ['accounting:read'] },
+        { name: 'Financial Reports', path: '/accounting/reports', icon: BarChart3, permissions: ['accounting:read'] },
+        { name: 'Payroll & Salary', path: '/accounting/payroll', icon: Users, permissions: ['staff.payroll:read'] },
     ],
     people: [
         { name: 'Students', path: '/students', icon: GraduationCap, permissions: ['student:read', 'student.directory:read'] },
         { name: 'Faculty Records', path: '/teachers', icon: Users, permissions: ['staff:read', 'staff.directory:read'] },
         { name: 'Attendance', path: '/attendance', icon: CalendarCheck, permissions: ['student.attendance:read'] },
+        { name: 'Apply for Leave', path: '/leaves/apply', icon: Calendar, permissions: ['student.academic:read'], roleFilter: 'teacher' },
         { name: 'Leave Approvals', path: '/admin/leaves', icon: CalendarCheck, permissions: ['staff.leave:write'], roleFilter: 'admin' },
     ],
     operations: [
@@ -78,23 +96,6 @@ const navigation = {
                 { name: 'Workflow Builder', path: '/workflow-builder', permissions: ['settings:write'] },
             ]
         },
-        { 
-            name: 'Accounting', 
-            icon: DollarSign, 
-            permissions: ['accounting:read'],
-            children: [
-                { name: 'Workspace Hub', path: '/accounting/hub', permissions: ['fee:read'] },
-                { name: 'Accounts Payable', path: '/accounting/ap', permissions: ['accounting:read'] },
-                { name: 'Accounts Receivable', path: '/finance', permissions: ['fee:read'] },
-                { name: 'Institutional Fees', path: '/admin/finance', permissions: ['fee:write'], roleFilter: 'admin' },
-                { name: 'General Ledger', path: '/accounting/coa', permissions: ['coa:read'] },
-                { name: 'Banking & Cash', path: '/accounting/banking', permissions: ['accounting:read'] },
-                { name: 'Financial Reports', path: '/accounting/reports', permissions: ['report.financial:read'] },
-                { name: 'Payroll & Salary', path: '/accounting/payroll', permissions: ['staff.payroll:read'] },
-                { name: 'Fixed Assets', path: '#', permissions: ['accounting:write'], isPro: true },
-                { name: 'Journal Entries', path: '/accounting/journals', permissions: ['journal:read'] },
-            ]
-        },
         { name: 'Reports', path: '/reports', icon: BarChart2, permissions: ['report:read'] },
         { name: 'Integrations', path: '/integrations', icon: Zap, permissions: ['settings:write'] },
         { name: 'IAM Settings', path: '/iam', icon: Shield, permissions: ['settings:write'] },
@@ -103,7 +104,6 @@ const navigation = {
     system: [
         { name: 'Metrics', path: '/admin/metrics', icon: Activity, permissions: ['settings:write'], roleFilter: 'admin' },
         { name: 'System Logs', path: '/admin/logs', icon: Terminal, permissions: ['settings:read'], roleFilter: 'admin' },
-        { name: 'Master Settings', path: '/admin/settings', icon: Settings, permissions: ['settings:write'], roleFilter: 'admin' },
     ]
 };
 
@@ -114,6 +114,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
     const [dynamicItems, setDynamicItems] = useState<DynamicNavItem[]>([]);
     const { user, tenants, tenantFetchError, logout, can } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const switcherRef = useRef<HTMLDivElement>(null);
 
     const currentTenant = tenants.find(t => t.id === user?.tenant_id);
@@ -161,19 +162,33 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
         );
     };
 
-    const hasPermission = (item: any) => {
-        if (item.roleFilter) {
-            const roles = user?.roles || [];
-            const isTeacher = roles.includes('teacher');
-            const isPrincipal = roles.includes('principal');
-            const isAdmin = roles.includes('school_admin') || roles.includes('system_admin');
+    const hasPermission = (item: any): boolean => {
+        const roles = user?.roles || [];
+        const isAdmin = roles.includes('school_admin') || roles.includes('system_admin');
+        const isPrincipal = roles.includes('principal');
+        const isTeacher = roles.includes('teacher');
+        const isStudent = roles.includes('student');
 
-            if (item.roleFilter === 'teacher' && !isTeacher && !isPrincipal) return false;
-            if (item.roleFilter === 'admin' && isTeacher && !isPrincipal && !isAdmin) return false;
+        // 1. Role Filter Check
+        if (item.roleFilter) {
+            if (item.roleFilter === 'admin' && !isAdmin && !isPrincipal) return false;
+            if (item.roleFilter === 'teacher' && !isTeacher && !isPrincipal && !isAdmin) return false;
+            if (item.roleFilter === 'student' && !isStudent) return false;
         }
-        
-        if (!item.permissions || item.permissions.length === 0) return true;
-        return item.permissions.some((p: string) => can(p));
+
+        // 2. Permission Check (Self)
+        const canAccessSelf = !item.permissions || item.permissions.length === 0 || 
+                             item.permissions.some((p: string) => can(p));
+
+        if (!canAccessSelf) return false;
+
+        // 3. Recursive Child Check for Parent Menus
+        // A menu with children should only be visible if at least one child is accessible.
+        if (item.children && item.children.length > 0) {
+            return item.children.some((child: any) => hasPermission(child));
+        }
+
+        return true;
     };
 
     const handleSwitch = (slug: string) => {
@@ -199,12 +214,14 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                             text-[var(--sidebar-text)] hover:bg-white/5 hover:text-[var(--sidebar-text-active)]
                         `}
                     >
-                        <div
-                            className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
-                                text-slate-500 group-hover:text-[var(--sidebar-text-active)]`}
-                        >
-                            <Icon size={18} />
-                        </div>
+                        {Icon && (
+                            <div
+                                className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
+                                    text-slate-500 group-hover:text-[var(--sidebar-text-active)]`}
+                            >
+                                <Icon size={18} />
+                            </div>
+                        )}
                         {!collapsed && (
                             <>
                                 <span className="text-[13px] font-medium flex-1 text-left">{item.name}</span>
@@ -230,21 +247,28 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                 key={item.name}
                 to={item.path}
                 title={collapsed && !isChild ? item.name : undefined}
-                className={({ isActive }) =>
-                    `group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
+                className={() => {
+                    const fullCurrentPath = location.pathname + location.search;
+                    const isTrulyActive = fullCurrentPath === item.path || (location.pathname === item.path && !item.path.includes('?'));
+                    
+                    return `group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
                     ${collapsed && !isChild ? 'justify-center' : ''}
-                    ${isActive 
-                        ? 'bg-[var(--sidebar-active)] text-[var(--sidebar-text-active)] font-bold' 
-                        : 'text-[var(--sidebar-text)] hover:bg-white/5 hover:text-[var(--sidebar-text-active)]'}`
-                }
+                    ${isTrulyActive 
+                        ? 'bg-[var(--sidebar-active)] text-[var(--sidebar-text-active)] font-bold shadow-sm' 
+                        : 'text-[var(--sidebar-text)] hover:bg-white/5 hover:text-[var(--sidebar-text-active)]'}`;
+                }}
             >
-                {({ isActive }) => (
+                {() => {
+                    const fullCurrentPath = location.pathname + location.search;
+                    const isTrulyActive = fullCurrentPath === item.path || (location.pathname === item.path && !item.path.includes('?'));
+                    
+                    return (
                     <>
                         <div
                             className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
-                                ${isActive ? 'text-[var(--sidebar-text-active)]' : 'text-slate-500 group-hover:text-[var(--sidebar-text-active)]'}`}
+                                ${isTrulyActive ? 'text-[var(--sidebar-text-active)]' : 'text-slate-500 group-hover:text-[var(--sidebar-text-active)]'}`}
                         >
-                            <Icon size={18} />
+                            {Icon ? <Icon size={18} /> : <div className="w-1.5 h-1.5 rounded-full bg-current opacity-40" />}
                         </div>
                         {(!collapsed || isChild) && (
                             <div className="flex-1 flex items-center justify-between gap-2 overflow-hidden">
@@ -259,7 +283,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                             </div>
                         )}
                     </>
-                )}
+                )}}
             </NavLink>
         );
     };
@@ -365,56 +389,90 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
             {/* Nav */}
             <nav className="flex-1 py-6 px-3 space-y-7 overflow-y-auto custom-scrollbar">
                 {/* Main */}
-                <div className="space-y-1">
-                    {!collapsed && (
-                        <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
-                            Overview
-                        </p>
-                    )}
-                    {navigation.main.map((item) => renderNavItem(item))}
-                </div>
+                {navigation.main.some(hasPermission) && (
+                    <div className="space-y-1">
+                        {!collapsed && (
+                            <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                                Overview
+                            </p>
+                        )}
+                        {navigation.main.map((item) => renderNavItem(item))}
+                    </div>
+                )}
 
-                {/* People - Consistently placed */}
-                <div className="space-y-1">
-                    {!collapsed && (
-                        <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
-                            People
-                        </p>
-                    )}
-                    {navigation.people.map((item) => renderNavItem(item))}
-                </div>
+                {/* People */}
+                {navigation.people.some(hasPermission) && (
+                    <div className="space-y-1">
+                        {!collapsed && (
+                            <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                                People
+                            </p>
+                        )}
+                        {navigation.people.map((item) => renderNavItem(item))}
+                    </div>
+                )}
 
                 {/* Academic */}
-                <div className="space-y-1">
-                    {!collapsed && (
-                        <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
-                            Academic
-                        </p>
-                    )}
-                    {navigation.academic.map((item) => renderNavItem(item))}
-                    {dynamicItems.filter(i => i.group === 'academic').map((item) => renderNavItem(item))}
-                </div>
+                {(navigation.academic.some(hasPermission) || dynamicItems.some(i => i.group === 'academic' && hasPermission(i))) && (
+                    <div className="space-y-1">
+                        {!collapsed && (
+                            <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                                Academic Ops
+                            </p>
+                        )}
+                        {navigation.academic.map((item) => renderNavItem(item))}
+                        {dynamicItems.filter(i => i.group === 'academic').map((item) => renderNavItem(item))}
+                    </div>
+                )}
+
+                {/* Fees */}
+                {navigation.fees.some(hasPermission) && (
+                    <div className="space-y-1">
+                        {!collapsed && (
+                            <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                                Institution Fees
+                            </p>
+                        )}
+                        {navigation.fees.map((item) => renderNavItem(item))}
+                    </div>
+                )}
+
+                {/* Accounting */}
+                {navigation.accounting.some(hasPermission) && (
+                    <div className="space-y-1">
+                        {!collapsed && (
+                            <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                                Financial Accounting
+                            </p>
+                        )}
+                        {navigation.accounting.map((item) => renderNavItem(item))}
+                    </div>
+                )}
 
                 {/* Operations */}
-                <div className="space-y-1">
-                    {!collapsed && (
-                        <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
-                            Operations
-                        </p>
-                    )}
-                    {navigation.operations.map((item) => renderNavItem(item))}
-                    {dynamicItems.filter(i => i.group === 'operations' || !i.group).map((item) => renderNavItem(item))}
-                </div>
+                {(navigation.operations.some(hasPermission) || dynamicItems.some(i => (i.group === 'operations' || !i.group) && hasPermission(i))) && (
+                    <div className="space-y-1">
+                        {!collapsed && (
+                            <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                                Operations
+                            </p>
+                        )}
+                        {navigation.operations.map((item) => renderNavItem(item))}
+                        {dynamicItems.filter(i => i.group === 'operations' || !i.group).map((item) => renderNavItem(item))}
+                    </div>
+                )}
                 
                 {/* System */}
-                <div className="space-y-1">
-                    {!collapsed && (
-                        <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
-                            System
-                        </p>
-                    )}
-                    {navigation.system.map((item) => renderNavItem(item))}
-                </div>
+                {navigation.system.some(hasPermission) && (
+                    <div className="space-y-1">
+                        {!collapsed && (
+                            <p className="px-3 pb-2 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-60">
+                                System
+                            </p>
+                        )}
+                        {navigation.system.map((item) => renderNavItem(item))}
+                    </div>
+                )}
 
                 <div className="pt-4 border-t border-white/5">
                     <NavLink

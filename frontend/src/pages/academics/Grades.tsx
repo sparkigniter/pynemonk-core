@@ -3,7 +3,7 @@ import {
     Plus, Layers, ChevronRight, Edit2, Trash2,
     Loader2, LayoutGrid, Map, Award,
     Users, Building2, BookOpen, GraduationCap,
-    Search, Filter, Sparkles, ArrowUpRight
+    Search, Filter, Sparkles
 } from 'lucide-react';
 import * as gradeApi from '../../api/grade.api';
 import Modal from '../../components/ui/Modal';
@@ -238,10 +238,7 @@ export default function Grades() {
                                             <button onClick={() => handleDelete(grade.id)} className="p-3 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:text-rose-500 hover:border-rose-500 rounded-xl transition-all shadow-sm active:scale-95">
                                                 <Trash2 size={18} />
                                             </button>
-                                            <button className="flex items-center gap-3 px-6 py-3 btn-dark !text-[10px] !shadow-theme/10 active:scale-95">
-                                                Config
-                                                <ChevronRight size={16} />
-                                            </button>
+
                                         </div>
                                     </div>
                                 </div>
@@ -293,10 +290,7 @@ export default function Grades() {
                                     </div>
                                 </div>
 
-                                <button className="w-full py-4 bg-[var(--background)] text-[var(--text-muted)] rounded-2xl font-bold text-[10px] uppercase tracking-widest group-hover:bg-surface-dark group-hover:text-white transition-all active:scale-95 flex items-center justify-center gap-2">
-                                    Advanced Configuration
-                                    <ArrowUpRight size={14} />
-                                </button>
+
                             </div>
                         </div>
                     ))}

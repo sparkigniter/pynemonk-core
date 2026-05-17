@@ -30,6 +30,7 @@ import { getGrades } from '../../api/grade.api';
 import type { Grade } from '../../api/grade.api';
 import { academicsApi } from '../../api/academics.api';
 import { useAuth } from '../../contexts/AuthContext';
+import { eventApi } from '../../api/event.api';
 
 // ── Components ───────────────────────────────────────────────────────────────
 
@@ -275,6 +276,7 @@ const Timetable: React.FC = () => {
     const [entries, setEntries] = useState<TimetableEntry[]>([]);
     const [originalEntries, setOriginalEntries] = useState<TimetableEntry[]>([]);
     const [breaks, setBreaks] = useState<{ id: number, name: string, start_time: string, end_time: string }[]>([]);
+    const [holidays, setHolidays] = useState<any[]>([]);
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -288,21 +290,38 @@ const Timetable: React.FC = () => {
 
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
+    const getHolidayForDay = (dayId: number) => {
+        const now = new Date();
+        const dayOfWeek = now.getDay() || 7;
+        const diff = dayId - dayOfWeek;
+        const targetDate = new Date(now);
+        targetDate.setDate(now.getDate() + diff);
+        const dateString = targetDate.toISOString().split('T')[0];
+
+        return holidays.find(h => {
+            const start = new Date(h.start_date).toISOString().split('T')[0];
+            const end = new Date(h.end_date).toISOString().split('T')[0];
+            return dateString >= start && dateString <= end;
+        });
+    };
+
     useEffect(() => { loadInitialData(); }, []);
     useEffect(() => { if (selectedGrade) loadClassrooms(selectedGrade); }, [selectedGrade]);
     useEffect(() => { if (selectedClassroom) loadTimetable(selectedClassroom); }, [selectedClassroom]);
 
     const loadInitialData = async () => {
         try {
-            const [gradeRes, staffData, yearsData, breaksData] = await Promise.all([
+            const [gradeRes, staffData, yearsData, breaksData, eventsRes] = await Promise.all([
                 getGrades(),
                 getStaffList({ limit: 100 }),
                 academicsApi.getYears(),
-                TimetableApi.getBreaks()
+                TimetableApi.getBreaks(),
+                eventApi.getEvents().catch(() => [])
             ]);
             setGrades(gradeRes.data);
             setStaff(staffData.data);
             setBreaks(breaksData);
+            setHolidays((eventsRes || []).filter((e: any) => e.event_type === 'holiday'));
             if (yearsData && yearsData.length > 0) {
                 const activeYear = yearsData.find((y: any) => y.is_current) || yearsData[0];
                 setActiveYearId(activeYear.id);
@@ -665,12 +684,23 @@ const Timetable: React.FC = () => {
                                                 <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-tight border border-emerald-100">Collision Free</span>
                                             </div>
                                             <div className="space-y-1 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                                {staff.filter(s => !globalSchedule.some(entry => 
-                                                    Number(entry.teacher_id) === Number(s.id) && 
-                                                    Number(entry.day_of_week) === selectedSlot.day && 
-                                                    entry.start_time.startsWith(selectedSlot.time.split(':')[0]) &&
-                                                    Number(entry.classroom_id) !== Number(selectedClassroom)
-                                                )).map(s => (
+                                                {staff.filter(s => {
+                                                    const isAssigned = assignments.some(a => Number(a.staff_id) === Number(s.id));
+                                                    if (!isAssigned) return false;
+
+                                                    const busyGlobally = globalSchedule.some(entry => 
+                                                        Number(entry.teacher_id) === Number(s.id) && 
+                                                        Number(entry.day_of_week) === selectedSlot.day && 
+                                                        entry.start_time.startsWith(selectedSlot.time.split(':')[0]) &&
+                                                        Number(entry.classroom_id) !== Number(selectedClassroom)
+                                                    );
+                                                    const busyLocally = entries.some(entry =>
+                                                        Number(entry.teacher_id) === Number(s.id) &&
+                                                        Number(entry.day_of_week) === selectedSlot.day &&
+                                                        entry.start_time.startsWith(selectedSlot.time.split(':')[0])
+                                                    );
+                                                    return !busyGlobally && !busyLocally;
+                                                }).map(s => (
                                                     <DraggableResource 
                                                         key={`suggestion-${s.id}`} 
                                                         id={`suggestion-${s.id}`} 
@@ -769,11 +799,29 @@ const Timetable: React.FC = () => {
                                                                 const slotId = `${day.id}-${time}`;
                                                                 const isConflict = dragConflict === slotId;
                                                                 
-                                                                const isHighlighted = highlightedTeacherId ? !globalSchedule.some(entry => 
-                                                                    Number(entry.teacher_id) === Number(highlightedTeacherId) && 
-                                                                    Number(entry.day_of_week) === day.id && 
-                                                                    entry.start_time.startsWith(time.split(':')[0])
+                                                                const isHighlighted = highlightedTeacherId ? !(
+                                                                    globalSchedule.some(entry => 
+                                                                        Number(entry.teacher_id) === Number(highlightedTeacherId) && 
+                                                                        Number(entry.day_of_week) === day.id && 
+                                                                        entry.start_time.startsWith(time.split(':')[0]) &&
+                                                                        Number(entry.classroom_id) !== Number(selectedClassroom)
+                                                                    ) || entries.some(entry =>
+                                                                        Number(entry.teacher_id) === Number(highlightedTeacherId) &&
+                                                                        Number(entry.day_of_week) === day.id &&
+                                                                        entry.start_time.startsWith(time.split(':')[0])
+                                                                    )
                                                                 ) : false;
+
+                                                                const holiday = getHolidayForDay(day.id);
+                                                                if (holiday) {
+                                                                    return (
+                                                                        <div key={slotId} className="h-full w-full flex flex-col items-center justify-center bg-amber-50/20 border border-amber-100/50 p-2 text-center select-none overflow-hidden min-h-[98px]">
+                                                                            <span className="text-[9px] font-black text-amber-700 tracking-wider uppercase mb-1 flex items-center gap-1">🎉 Holiday</span>
+                                                                            <span className="text-[9px] font-bold text-slate-800 leading-tight truncate w-full" title={holiday.title}>{holiday.title}</span>
+                                                                            {holiday.description && <span className="text-[8px] font-medium text-slate-500 truncate w-full mt-0.5" title={holiday.description}>{holiday.description}</span>}
+                                                                        </div>
+                                                                    );
+                                                                }
 
                                                                 return (
                                                                     <DroppableSlot 

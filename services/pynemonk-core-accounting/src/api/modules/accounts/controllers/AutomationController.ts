@@ -4,11 +4,47 @@ import BaseController from "../../../core/controllers/BaseController.js";
 import { AuthenticatedRequest } from "../../../core/middleware/requireAuth.js";
 import SystemMappingHelper from "../helpers/SystemMappingHelper.js";
 
+import LateFeeService from "../helpers/LateFeeService.js";
+
 @injectable()
 export default class AutomationController extends BaseController {
-    constructor(private mappingHelper: SystemMappingHelper) {
+    constructor(
+        private mappingHelper: SystemMappingHelper,
+        private lateFeeService: LateFeeService
+    ) {
         super();
     }
+
+    public runLateFeeAutomation = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const tenantId = req.user!.tenantId;
+            const userId = req.user!.id;
+            const result = await this.lateFeeService.processLateFees(tenantId, userId);
+            return this.ok(res, "Late fee automation completed", result);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    };
+
+    public getLateFeePolicies = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const tenantId = req.user!.tenantId;
+            const policies = await this.lateFeeService.getPolicies(tenantId);
+            return this.ok(res, "Policies retrieved", policies);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    };
+
+    public createLateFeePolicy = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const tenantId = req.user!.tenantId;
+            const policy = await this.lateFeeService.createPolicy(tenantId, req.body);
+            return this.ok(res, "Policy created", policy);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    };
 
     /**
      * Trigger an automated transaction from an external event (Admission, Payroll, etc.)

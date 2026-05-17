@@ -71,6 +71,17 @@ studentRouter.get(
     },
 );
 
+studentRouter.get(
+    "/:id/analytics",
+    apiRateLimiter,
+    requireAuth,
+    requirePermission(["student:read"]),
+    (req, res) => {
+        const ctrl = container.resolve(StudentController);
+        return ctrl.getAnalytics(req, res);
+    }
+);
+
 /**
  * POST /api/v1/school/students/:id/documents
  * Upload a document for a student

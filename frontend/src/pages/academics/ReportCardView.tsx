@@ -90,7 +90,7 @@ export default function ReportCardView() {
                     <div className="w-20 h-20 bg-primary rounded-3xl flex items-center justify-center text-white mb-4 shadow-xl shadow-primary/20">
                         <School size={40} />
                     </div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Pynemonk International School</h1>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Luvia International Academy</h1>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Academic Achievement Record</p>
                     <div className="w-16 h-1 bg-primary mt-6 rounded-full" />
                 </div>

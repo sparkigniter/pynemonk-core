@@ -31,6 +31,8 @@ import { GradeController } from "./api/modules/grade/controllers/GradeController
 import AcademicYearHelper from "./api/modules/academics/helpers/AcademicYearHelper.js";
 import RolloverService from "./api/modules/academics/services/RolloverService.js";
 import RolloverController from "./api/modules/academics/controllers/RolloverController.js";
+import { AcademicPlannerService } from "./api/modules/planner/services/AcademicPlannerService.js";
+import { AcademicPlannerController } from "./api/modules/planner/controllers/AcademicPlannerController.js";
 
 import { TimetableService } from "./api/modules/timetable/services/TimetableService.js";
 import { TimetableController } from "./api/modules/timetable/controllers/TimetableController.js";
@@ -57,7 +59,10 @@ import IntegrationHelper from "./api/modules/integration/helpers/IntegrationHelp
 import { PluginContextFactory } from "./api/modules/integration/core/PluginContextFactory.js";
 import { KarnatakaSATSAdapter } from "./api/modules/integration/plugins/karnataka-sats/SATSAdapter.js";
 import NotificationService from "./api/modules/notification/services/NotificationService.js";
-import { EmailDispatcher, SMSDispatcher, InAppDispatcher } from "./api/modules/notification/dispatchers/MockDispatchers.js";
+import ReminderService from "./api/modules/notification/services/ReminderService.js";
+import { EmailDispatcher, InAppDispatcher } from "./api/modules/notification/dispatchers/MockDispatchers.js";
+import { TwilioSMSDispatcher } from "./api/modules/notification/dispatchers/TwilioSMSDispatcher.js";
+import { SendGridEmailDispatcher } from "./api/modules/notification/dispatchers/SendGridEmailDispatcher.js";
 
 import LeaveHelper from "./api/modules/leave/helpers/LeaveHelper.js";
 import LeaveService from "./api/modules/leave/services/LeaveService.js";
@@ -153,7 +158,7 @@ function setupDI(): void {
 
     // ── Attendance Module ───────────────────────────────────────────────────
     container.register(AttendanceService, {
-        useFactory: (c) => new AttendanceService(c.resolve("DB"))
+        useFactory: (c) => new AttendanceService(c.resolve("DB"), c.resolve(ReminderService))
     });
     container.register(AttendanceController, {
         useFactory: (c) => new AttendanceController(c.resolve(AttendanceService))
@@ -175,8 +180,9 @@ function setupDI(): void {
     registry.register(container.resolve(KarnatakaSATSAdapter));
 
     // ── Notification Module ──────────────────────────────────────────────────
-    container.register("NotificationDispatcher", { useClass: EmailDispatcher });
-    container.register("NotificationDispatcher", { useClass: SMSDispatcher });
+    container.registerSingleton(ReminderService);
+    container.register("NotificationDispatcher", { useClass: SendGridEmailDispatcher });
+    container.register("NotificationDispatcher", { useClass: TwilioSMSDispatcher });
     container.register("NotificationDispatcher", { useClass: InAppDispatcher });
     container.registerSingleton(NotificationService);
 
@@ -189,6 +195,10 @@ function setupDI(): void {
     container.register(PayrollHelper, { useClass: PayrollHelper });
     container.register(PayrollService, { useClass: PayrollService });
     container.register(PayrollController, { useClass: PayrollController });
+
+    // ── Academic Planner Module ──────────────────────────────────────────────
+    container.register(AcademicPlannerService, { useClass: AcademicPlannerService });
+    container.register(AcademicPlannerController, { useClass: AcademicPlannerController });
 }
 
 export default setupDI;

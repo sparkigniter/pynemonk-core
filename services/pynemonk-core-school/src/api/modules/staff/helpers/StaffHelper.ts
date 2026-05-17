@@ -52,11 +52,27 @@ export default class StaffHelper extends BaseModel {
                 u.email,
                 COUNT(*) OVER() as total_count,
                 COALESCE(a.subjects, '[]') as assignments,
-                (ct.staff_id IS NOT NULL) as is_class_teacher
+                (ct.staff_id IS NOT NULL) as is_class_teacher,
+                CASE 
+                    WHEN active_leave.start_date IS NOT NULL THEN 'on_leave'
+                    ELSE s.status
+                END as status,
+                active_leave.start_date as leave_start_date,
+                active_leave.end_date as leave_end_date
             FROM school.staff s
             JOIN auth.user u ON s.user_id = u.id
             LEFT JOIN assignments a ON s.id = a.staff_id
             LEFT JOIN class_teachers ct ON s.id = ct.staff_id
+            LEFT JOIN LATERAL (
+                SELECT la.start_date, la.end_date
+                FROM school.leave_application la
+                WHERE la.staff_id = s.id 
+                  AND la.tenant_id = s.tenant_id 
+                  AND la.status = 'approved'
+                  AND CURRENT_DATE BETWEEN la.start_date AND la.end_date
+                ORDER BY la.created_at DESC
+                LIMIT 1
+            ) active_leave ON TRUE
             WHERE s.tenant_id = $1 AND s.is_deleted = FALSE
         `;
         const values: any[] = [tenantId];
@@ -69,9 +85,15 @@ export default class StaffHelper extends BaseModel {
         }
 
         if (filters.status) {
-            query += ` AND s.status = $${paramIndex}`;
-            values.push(filters.status);
-            paramIndex++;
+            if (filters.status === 'on_leave') {
+                query += ` AND active_leave.start_date IS NOT NULL`;
+            } else if (filters.status === 'active') {
+                query += ` AND active_leave.start_date IS NULL AND s.status = 'active'`;
+            } else {
+                query += ` AND s.status = $${paramIndex}`;
+                values.push(filters.status);
+                paramIndex++;
+            }
         }
 
         if (filters.gender) {
@@ -270,9 +292,25 @@ export default class StaffHelper extends BaseModel {
 
     public async getStaffById(tenantId: number, id: number) {
         const query = `
-            SELECT s.*, u.email
+            SELECT s.*, u.email,
+                   CASE 
+                       WHEN active_leave.start_date IS NOT NULL THEN 'on_leave'
+                       ELSE s.status
+                   END as status,
+                   active_leave.start_date as leave_start_date,
+                   active_leave.end_date as leave_end_date
             FROM school.staff s
             JOIN auth.user u ON s.user_id = u.id
+            LEFT JOIN LATERAL (
+                SELECT la.start_date, la.end_date
+                FROM school.leave_application la
+                WHERE la.staff_id = s.id 
+                  AND la.tenant_id = s.tenant_id 
+                  AND la.status = 'approved'
+                  AND CURRENT_DATE BETWEEN la.start_date AND la.end_date
+                ORDER BY la.created_at DESC
+                LIMIT 1
+            ) active_leave ON TRUE
             WHERE s.tenant_id = $1 AND s.id = $2 AND s.is_deleted = FALSE
         `;
         const result = await this.db.query(query, [tenantId, id]);
@@ -281,8 +319,24 @@ export default class StaffHelper extends BaseModel {
 
     public async findByUserId(tenantId: number, userId: number) {
         const query = `
-            SELECT s.*
+            SELECT s.*,
+                   CASE 
+                       WHEN active_leave.start_date IS NOT NULL THEN 'on_leave'
+                       ELSE s.status
+                   END as status,
+                   active_leave.start_date as leave_start_date,
+                   active_leave.end_date as leave_end_date
             FROM school.staff s
+            LEFT JOIN LATERAL (
+                SELECT la.start_date, la.end_date
+                FROM school.leave_application la
+                WHERE la.staff_id = s.id 
+                  AND la.tenant_id = s.tenant_id 
+                  AND la.status = 'approved'
+                  AND CURRENT_DATE BETWEEN la.start_date AND la.end_date
+                ORDER BY la.created_at DESC
+                LIMIT 1
+            ) active_leave ON TRUE
             WHERE s.tenant_id = $1 AND s.user_id = $2 AND s.is_deleted = FALSE
         `;
         const result = await this.db.query(query, [tenantId, userId]);

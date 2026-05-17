@@ -45,7 +45,11 @@ export default class StudentHelper {
         const res = await this.db.query(
             `SELECT s.*, 
                     se.roll_number, 
+                    se.classroom_id,
+                    se.academic_year_id as enrollment_year_id,
+                    se.status as enrollment_status,
                     c.name as classroom_name, 
+                    c.section as classroom_section,
                     g.id as current_grade_id, 
                     g.name as current_grade_name, 
                     g.sequence_order as current_grade_sequence,
@@ -221,6 +225,21 @@ export default class StudentHelper {
             conditions.push(`se.id IS NULL`);
         }
 
+        // Optionally filter students who haven't been allocated fees for the year yet
+        if (filters.unallocated_only === true || filters.unallocated_only === 'true') {
+            const ayId = filters.academic_year_id;
+            if (ayId) {
+                conditions.push(`NOT EXISTS (
+                    SELECT 1 FROM school.student_fee_allocation sfa 
+                    WHERE sfa.student_id = s.id 
+                    AND sfa.academic_year_id = $${paramIndex}
+                    AND sfa.status != 'CANCELLED'
+                )`);
+                params.push(ayId);
+                paramIndex++;
+            }
+        }
+
         const whereClause = ` WHERE ` + conditions.join(" AND ");
         const enrollJoinOn = enrollJoinConditions.join(" AND ");
 
@@ -241,9 +260,14 @@ export default class StudentHelper {
             SELECT DISTINCT ON (s.created_at, s.id) s.*, 
                    se.academic_year_id as enrollment_year_id,
                    c.name as classroom_name, c.section as classroom_section,
-                   COALESCE(vfs.financial_status, 'unpaid') as fee_status,
+                   g.name as current_grade_name, g.sequence_order as current_grade_sequence,
+                   COALESCE(vfs.financial_status, 'no_invoices') as fee_status,
                    COALESCE(vfs.outstanding_balance, 0) as outstanding_balance
-            ${baseJoin}
+            FROM school.student s
+            LEFT JOIN school.student_enrollment se ON ${enrollJoinOn}
+            LEFT JOIN school.classroom c ON se.classroom_id = c.id
+            LEFT JOIN school.grade g ON (c.grade_id = g.id OR s.grade_id = g.id)
+            LEFT JOIN accounting.v_student_financial_status vfs ON s.id = vfs.student_id
             ${whereClause}
             ORDER BY s.created_at DESC, s.id ASC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}

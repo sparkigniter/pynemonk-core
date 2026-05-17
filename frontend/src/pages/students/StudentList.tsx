@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
     Search, Plus, Filter, GraduationCap, AlertCircle, ChevronRight, 
     CheckCircle2, FileSpreadsheet, RefreshCw, 
-    UserX, LayoutGrid, List, MoreVertical
+    UserX, LayoutGrid, List, DollarSign
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import * as studentApi from '../../api/student.api';
@@ -12,10 +12,12 @@ import { useAcademics } from '../../contexts/AcademicsContext';
 import AdvancedFilters from '../../components/ui/AdvancedFilters';
 import type { FilterField } from '../../components/ui/AdvancedFilters';
 import { getClassrooms } from '../../api/classroom.api';
+import { useNotification } from '../../contexts/NotificationContext';
 import type { Classroom } from '../../api/classroom.api';
 import { getGrades } from '../../api/grade.api';
 
 export default function StudentList() {
+    const { notify } = useNotification();
     const { isYearClosed } = useAcademics();
     const [students, setStudents] = useState<studentApi.Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -35,6 +37,8 @@ export default function StudentList() {
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
     const [activeTab, setActiveTab] = useState<'directory' | 'admissions'>('directory');
     const [applications, setApplications] = useState<any[]>([]);
+    const [pipelineStudents, setPipelineStudents] = useState<studentApi.Student[]>([]);
+    const [gradeSearch, setGradeSearch] = useState('');
 
     const filterFields: FilterField[] = [
         { 
@@ -95,6 +99,15 @@ export default function StudentList() {
             });
             setStudents(response.data);
             setPagination(response.pagination);
+
+            // If we are in admissions tab, fetch ALL unplaced students for the pipeline
+            if (activeTab === 'admissions') {
+                const pipelineRes = await studentApi.getStudentList({
+                    unenrolled: true,
+                    limit: 100 // Fetch a larger batch for the kanban
+                });
+                setPipelineStudents(pipelineRes.data);
+            }
         } catch (err) {
             console.error('Failed to fetch students:', err);
         } finally {
@@ -102,12 +115,15 @@ export default function StudentList() {
         }
     };
 
-    const isSatsReady = (student: any) => {
+    const isSatsReady = (data: any) => {
+        // Handle both Student objects and AdmissionApplication drafts
+        const student = data.student_data || data;
+        
         // Required fields for SATS/Identity
         const requiredFields = [
             'mother_tongue', 'nationality', 'religion', 
             'phone', 'address', 'date_of_birth', 
-            'gender', 'admission_date'
+            'gender'
         ];
         return requiredFields.every(field => student[field] && student[field].toString().trim() !== '');
     };
@@ -126,6 +142,22 @@ export default function StudentList() {
             const res = await studentApi.getStudentList({ unenrolled: true, limit: 1 });
             setUnenrolledCount(res.pagination.total);
         } catch {}
+    };
+
+    const handleFinalize = async (id: number) => {
+        setLoading(true);
+        try {
+            await studentApi.finalizeAdmissionWorkflow(id);
+            notify('success', 'Admission Finalized', 'Student has been officially admitted and added to the directory.');
+            fetchStudents();
+            fetchApplications();
+            fetchUnenrolledCount();
+        } catch (err: any) {
+            console.error('Finalization failed', err);
+            notify('error', 'Finalization Failed', err.message || 'Check if all required fields (Mother Tongue, Address, etc.) are filled.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const loadInitialData = async () => {
@@ -156,7 +188,7 @@ export default function StudentList() {
         if (!showUnenrolledOnly && selectedGradeId === null && grades.length > 0) return;
         const timer = setTimeout(() => fetchStudents(), 300);
         return () => clearTimeout(timer);
-    }, [search, pagination.page, advancedFilters, selectedGradeId, showUnenrolledOnly, viewMode]);
+    }, [search, pagination.page, advancedFilters, selectedGradeId, showUnenrolledOnly, viewMode, activeTab]);
 
     const handleUnenrolledToggle = () => {
         const next = !showUnenrolledOnly;
@@ -180,8 +212,8 @@ export default function StudentList() {
             {/* Header section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-[var(--text-main)] tracking-tight">Student Directory</h1>
-                    <p className="text-[var(--text-muted)] text-sm mt-1 font-medium">Unified management for all enrolled and incoming students.</p>
+                    <h1 className="text-3xl font-bold text-[var(--text-main)] tracking-tight">Students</h1>
+                    <p className="text-[var(--text-muted)] text-sm mt-1 font-medium">Manage all your students and their admission records here.</p>
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                     {canSyncSats && (
@@ -214,7 +246,7 @@ export default function StudentList() {
                         <GraduationCap size={24} />
                     </div>
                     <div>
-                        <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Active Total</p>
+                        <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Total Students</p>
                         <h4 className="text-2xl font-bold text-slate-800">{pagination.total}</h4>
                     </div>
                 </div>
@@ -235,7 +267,7 @@ export default function StudentList() {
                         <AlertCircle size={24} />
                     </div>
                     <div>
-                        <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Data Gaps</p>
+                        <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Missing Info</p>
                         <h4 className="text-2xl font-bold text-slate-800">{attentionCount}</h4>
                     </div>
                 </button>
@@ -269,7 +301,7 @@ export default function StudentList() {
                         ${activeTab === 'admissions' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-[var(--text-muted)] hover:bg-[var(--background)] hover:text-[var(--text-main)]'}`}
                 >
                     <GraduationCap size={16} />
-                    Admissions Pipeline
+                    New Admissions
                 </button>
             </div>
 
@@ -279,18 +311,22 @@ export default function StudentList() {
                         <div className="w-full lg:w-72 flex-shrink-0">
                             <div className="bg-[var(--card-bg)] rounded-[2rem] border border-[var(--card-border)] shadow-xl overflow-hidden lg:sticky lg:top-28">
                                 <div className="p-6 border-b border-[var(--card-border)] bg-slate-50/30">
-                                    <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-4">Academic Stages</h3>
+                                    <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-4">Grades / Classes</h3>
                                     <div className="relative group">
                                         <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" />
                                         <input
                                             type="text"
                                             placeholder="Find grade level..."
                                             className="w-full bg-slate-100/50 border-transparent focus:bg-white focus:border-primary/20 rounded-xl py-2.5 pl-11 pr-4 text-xs font-bold transition-all outline-none"
+                                            value={gradeSearch}
+                                            onChange={(e) => setGradeSearch(e.target.value)}
                                         />
                                     </div>
                                 </div>
-                                <div className="p-3 space-y-1">
-                                    {grades.map((grade) => (
+                                <div className="p-3 space-y-1 max-h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar">
+                                    {grades
+                                        .filter(g => g.name.toLowerCase().includes(gradeSearch.toLowerCase()))
+                                        .map((grade) => (
                                         <button
                                             key={grade.id}
                                             onClick={() => { setSelectedGradeId(grade.id); setPagination(p => ({ ...p, page: 1 })); }}
@@ -317,8 +353,8 @@ export default function StudentList() {
                     )}
 
                     <div className="flex-1 min-w-0 space-y-6">
-                        <div className="bg-[var(--card-bg)] rounded-[2rem] border border-[var(--card-border)] shadow-xl overflow-hidden">
-                            <div className="p-5 border-b border-[var(--card-border)] flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/30">
+                        <div className="bg-[var(--card-bg)] rounded-[2rem] border border-[var(--card-border)] shadow-xl">
+                            <div className="p-5 border-b border-[var(--card-border)] flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/30 rounded-t-[2rem]">
                                 <div className="relative w-full md:w-96 group">
                                     <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" />
                                     <input
@@ -348,24 +384,26 @@ export default function StudentList() {
                                             List
                                         </button>
                                     </div>
-                                    <button 
-                                        onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                        className={`p-3.5 flex items-center gap-2 rounded-2xl text-[10px] font-bold uppercase tracking-wider transition-all ${
-                                            Object.keys(advancedFilters).length > 0 ? 'btn-dark' : 'bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:bg-slate-50 shadow-sm'
-                                        }`}
-                                    >
-                                        <Filter size={16} />
-                                        Filters {Object.keys(advancedFilters).length > 0 && `(${Object.keys(advancedFilters).length})`}
-                                    </button>
-                                    
-                                    <AdvancedFilters 
-                                        isOpen={isFilterOpen}
-                                        onClose={() => setIsFilterOpen(false)}
-                                        fields={filterFields}
-                                        currentFilters={advancedFilters}
-                                        onFilter={(f) => { setAdvancedFilters(f); setPagination(prev => ({ ...prev, page: 1 })); }}
-                                        onReset={() => { setAdvancedFilters({}); setPagination(prev => ({ ...prev, page: 1 })); }}
-                                    />
+                                    <div className="relative">
+                                        <button 
+                                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                            className={`p-3.5 flex items-center gap-2 rounded-2xl text-[10px] font-bold uppercase tracking-wider transition-all ${
+                                                Object.keys(advancedFilters).length > 0 ? 'btn-dark' : 'bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:bg-slate-50 shadow-sm'
+                                            }`}
+                                        >
+                                            <Filter size={16} />
+                                            Filters {Object.keys(advancedFilters).length > 0 && `(${Object.keys(advancedFilters).length})`}
+                                        </button>
+                                        
+                                        <AdvancedFilters 
+                                            isOpen={isFilterOpen}
+                                            onClose={() => setIsFilterOpen(false)}
+                                            fields={filterFields}
+                                            currentFilters={advancedFilters}
+                                            onFilter={(f) => { setAdvancedFilters(f); setPagination(prev => ({ ...prev, page: 1 })); }}
+                                            onReset={() => { setAdvancedFilters({}); setPagination(prev => ({ ...prev, page: 1 })); }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -398,9 +436,7 @@ export default function StudentList() {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <button className="p-2 text-slate-300 hover:text-slate-600 transition-colors">
-                                                            <MoreVertical size={16} />
-                                                        </button>
+
                                                     </div>
                                                     <div className="space-y-1 mb-4">
                                                         <h4 className="text-[15px] font-bold text-[var(--text-main)] group-hover:text-primary transition-colors truncate">
@@ -414,6 +450,20 @@ export default function StudentList() {
                                                             <span className="px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 size={10} /> Ready</span>
                                                         ) : (
                                                             <span className="px-2.5 py-1 bg-rose-50 text-rose-500 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><AlertCircle size={10} /> Incomplete</span>
+                                                        )}
+                                                        {canSeeFees && (
+                                                            <div
+                                                                className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all ${
+                                                                    student.fee_status === 'paid' 
+                                                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+                                                                    : student.fee_status === 'no_invoices'
+                                                                    ? 'bg-slate-50 text-slate-400 border border-slate-100'
+                                                                    : 'bg-rose-50 text-rose-600 border border-rose-100 shadow-sm'
+                                                                }`}
+                                                            >
+                                                                <DollarSign size={10} />
+                                                                {student.fee_status === 'no_invoices' ? 'NO FEES' : student.fee_status === 'paid' ? 'PAID' : 'PENDING'}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
@@ -467,9 +517,17 @@ export default function StudentList() {
                                                         </td>
                                                         {canSeeFees && (
                                                             <td className="px-4 py-4 text-xs font-black text-slate-600">
-                                                                <span className={`px-2 py-1 rounded-lg ${student.fee_status === 'paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                                                    {student.fee_status?.toUpperCase() || 'UNPAID'}
-                                                                </span>
+                                                                <div
+                                                                    className={`inline-flex px-2 py-1 rounded-lg transition-all ${
+                                                                        student.fee_status === 'paid' 
+                                                                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+                                                                        : student.fee_status === 'no_invoices'
+                                                                        ? 'bg-slate-50 text-slate-400 border border-slate-100'
+                                                                        : 'bg-rose-50 text-rose-600 border border-rose-100 shadow-sm'
+                                                                    }`}
+                                                                >
+                                                                    {student.fee_status === 'no_invoices' ? 'NO FEES' : student.fee_status === 'paid' ? 'PAID' : 'PENDING'}
+                                                                </div>
                                                             </td>
                                                         )}
                                                         <td className="pl-4 pr-5 py-4 text-right">
@@ -486,7 +544,7 @@ export default function StudentList() {
                             </div>
 
                             {pagination.pages > 1 && (
-                                <div className="px-5 py-4 border-t border-[var(--card-border)] bg-slate-50/30 flex items-center justify-between">
+                                <div className="px-5 py-4 border-t border-[var(--card-border)] bg-slate-50/30 flex items-center justify-between rounded-b-[2rem]">
                                     <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                                         Total <span className="text-[var(--text-main)]">{pagination.total}</span> students
                                     </p>
@@ -521,12 +579,12 @@ export default function StudentList() {
                         <div className="flex items-center justify-between px-2">
                             <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">1. Leads</h3>
                             <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black rounded-lg">
-                                {applications.filter(a => a.status === 'draft').length}
+                                {applications.filter(a => a.status === 'draft' && a.current_stage !== 'finance').length}
                             </span>
                         </div>
                         <div className="space-y-3">
-                            {applications.filter(a => a.status === 'draft').map((app: any) => (
-                                <div key={app.id} className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm hover:shadow-xl transition-all group">
+                            {applications.filter(a => a.status === 'draft' && a.current_stage !== 'finance').map((app: any) => (
+                                <div key={app.id} className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm hover:shadow-xl transition-all group relative">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-[10px] font-black text-slate-400">
                                             {app.first_name?.[0]}{app.last_name?.[0]}
@@ -537,13 +595,26 @@ export default function StudentList() {
                                         </div>
                                     </div>
                                     <h4 className="text-sm font-black text-slate-800">{app.first_name} {app.last_name}</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Applied for {app.grade_name || '--'}</p>
-                                    <button 
-                                        onClick={() => navigate(`/students/register?application=${app.id}`)}
-                                        className="w-full mt-4 py-2 bg-slate-50 text-slate-600 text-[10px] font-black rounded-xl hover:bg-primary hover:text-white transition-all opacity-0 group-hover:opacity-100"
-                                    >
-                                        Resume Application
-                                    </button>
+                                    <div className="flex items-center justify-between mt-1">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stage: {app.current_stage}</p>
+                                        <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">{app.grade_name || '--'}</p>
+                                    </div>
+                                    <div className="flex gap-2 mt-4">
+                                        <button 
+                                            onClick={() => navigate(`/students/register?application=${app.id}`)}
+                                            className="flex-1 py-2 bg-slate-50 text-slate-600 text-[10px] font-black rounded-xl hover:bg-slate-100 transition-all"
+                                        >
+                                            Resume
+                                        </button>
+                                        {app.current_stage === 'finance' && (
+                                            <button 
+                                                onClick={() => handleFinalize(app.id)}
+                                                className="flex-1 py-2 bg-primary text-white text-[10px] font-black rounded-xl hover:opacity-90 shadow-lg shadow-primary/20 transition-all"
+                                            >
+                                                Finalize
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -553,14 +624,48 @@ export default function StudentList() {
                         <div className="flex items-center justify-between px-2">
                             <h3 className="text-xs font-black uppercase tracking-widest text-rose-500">2. Unpaid</h3>
                             <span className="px-2 py-0.5 bg-rose-50 text-rose-500 text-[9px] font-black rounded-lg">
-                                {students.filter(s => !s.classroom_id && s.fee_status === 'unpaid').length}
+                                {pipelineStudents.filter(s => s.fee_status === 'unpaid').length + applications.filter(a => a.current_stage === 'finance').length}
                             </span>
                         </div>
                         <div className="space-y-3">
-                            {students.filter(s => !s.classroom_id && s.fee_status === 'unpaid').map((student: any) => (
+                            {/* Render Finance Stage Applications first */}
+                            {applications.filter(a => a.current_stage === 'finance').map((app: any) => (
+                                <div key={`app-${app.id}`} className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm hover:shadow-xl transition-all group border-l-4 border-l-amber-400">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="px-2 py-0.5 bg-amber-50 text-amber-600 text-[8px] font-black rounded uppercase">Awaiting Finalization</div>
+                                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${isSatsReady(app) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                            {isSatsReady(app) ? <CheckCircle2 size={10} /> : <AlertCircle size={10} />}
+                                            {isSatsReady(app) ? 'Ready' : 'Incomplete'}
+                                        </div>
+                                    </div>
+                                    <h4 className="text-sm font-black text-slate-800">{app.first_name} {app.last_name}</h4>
+                                    <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{app.grade_name || '--'}</p>
+                                    
+                                    <div className="flex gap-2 mt-4">
+                                        <button 
+                                            onClick={() => navigate(`/students/register?application=${app.id}`)}
+                                            className="flex-1 py-2 bg-slate-50 text-slate-600 text-[10px] font-black rounded-xl hover:bg-slate-100 transition-all"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button 
+                                            onClick={() => handleFinalize(app.id)}
+                                            className="flex-2 py-2 bg-primary text-white text-[10px] font-black rounded-xl hover:opacity-90 shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            Finalize & Pay
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Render Finalized Unpaid Students */}
+                            {pipelineStudents.filter(s => s.fee_status === 'unpaid').map((student: any) => (
                                 <div key={student.id} className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm hover:shadow-xl transition-all group border-l-4 border-l-rose-500">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h4 className="text-sm font-black text-slate-800">{student.first_name} {student.last_name}</h4>
+                                        <div>
+                                            <h4 className="text-sm font-black text-slate-800">{student.first_name} {student.last_name}</h4>
+                                            <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{student.grade_name || 'No Grade'}</p>
+                                        </div>
                                         <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${isSatsReady(student) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                                             {isSatsReady(student) ? <CheckCircle2 size={10} /> : <AlertCircle size={10} />}
                                             {isSatsReady(student) ? 'Ready' : 'Incomplete'}
@@ -569,9 +674,14 @@ export default function StudentList() {
                                     <div className="p-3 bg-rose-50/50 rounded-2xl border border-rose-100 flex items-center justify-between">
                                         <div>
                                             <p className="text-[8px] font-black text-rose-400 uppercase tracking-widest">Balance</p>
-                                            <p className="text-xs font-black text-rose-600">₹{student.outstanding_balance || '0'}</p>
+                                            <p className="text-xs font-black text-rose-600">₹{student.outstanding_balance?.toLocaleString() || '0'}</p>
                                         </div>
-                                        <button className="px-3 py-1.5 bg-rose-500 text-white text-[9px] font-black rounded-lg shadow-lg shadow-rose-200">Pay Now</button>
+                                        <button 
+                                            onClick={() => navigate(`/students/${student.id}`)}
+                                            className="px-3 py-1.5 bg-rose-500 text-white text-[9px] font-black rounded-lg shadow-lg shadow-rose-200"
+                                        >
+                                            View Profile
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -582,14 +692,17 @@ export default function StudentList() {
                         <div className="flex items-center justify-between px-2">
                             <h3 className="text-xs font-black uppercase tracking-widest text-amber-500">3. Partial</h3>
                             <span className="px-2 py-0.5 bg-amber-50 text-amber-500 text-[9px] font-black rounded-lg">
-                                {students.filter(s => !s.classroom_id && s.fee_status === 'partial').length}
+                                {pipelineStudents.filter(s => s.fee_status === 'partial').length}
                             </span>
                         </div>
                         <div className="space-y-3">
-                            {students.filter(s => !s.classroom_id && s.fee_status === 'partial').map((student: any) => (
+                            {pipelineStudents.filter(s => s.fee_status === 'partial').map((student: any) => (
                                 <div key={student.id} className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm hover:shadow-xl transition-all group border-l-4 border-l-amber-500">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h4 className="text-sm font-black text-slate-800">{student.first_name} {student.last_name}</h4>
+                                        <div>
+                                            <h4 className="text-sm font-black text-slate-800">{student.first_name} {student.last_name}</h4>
+                                            <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{student.grade_name || 'No Grade'}</p>
+                                        </div>
                                         <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${isSatsReady(student) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                                             {isSatsReady(student) ? <CheckCircle2 size={10} /> : <AlertCircle size={10} />}
                                             {isSatsReady(student) ? 'Ready' : 'Incomplete'}
@@ -598,9 +711,14 @@ export default function StudentList() {
                                     <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-100 flex items-center justify-between">
                                         <div>
                                             <p className="text-[8px] font-black text-amber-400 uppercase tracking-widest">Pending</p>
-                                            <p className="text-xs font-black text-amber-600">₹{student.outstanding_balance || '0'}</p>
+                                            <p className="text-xs font-black text-amber-600">₹{student.outstanding_balance?.toLocaleString() || '0'}</p>
                                         </div>
-                                        <button className="px-3 py-1.5 bg-amber-500 text-white text-[9px] font-black rounded-lg shadow-lg shadow-amber-200">Settle</button>
+                                        <button 
+                                            onClick={() => navigate(`/students/${student.id}`)}
+                                            className="px-3 py-1.5 bg-amber-500 text-white text-[9px] font-black rounded-lg shadow-lg shadow-amber-200"
+                                        >
+                                            Settle
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -611,14 +729,17 @@ export default function StudentList() {
                         <div className="flex items-center justify-between px-2">
                             <h3 className="text-xs font-black uppercase tracking-widest text-emerald-500">4. Paid</h3>
                             <span className="px-2 py-0.5 bg-emerald-50 text-emerald-500 text-[9px] font-black rounded-lg">
-                                {students.filter(s => !s.classroom_id && s.fee_status === 'paid').length}
+                                {pipelineStudents.filter(s => s.fee_status === 'paid').length}
                             </span>
                         </div>
                         <div className="space-y-3">
-                            {students.filter(s => !s.classroom_id && s.fee_status === 'paid').map((student: any) => (
+                            {pipelineStudents.filter(s => s.fee_status === 'paid').map((student: any) => (
                                 <div key={student.id} className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm hover:shadow-xl transition-all group border-l-4 border-l-emerald-500">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h4 className="text-sm font-black text-slate-800">{student.first_name} {student.last_name}</h4>
+                                        <div>
+                                            <h4 className="text-sm font-black text-slate-800">{student.first_name} {student.last_name}</h4>
+                                            <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{student.grade_name || 'No Grade'}</p>
+                                        </div>
                                         <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[8px] font-black uppercase tracking-widest border border-emerald-100">
                                             <CheckCircle2 size={10} />
                                             Ready

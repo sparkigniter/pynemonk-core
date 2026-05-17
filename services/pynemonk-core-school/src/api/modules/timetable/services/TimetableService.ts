@@ -140,6 +140,14 @@ export class TimetableService {
         return res.rows;
     }
 
+    async getPeriods(tenantId: number) {
+        const res = await this.pool.query(
+            `SELECT id, name, start_time, end_time, is_break FROM school.period_config WHERE tenant_id = $1 AND is_deleted = FALSE ORDER BY start_time`,
+            [tenantId]
+        );
+        return res.rows;
+    }
+
     async createBreak(tenantId: number, data: { name: string, start_time: string, end_time: string }) {
         const res = await this.pool.query(
             `INSERT INTO school.period_config (tenant_id, name, start_time, end_time, is_break) VALUES ($1, $2, $3, $4, TRUE) RETURNING *`,
@@ -225,20 +233,26 @@ export class TimetableService {
                 throw new Error("No school periods configured. Please set up your school timing periods first.");
             }
 
+            const normalizeTime = (time: string) => {
+                if (!time) return "";
+                return time.split(':').slice(0, 2).join(':'); // Always HH:mm
+            };
+
             const occupiedSlots = new Set();
             const days = [1, 2, 3, 4, 5];
 
             periods.rows.forEach(p => {
+                const startTime = normalizeTime(p.start_time);
                 if (p.is_break) {
-                    days.forEach(d => occupiedSlots.add(`${d}-${p.start_time}`));
+                    days.forEach(d => occupiedSlots.add(`${d}-${startTime}`));
                 }
             });
 
-            stickyRes.rows.forEach(r => occupiedSlots.add(`${r.day_of_week}-${r.start_time}`));
+            stickyRes.rows.forEach(r => occupiedSlots.add(`${r.day_of_week}-${normalizeTime(r.start_time)}`));
 
             // 5. CACHE: Fetch all relevant teacher schedules for the week to avoid N+1 queries
             const teacherIds = [...new Set(requirements.rows.map(r => r.teacher_id).filter(Boolean))];
-            const teacherSchedules = new Map(); // Map<teacherId, Set<"day-start_time">>
+            const teacherSchedules = new Map(); // Map<teacherId, Set<"day-HH:mm">>
 
             if (teacherIds.length > 0) {
                 const scheduleRes = await client.query(`
@@ -248,7 +262,7 @@ export class TimetableService {
                     [tenantId, teacherIds, academicYearId]
                 );
                 scheduleRes.rows.forEach(s => {
-                    const key = `${s.day_of_week}-${s.start_time}`;
+                    const key = `${s.day_of_week}-${normalizeTime(s.start_time)}`;
                     if (!teacherSchedules.has(s.teacher_id)) teacherSchedules.set(s.teacher_id, new Set());
                     teacherSchedules.get(s.teacher_id).add(key);
                 });
@@ -265,8 +279,35 @@ export class TimetableService {
                 return { success: false, message: "All requirements met by sticky periods or no assignments found." };
             }
 
+            // Get holidays for the current week!
+            const now = new Date();
+            const dayOfWeek = now.getDay() || 7;
+            const getLocalDateForDayId = (dayId: number) => {
+                const diff = dayId - dayOfWeek;
+                const d = new Date(now);
+                d.setDate(now.getDate() + diff);
+                return d.toISOString().split('T')[0];
+            };
+
+            const holidaysRes = await client.query(
+                `SELECT start_date, end_date, title FROM school.event WHERE tenant_id = $1 AND event_type = 'holiday' AND is_deleted = FALSE`,
+                [tenantId]
+            );
+
+            const holidayDayIds = new Set<number>();
+            days.forEach(d => {
+                const dateStr = getLocalDateForDayId(d);
+                const isHoliday = holidaysRes.rows.some(h => {
+                    const start = new Date(h.start_date).toISOString().split('T')[0];
+                    const end = new Date(h.end_date).toISOString().split('T')[0];
+                    return dateStr >= start && dateStr <= end;
+                });
+                if (isHoliday) holidayDayIds.add(d);
+            });
+
             // 7. Allocation Loop (Optimized with in-memory cache)
             for (const day of days) {
+                if (holidayDayIds.has(day)) continue; // Skip holidays!
                 const scheduledToday = new Set();
                 stickyRes.rows
                     .filter(r => r.day_of_week === day)
@@ -275,7 +316,8 @@ export class TimetableService {
                 for (const period of periods.rows) {
                     if (period.is_break) continue;
 
-                    const slotKey = `${day}-${period.start_time}`;
+                    const startTime = normalizeTime(period.start_time);
+                    const slotKey = `${day}-${startTime}`;
                     if (occupiedSlots.has(slotKey)) continue;
 
                     for (let i = 0; i < workload.length; i++) {
