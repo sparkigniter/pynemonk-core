@@ -158,7 +158,7 @@ BEGIN
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='accounting' AND table_name='fee_payment' AND column_name='fee_structure_id') THEN
-        ALTER TABLE accounting.fee_payment ADD COLUMN fee_structure_id INT REFERENCES accounting.fee_structure(id);
+        ALTER TABLE accounting.fee_payment ADD COLUMN fee_structure_id INT REFERENCES school.fee_structure(id);
     END IF;
 END $$;
 
