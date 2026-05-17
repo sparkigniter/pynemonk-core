@@ -313,3 +313,39 @@ END $$;
 INSERT INTO school.settings (tenant_id, key, value)
 SELECT id, 'admission_number_format', 'ADM-{YEAR}-{SEQ}' FROM auth.tenant
 ON CONFLICT DO NOTHING;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Guardian & Student-Guardian Tables
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS school.guardian (
+    id              serial        NOT NULL PRIMARY KEY,
+    tenant_id       int           NOT NULL REFERENCES auth.tenant(id),
+    user_id         int           NOT NULL REFERENCES auth.user(id),
+    first_name      varchar(100)  NOT NULL,
+    last_name       varchar(100),
+    gender          varchar(10),
+    phone           varchar(20),
+    email           citext        NOT NULL,
+    address         text,
+    occupation      varchar(100),
+    avatar_url      varchar(500),
+    is_deleted      BOOLEAN       NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_guardian_tenant_user UNIQUE (tenant_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_guardian_tenant ON school.guardian (tenant_id) WHERE is_deleted = FALSE;
+
+CREATE TABLE IF NOT EXISTS school.student_guardian (
+    id              serial      NOT NULL PRIMARY KEY,
+    tenant_id       int         NOT NULL REFERENCES auth.tenant(id),
+    student_id      int         NOT NULL REFERENCES school.student(id),
+    guardian_id     int         NOT NULL REFERENCES school.guardian(id),
+    relation        varchar(50) NOT NULL,
+    is_emergency    BOOLEAN     NOT NULL DEFAULT FALSE,
+    is_deleted      BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_student_guardian UNIQUE (student_id, guardian_id)
+);
