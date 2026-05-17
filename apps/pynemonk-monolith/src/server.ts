@@ -58,7 +58,17 @@ app.use(
                 "http://127.0.0.1:5174",
                 "http://127.0.0.1:3000"
             ];
-            if (!origin || allowedOrigins.includes(origin) || devOrigins.includes(origin)) {
+            if (
+                !origin || 
+                allowedOrigins.includes(origin) || 
+                devOrigins.includes(origin) ||
+                origin.startsWith("capacitor://") ||
+                origin.startsWith("http://localhost") ||
+                origin.includes("13.61.11.86") ||
+                /^(http|https):\/\/192\.168\./.test(origin) ||
+                /^(http|https):\/\/10\./.test(origin) ||
+                /^(http|https):\/\/172\./.test(origin)
+            ) {
                 callback(null, true);
             } else {
                 callback(new Error(`CORS: origin '${origin}' not allowed`));
