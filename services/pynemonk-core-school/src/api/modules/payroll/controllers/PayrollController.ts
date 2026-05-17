@@ -31,6 +31,17 @@ export default class PayrollController extends BaseController {
         }
     }
 
+    public async generateBulk(req: Request, res: Response) {
+        try {
+            const { tenantId } = (req as any).user;
+            const { month, year } = req.body;
+            const data = await this.payrollService.generateBulkPayslips(tenantId, parseInt(month), parseInt(year));
+            return this.ok(res, "Bulk payslips generation completed", data);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
+
     public async pay(req: Request, res: Response) {
         try {
             const { tenantId, userId } = (req as any).user;

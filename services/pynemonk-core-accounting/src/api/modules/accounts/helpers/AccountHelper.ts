@@ -85,7 +85,7 @@ export default class AccountHelper {
         );
         return res.rows[0];
     }
-
+    
     public async getAccountTypes(): Promise<any[]> {
         const res = await this.db.query(`SELECT * FROM accounting.account_type ORDER BY id`);
         return res.rows;

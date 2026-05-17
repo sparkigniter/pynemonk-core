@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 import { 
-    Shield, Palette, Save, 
+    Shield, Save, 
     RotateCcw, Building, CreditCard, 
-    Calendar, Loader2
+    Calendar, Loader2, User, Palette, ListChecks, MessageSquare
 } from 'lucide-react';
+import LeaveTypeSettings from '../../components/admin/LeaveTypeSettings';
+import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { get, put } from '../../api/base.api';
 import { useNotification } from '../../contexts/NotificationContext';
+import FiscalYearSettings from './components/FiscalYearSettings';
+
 
 const Sparkles = ({ size, className }: { size: number, className?: string }) => (
     <svg 
@@ -28,7 +33,9 @@ const Sparkles = ({ size, className }: { size: number, className?: string }) => 
 
 export default function SettingsHub() {
     const { notify } = useNotification();
-    const [activeTab, setActiveTab] = useState('general');
+    const { user, can } = useAuth();
+    const { theme, setTheme, themes } = useTheme();
+    const [activeTab, setActiveTab] = useState('profile');
     const [settings, setSettings] = useState<any>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -65,12 +72,18 @@ export default function SettingsHub() {
     };
 
     const TABS = [
-        { id: 'general', label: 'Institutional Profile', icon: Building },
-        { id: 'academic', label: 'Academic Rules', icon: Calendar },
-        { id: 'finance', label: 'Financial Policy', icon: CreditCard },
-        { id: 'branding', label: 'Custom Branding', icon: Palette },
-        { id: 'security', label: 'Access Control', icon: Shield },
+        { id: 'profile', label: 'My Profile', icon: User },
+        { id: 'appearance', label: 'Interface Style', icon: Palette },
+        { id: 'general', label: 'Institutional Profile', icon: Building, permission: 'settings:write' },
+        { id: 'academic', label: 'Academic Rules', icon: Calendar, permission: 'settings:write' },
+        { id: 'finance', label: 'Financial Policy', icon: CreditCard, permission: 'settings:write' },
+        { id: 'hr', label: 'HR Configuration', icon: ListChecks, permission: 'staff.leave:read' },
+        { id: 'communication', label: 'Communication Hub', icon: MessageSquare, permission: 'settings:write' },
+        { id: 'branding', label: 'Custom Branding', icon: Palette, permission: 'settings:write' },
+        { id: 'security', label: 'Access Control', icon: Shield, permission: 'settings:write' },
     ];
+
+    const visibleTabs = TABS.filter(t => !t.permission || can(t.permission));
 
     if (loading) return (
         <div className="p-20 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
@@ -104,7 +117,7 @@ export default function SettingsHub() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
                 {/* Navigation Sidebar */}
                 <aside className="lg:col-span-3 space-y-2">
-                    {TABS.map((tab) => (
+                    {visibleTabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
@@ -128,6 +141,55 @@ export default function SettingsHub() {
                 <main className="lg:col-span-9 bg-white p-10 lg:p-14 rounded-[3.5rem] border border-slate-100 shadow-2xl shadow-slate-200/20 relative overflow-hidden min-h-[600px]">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full -mr-32 -mt-32 blur-3xl opacity-50" />
                     
+                    {activeTab === 'profile' && (
+                        <div className="space-y-12 animate-in fade-in slide-in-from-right-8 duration-500">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">My Profile</h2>
+                                <p className="text-xs font-medium text-slate-400">Manage your personal information and security credentials.</p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Identity</label>
+                                    <input type="text" className="settings-input" defaultValue={user?.email} readOnly />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                                    <input type="email" className="settings-input" defaultValue={user?.email} readOnly />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Role Architecture</label>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {user?.roles.map((r: string) => (
+                                            <span key={r} className="px-3 py-1 bg-slate-100 rounded-lg text-[9px] font-black uppercase tracking-widest">{r.replace('_', ' ')}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'appearance' && (
+                        <div className="space-y-12 animate-in fade-in slide-in-from-right-8 duration-500">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Interface Style</h2>
+                                <p className="text-xs font-medium text-slate-400">Choose a visual theme that complements your workflow.</p>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {themes.map((t) => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => setTheme(t.id)}
+                                        className={`p-6 rounded-[2.5rem] border-2 text-left transition-all ${t.id === theme.id ? 'border-slate-900 bg-slate-50' : 'border-slate-50 hover:border-slate-200'}`}
+                                    >
+                                        <div className="w-12 h-12 rounded-2xl mb-4" style={{ background: `linear-gradient(135deg, ${t.preview[0]}, ${t.preview[1]})` }} />
+                                        <p className="text-sm font-black text-slate-900">{t.name}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1">{t.description}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    
                     {activeTab === 'general' && (
                         <div className="space-y-12 animate-in fade-in slide-in-from-right-8 duration-500">
                             <div>
@@ -140,7 +202,7 @@ export default function SettingsHub() {
                                     <input 
                                         type="text" 
                                         className="settings-input"
-                                        placeholder="Pynemonk Academy"
+                                        placeholder="Luvia Academy"
                                         value={settings.school_name || ''}
                                         onChange={e => updateValue('school_name', e.target.value)}
                                     />
@@ -340,6 +402,153 @@ export default function SettingsHub() {
                                         value={settings.tax_id || ''}
                                         onChange={e => updateValue('tax_id', e.target.value)}
                                     />
+                                </div>
+                                <div className="space-y-2 col-span-2 pt-8 border-t border-slate-100">
+                                    <FiscalYearSettings />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === 'hr' && (
+                        <div className="space-y-12 animate-in fade-in slide-in-from-right-8 duration-500">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Human Resources</h2>
+                                <p className="text-xs font-medium text-slate-400">Configure leave types, approval workflows, and staff categories.</p>
+                            </div>
+                            <LeaveTypeSettings />
+                        </div>
+                    )}
+                    
+                    {activeTab === 'communication' && (
+                        <div className="space-y-12 animate-in fade-in slide-in-from-right-8 duration-500">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Communication Hub</h2>
+                                <p className="text-xs font-medium text-slate-400">Configure SMS and Email gateways for automated institutional alerts.</p>
+                            </div>
+                            
+                            <div className="space-y-10">
+                                {/* SMS Gateway */}
+                                <div className="p-10 bg-slate-50 rounded-[3rem] border border-slate-100 space-y-8">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white">
+                                                <MessageSquare size={24} />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-black text-slate-900">SMS Gateway (Twilio)</h3>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Parent Alerts & Staff Reminders</p>
+                                            </div>
+                                        </div>
+                                        <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${settings.sms_provider === 'twilio' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                            {settings.sms_provider === 'twilio' ? 'Active Gateway' : 'System Fallback'}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">SMS Provider</label>
+                                            <select 
+                                                className="settings-input appearance-none"
+                                                value={settings.sms_provider || 'mock'}
+                                                onChange={e => updateValue('sms_provider', e.target.value)}
+                                            >
+                                                <option value="mock">System Console (Mock/Debug)</option>
+                                                <option value="twilio">Twilio Institutional API</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sender ID / Phone</label>
+                                            <input 
+                                                type="text" 
+                                                className="settings-input"
+                                                placeholder="+1234567890"
+                                                value={settings.sms_twilio_from || ''}
+                                                onChange={e => updateValue('sms_twilio_from', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account SID</label>
+                                            <input 
+                                                type="text" 
+                                                className="settings-input"
+                                                placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxx"
+                                                value={settings.sms_twilio_sid || ''}
+                                                onChange={e => updateValue('sms_twilio_sid', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Auth Token</label>
+                                            <input 
+                                                type="password" 
+                                                className="settings-input"
+                                                placeholder="••••••••••••••••••••••••"
+                                                value={settings.sms_twilio_token || ''}
+                                                onChange={e => updateValue('sms_twilio_token', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Email Gateway */}
+                                <div className="p-10 bg-white rounded-[3rem] border border-slate-100 space-y-8">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white">
+                                                <Save size={24} />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-black text-slate-900">Email Gateway (SendGrid)</h3>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Report Cards & Invoices</p>
+                                            </div>
+                                        </div>
+                                        <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${settings.email_provider === 'sendgrid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                            {settings.email_provider === 'sendgrid' ? 'Active Gateway' : 'System Fallback'}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Provider</label>
+                                            <select 
+                                                className="settings-input appearance-none"
+                                                value={settings.email_provider || 'mock'}
+                                                onChange={e => updateValue('email_provider', e.target.value)}
+                                            >
+                                                <option value="mock">System Console (Mock/Debug)</option>
+                                                <option value="sendgrid">SendGrid REST API</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Verified Sender Email</label>
+                                            <input 
+                                                type="email" 
+                                                className="settings-input"
+                                                placeholder="notifications@luvia.edu"
+                                                value={settings.email_from || ''}
+                                                onChange={e => updateValue('email_from', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">From Name</label>
+                                            <input 
+                                                type="text" 
+                                                className="settings-input"
+                                                placeholder="Luvia Administration"
+                                                value={settings.email_from_name || ''}
+                                                onChange={e => updateValue('email_from_name', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">SendGrid API Key</label>
+                                            <input 
+                                                type="password" 
+                                                className="settings-input"
+                                                placeholder="SG.xxxxxxxxxxxxxxxxxxxxxxxx"
+                                                value={settings.email_sendgrid_key || ''}
+                                                onChange={e => updateValue('email_sendgrid_key', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

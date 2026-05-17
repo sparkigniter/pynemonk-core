@@ -10,42 +10,60 @@ export class AdmissionNumberService {
         try {
             await client.query('BEGIN');
 
-            // 1. Get format and sequence from key-value settings
+            // 1. Get format from key-value settings
             const settingsRes = await client.query(
-                `SELECT key, value FROM school.settings WHERE tenant_id = $1 AND key IN ('admission_number_format', 'next_admission_seq')`,
+                `SELECT value FROM school.settings WHERE tenant_id = $1 AND key = 'admission_number_format'`,
                 [tenantId]
             );
 
-            let format = 'ADM-{YEAR}-{SEQ}';
-            let seq = 1;
+            let format = settingsRes.rows[0]?.value || 'ADM-{YEAR}-{SEQ}';
+            
+            // 2. Get current sequence
+            const seqRes = await client.query(
+                `SELECT value FROM school.settings WHERE tenant_id = $1 AND key = 'next_admission_seq'`,
+                [tenantId]
+            );
+            let seq = parseInt(seqRes.rows[0]?.value || '1', 10);
 
-            settingsRes.rows.forEach(row => {
-                if (row.key === 'admission_number_format') format = row.value;
-                if (row.key === 'next_admission_seq') seq = parseInt(row.value, 10);
-            });
-
-            // 2. Generate the number
             const now = new Date();
             const year = now.getFullYear().toString();
             const month = (now.getMonth() + 1).toString().padStart(2, '0');
-            const paddedSeq = seq.toString().padStart(4, '0');
 
-            let admissionNo = format
-                .replace('{YEAR}', year)
-                .replace('{MONTH}', month)
-                .replace('{SEQ}', paddedSeq);
+            let admissionNo = '';
+            let isUnique = false;
 
-            // 3. Increment and update the sequence key
+            // 3. Loop until we find a unique number
+            while (!isUnique) {
+                const paddedSeq = seq.toString().padStart(4, '0');
+                admissionNo = format
+                    .replace('{YEAR}', year)
+                    .replace('{MONTH}', month)
+                    .replace('{SEQ}', paddedSeq);
+
+                // Check collision
+                const collisionRes = await client.query(
+                    `SELECT id FROM school.student WHERE tenant_id = $1 AND admission_no = $2`,
+                    [tenantId, admissionNo]
+                );
+
+                if (collisionRes.rows.length === 0) {
+                    isUnique = true;
+                } else {
+                    seq++;
+                }
+            }
+
+            // 4. Update the sequence key to the NEXT available one
             await client.query(
                 `INSERT INTO school.settings (tenant_id, key, value)
                  VALUES ($1, 'next_admission_seq', $2)
                  ON CONFLICT (tenant_id, key) DO UPDATE 
-                 SET value = (EXCLUDED.value::int + 1)::text, updated_at = NOW()`,
+                 SET value = EXCLUDED.value, updated_at = NOW()`,
                 [tenantId, (seq + 1).toString()]
             );
 
-            // Ensure format exists if it didn't
-            if (!settingsRes.rows.find(r => r.key === 'admission_number_format')) {
+            // Ensure format exists
+            if (settingsRes.rows.length === 0) {
                 await client.query(
                     `INSERT INTO school.settings (tenant_id, key, value)
                      VALUES ($1, 'admission_number_format', $2)

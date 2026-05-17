@@ -8,6 +8,7 @@ import ClassroomHelper from "../../classroom/helpers/ClassroomHelper.js";
 import NotificationService from "../../notification/services/NotificationService.js";
 import { NotificationChannel } from "../../notification/types.js";
 import { EventEmitter } from "events";
+import { FeeService } from "../../finance/services/FeeService.js";
 
 export interface AdmissionRequest {
     student: {
@@ -46,9 +47,13 @@ export interface AdmissionRequest {
     };
     finance?: {
         payment_method?: string;
+        bank_account_id?: number;
         amount_paid?: number;
+        admission_fee?: number;
+        structure_ids?: number[];
         reference_no?: string;
         notes?: string;
+        is_paid?: boolean;
     };
 }
 
@@ -63,6 +68,7 @@ export default class AdmissionService {
         private enrollmentHelper: EnrollmentHelper,
         private classroomHelper: ClassroomHelper,
         private notificationService: NotificationService,
+        private feeService: FeeService,
     ) {}
 
     public async admitStudent(tenantId: number, data: AdmissionRequest, userId: number): Promise<any> {
@@ -70,18 +76,35 @@ export default class AdmissionService {
         try {
             await client.query("BEGIN");
 
-            // 0. Resolve Classroom ID if not provided
-            let classroomId = data.enrollment?.classroom_id;
-            if (!classroomId && data.enrollment?.grade_id && data.enrollment?.section) {
+            // 0. Resolve IDs and sanitize empty strings to prevent Postgres integer syntax errors
+            const rawEnrollment: any = data.enrollment || {};
+            const academicYearId = rawEnrollment.academic_year_id ? parseInt(rawEnrollment.academic_year_id.toString()) : null;
+            const gradeId = rawEnrollment.grade_id ? parseInt(rawEnrollment.grade_id.toString()) : null;
+            let classroomId = rawEnrollment.classroom_id ? parseInt(rawEnrollment.classroom_id.toString()) : null;
+
+            if (!classroomId && gradeId && rawEnrollment.section && academicYearId) {
                 const classroom = await this.classroomHelper.findByGradeAndSection(
                     tenantId,
-                    data.enrollment.academic_year_id,
-                    data.enrollment.grade_id,
-                    data.enrollment.section,
+                    academicYearId,
+                    gradeId,
+                    rawEnrollment.section,
                 );
                 if (classroom) {
                     classroomId = classroom.id;
                 }
+            }
+
+            // Update the data object with sanitized integers for consistent downstream usage
+            if (data.enrollment) {
+                data.enrollment.academic_year_id = academicYearId as any;
+                data.enrollment.grade_id = gradeId as any;
+                data.enrollment.classroom_id = classroomId as any;
+            }
+
+            // Sanitize finance data
+            if (data.finance) {
+                data.finance.admission_fee = data.finance.admission_fee ? parseFloat(data.finance.admission_fee.toString()) : 0;
+                data.finance.amount_paid = data.finance.amount_paid ? parseFloat(data.finance.amount_paid.toString()) : 0;
             }
 
             // 1. Create Student Auth User
@@ -157,6 +180,61 @@ export default class AdmissionService {
                     client,
                 );
             }
+            console.log(`[AdmissionService] Enrollment created: ${enrollment?.id}`);
+            
+            // 7. Fee Allocation (Institutional Finance)
+            const finance = data.finance;
+            // Support both singular structure_id (backward compat) and plural structure_ids
+            const structureIds = finance?.structure_ids || 
+                                ((finance as any)?.structure_id ? [(finance as any).structure_id] : []);
+
+            console.log(`[AdmissionService] Finance data detected. Structures:`, structureIds);
+
+            if (structureIds.length > 0) {
+                console.log(`[AdmissionService] Allocating ${structureIds.length} fee structures`);
+                
+                for (const structureId of structureIds) {
+                    await this.feeService.allocateFee(
+                        tenantId, 
+                        student.id, 
+                        structureId, 
+                        data.enrollment!.academic_year_id,
+                        client
+                    );
+                }
+                
+                // 8. Handle Initial Payment (distributed across all allocations)
+                if (finance?.amount_paid && finance.amount_paid > 0) {
+                    console.log(`[AdmissionService] Recording distributed payment: ${finance.amount_paid}`);
+                    
+                    // Fetch all installments for the student across all structures
+                    const installments = await this.feeService.getStudentFees(tenantId, student.id, client);
+                    const unpaidInstallments = installments.filter((f: any) => f.status !== 'PAID');
+                    
+                    let remainingPayment = finance.amount_paid;
+                    for (const installment of unpaidInstallments) {
+                        if (remainingPayment <= 0) break;
+
+                        const unpaidAmount = parseFloat(installment.amount_due) - parseFloat(installment.amount_paid);
+                        const amountToPay = Math.min(remainingPayment, unpaidAmount);
+                        
+                        if (amountToPay > 0) {
+                            await this.feeService.recordPayment(
+                                tenantId,
+                                installment.id,
+                                amountToPay,
+                                {
+                                    payment_method: finance.payment_method,
+                                    bank_account_id: finance.bank_account_id,
+                                    reference: finance.reference_no || (finance as any).reference
+                                },
+                                client
+                            );
+                            remainingPayment -= amountToPay;
+                        }
+                    }
+                }
+            }
 
             await client.query("COMMIT");
 
@@ -172,14 +250,14 @@ export default class AdmissionService {
 
             // 7. Emit Event
             const studentName = `${student.first_name} ${student.last_name}`;
-            const academicYearId = enrollment?.academic_year_id || data.enrollment?.academic_year_id;
+            const eventAcademicYearId = enrollment?.academic_year_id || data.enrollment?.academic_year_id;
             
-            if (academicYearId) {
+            if (eventAcademicYearId) {
                 this.dispatchAdmissionEvent(
                     tenantId, 
                     student.id, 
                     studentName, 
-                    academicYearId, 
+                    eventAcademicYearId, 
                     enrollment?.classroom_id || null, 
                     userId, 
                     data.finance

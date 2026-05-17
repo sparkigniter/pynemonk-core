@@ -35,6 +35,56 @@ export default function ProfitAndLoss() {
         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
     };
 
+    const exportToCSV = () => {
+        if (!data) return;
+        let csv = 'Category,Code,Account,Amount\n';
+        data.revenue.forEach((r: any) => csv += `Revenue,${r.code},"${r.account_name}",${r.balance}\n`);
+        csv += `,,TOTAL REVENUE,${data.totalRevenue}\n\n`;
+        data.expenses.forEach((e: any) => csv += `Expense,${e.code},"${e.account_name}",${e.balance}\n`);
+        csv += `,,TOTAL EXPENSE,${data.totalExpenses}\n\n`;
+        csv += `,,NET PROFIT,${data.netProfit}\n`;
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.setAttribute('hidden', '');
+        a.setAttribute('href', url);
+        a.setAttribute('download', `pnl_${dateRange.start}_to_${dateRange.end}.csv`);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
+    const handlePrint = async () => {
+        try {
+            const session = localStorage.getItem('eduerp_session');
+            const token = session ? JSON.parse(session).accessToken : '';
+            
+            const response = await fetch(`http://localhost:3000/api/v1/accounting/reports/profit-loss/export/pdf?startDate=${dateRange.start}&endDate=${dateRange.end}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) throw new Error('Failed to generate PDF');
+
+            const buffer = await response.arrayBuffer();
+            const blob = new Blob([buffer], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `profit_loss_${dateRange.start}_to_${dateRange.end}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err) {
+            console.error('PDF generation error:', err);
+            alert('Failed to generate professional PDF. Please check your template in Designer.');
+        }
+    };
+
     if (loading && !data) {
         return (
             <div className="h-[70vh] flex items-center justify-center">
@@ -65,10 +115,14 @@ export default function ProfitAndLoss() {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <button className="p-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl text-[var(--text-muted)] hover:text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
+                    <button 
+                        onClick={handlePrint}
+                        className="p-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl text-[var(--text-muted)] hover:text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
                         <Printer size={18} />
                     </button>
-                    <button className="flex items-center gap-2 px-5 py-2.5 bg-surface-dark text-white rounded-xl font-bold text-sm shadow-xl shadow-slate-200 hover:scale-[1.02] transition-all">
+                    <button 
+                        onClick={exportToCSV}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-surface-dark text-white rounded-xl font-bold text-sm shadow-xl shadow-slate-200 hover:scale-[1.02] transition-all">
                         <Download size={18} />
                         Export P&L
                     </button>

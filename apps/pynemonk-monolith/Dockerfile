@@ -29,6 +29,15 @@ RUN npm run build --workspace=apps/pynemonk-monolith
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
 
+# Install chromium and dependencies for PDF generation
+RUN apk add --no-cache \
+      chromium \
+      nss \
+      freetype \
+      harfbuzz \
+      ca-certificates \
+      ttf-freefont
+
 WORKDIR /app
 
 # Copy workspace manifests + lockfile so npm ci can install prod deps

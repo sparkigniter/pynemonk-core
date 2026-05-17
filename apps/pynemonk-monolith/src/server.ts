@@ -49,11 +49,23 @@ const allowedOrigins = (
 app.use(
     cors({
         origin: (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-            else callback(new Error(`CORS: origin '${origin}' not allowed`));
+            // In development, allow all local origins
+            const devOrigins = [
+                "http://localhost:5173", 
+                "http://localhost:5174", 
+                "http://localhost:3000",
+                "http://127.0.0.1:5173",
+                "http://127.0.0.1:5174",
+                "http://127.0.0.1:3000"
+            ];
+            if (!origin || allowedOrigins.includes(origin) || devOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error(`CORS: origin '${origin}' not allowed`));
+            }
         },
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization"],
+        allowedHeaders: ["Content-Type", "Authorization", "x-academic-year-id", "Accept", "X-Requested-With"],
         credentials: true,
     })
 );

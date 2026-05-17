@@ -39,4 +39,25 @@ export default class BankingController extends BaseController {
             return this.internalservererror(res, error.message);
         }
     };
+
+    public getTreasuryInventory = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const tenantId = req.user!.tenantId;
+            const inventory = await this.bankingHelper.getTreasuryInventory(tenantId);
+            return this.ok(res, "Treasury inventory retrieved", inventory);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    };
+
+    public settleFunds = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const tenantId = req.user!.tenantId;
+            const userId = req.user!.id;
+            const settlement = await this.bankingHelper.settleFunds(tenantId, userId, req.body);
+            return this.ok(res, "Treasury settlement completed successfully", settlement);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    };
 }

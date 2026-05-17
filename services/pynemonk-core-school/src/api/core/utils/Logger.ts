@@ -23,8 +23,12 @@ export enum LogLevel {
 export class Logger {
     private static formatMessage(level: LogLevel, message: string, context?: any): string {
         const timestamp = new Date().toISOString();
-        const ctxStr = context ? ` | ${JSON.stringify(context)}` : '';
-        return `[${timestamp}] [${level}] ${message}${ctxStr}\n`;
+        return JSON.stringify({
+            timestamp,
+            level,
+            message,
+            context
+        }) + '\n';
     }
 
     private static writeToFile(msg: string) {

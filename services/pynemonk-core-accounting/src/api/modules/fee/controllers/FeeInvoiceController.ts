@@ -19,7 +19,7 @@ export default class FeeInvoiceController extends BaseController {
     public get = async (req: any, res: Response) => {
         try {
             const tenantId = req.user.tenantId;
-            const id = parseInt(req.params.id);
+            const id = req.params.id;
             const invoice = await this.feeInvoiceService.getInvoiceById(tenantId, id);
             if (!invoice) return this.notfound(res, "Invoice not found");
             return this.ok(res, "Invoice retrieved successfully", invoice);

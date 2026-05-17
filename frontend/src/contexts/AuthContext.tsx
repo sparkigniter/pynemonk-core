@@ -56,8 +56,6 @@ function loadSession(): AuthSession | null {
         const raw = localStorage.getItem(SESSION_KEY);
         if (!raw) return null;
         const s = JSON.parse(raw) as AuthSession;
-        // Discard if access token is expired
-        if (Date.now() >= s.expiresAt) return null;
         
         // Safety: Ensure user object has permissions array for backward compatibility
         if (s.user && !s.user.permissions) {
@@ -150,11 +148,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         const stored = loadSession();
         if (stored) {
-            setSession(stored);
-            // Use local variable to avoid dependency on 'session' state
-            authApi.getMyTenants(stored.accessToken)
-                .then(setTenants)
-                .catch(err => console.error('Failed to fetch tenants on mount', err));
+            if (Date.now() >= stored.expiresAt) {
+                // Access token is expired, trigger refresh
+                authApi.refreshTokens(stored.refreshToken, CLIENT_ID, CLIENT_SECRET)
+                    .then(tokens => {
+                        const user = parseUser(tokens.access_token);
+                        if (user) {
+                            const newSession: AuthSession = {
+                                accessToken: tokens.access_token,
+                                refreshToken: tokens.refresh_token || stored.refreshToken,
+                                expiresAt: Date.now() + tokens.expires_in * 1000,
+                                user,
+                            };
+                            saveSession(newSession);
+                            setSession(newSession);
+                            authApi.getMyTenants(tokens.access_token)
+                                .then(setTenants)
+                                .catch(err => console.error('Failed to fetch tenants after refresh on mount', err));
+                        } else {
+                            clearSession();
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Failed to refresh tokens on mount', err);
+                        clearSession();
+                    })
+                    .finally(() => {
+                        setLoading(false);
+                    });
+                return;
+            } else {
+                setSession(stored);
+                // Use local variable to avoid dependency on 'session' state
+                authApi.getMyTenants(stored.accessToken)
+                    .then(setTenants)
+                    .catch(err => console.error('Failed to fetch tenants on mount', err));
+            }
         }
         setLoading(false);
     }, []); // Run ONLY once on mount

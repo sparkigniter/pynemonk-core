@@ -53,7 +53,7 @@ export default class PayrollHelper {
     public async updatePayslipStatus(tenantId: number, id: number, status: string, entryId?: number): Promise<any> {
         const res = await this.db.query(
             `UPDATE school.payslip 
-             SET status = $1, accounting_entry_id = $2, paid_at = CASE WHEN $1 = 'paid' THEN NOW() ELSE paid_at END
+             SET status = $1::text, accounting_entry_id = $2, paid_at = CASE WHEN $1::text = 'paid' THEN NOW() ELSE paid_at END
              WHERE id = $3 AND tenant_id = $4 RETURNING *`,
             [status, entryId || null, id, tenantId]
         );
@@ -66,5 +66,13 @@ export default class PayrollHelper {
             [tenantId, staffId]
         );
         return res.rows;
+    }
+
+    public async getPayslipForPeriod(tenantId: number, staffId: number, month: number, year: number): Promise<any> {
+        const res = await this.db.query(
+            `SELECT * FROM school.payslip WHERE tenant_id = $1 AND staff_id = $2 AND month = $3 AND year = $4`,
+            [tenantId, staffId, month, year]
+        );
+        return res.rows[0];
     }
 }

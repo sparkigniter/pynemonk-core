@@ -21,6 +21,7 @@ import { getGrades } from '../../api/grade.api';
 import { getClassrooms } from '../../api/classroom.api';
 import { getSubjectList } from '../../api/subject.api';
 import { getStaffList } from '../../api/staff.api';
+import { eventApi } from '../../api/event.api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -70,7 +71,7 @@ export default function ExamScheduler() {
     const [classrooms, setClassrooms] = useState<any[]>([]);
     const [subjects, setSubjects] = useState<any[]>([]);
     const [staff, setStaff] = useState<any[]>([]);
-
+    const [events, setEvents] = useState<any[]>([]);
     // Wizard State
     const [formData, setFormData] = useState({
         name: '',
@@ -83,6 +84,105 @@ export default function ExamScheduler() {
         schedule: [] as any[] // { paper_id, date, start_time, end_time }
     });
 
+    const holidays = useMemo(() => {
+        return events.filter(e => e.event_type === 'holiday');
+    }, [events]);
+
+    const conflicts = useMemo(() => {
+        const list: string[] = [];
+        
+        // 1. Check for Holiday conflicts
+        formData.papers.forEach(paper => {
+            if (!paper.date) return;
+            const activeHoliday = holidays.find(h => {
+                const sDate = h.start_date.split('T')[0];
+                const eDate = h.end_date.split('T')[0];
+                return paper.date >= sDate && paper.date <= eDate;
+            });
+            if (activeHoliday) {
+                const sub = subjects.find(s => s.id === paper.subject_id);
+                const cls = classrooms.find(c => c.id === paper.classroom_id);
+                list.push(`⚠️ Holiday Conflict: ${sub?.name} for ${cls?.name}-${cls?.section} is scheduled on a school holiday (${activeHoliday.title}).`);
+            }
+        });
+        
+        // 2. Check for Overlapping times in the same Classroom
+        const classroomGroups: { [key: number]: any[] } = {};
+        formData.papers.forEach(paper => {
+            if (!classroomGroups[paper.classroom_id]) {
+                classroomGroups[paper.classroom_id] = [];
+            }
+            classroomGroups[paper.classroom_id].push(paper);
+        });
+        
+        Object.keys(classroomGroups).forEach(cidStr => {
+            const cid = parseInt(cidStr);
+            const papersInClass = classroomGroups[cid];
+            const cls = classrooms.find(c => c.id === cid);
+            
+            for (let i = 0; i < papersInClass.length; i++) {
+                for (let j = i + 1; j < papersInClass.length; j++) {
+                    const p1 = papersInClass[i];
+                    const p2 = papersInClass[j];
+                    if (p1.date && p2.date && p1.date === p2.date) {
+                        const p1Start = p1.start_time || '00:00';
+                        const p1End = p1.end_time || '23:59';
+                        const p2Start = p2.start_time || '00:00';
+                        const p2End = p2.end_time || '23:59';
+                        
+                        const overlap = (p1Start < p2End) && (p2Start < p1End);
+                        if (overlap) {
+                            const sub1 = subjects.find(s => s.id === p1.subject_id);
+                            const sub2 = subjects.find(s => s.id === p2.subject_id);
+                            list.push(`🚨 Overlap in ${cls?.name}-${cls?.section}: ${sub1?.name} and ${sub2?.name} are scheduled at overlapping times on ${p1.date}.`);
+                        }
+                    }
+                }
+            }
+        });
+        
+        return list;
+    }, [formData.papers, holidays, subjects, classrooms]);
+
+    const calendarDays = useMemo(() => {
+        const baseDate = formData.start_date ? new Date(formData.start_date) : new Date();
+        const year = baseDate.getFullYear();
+        const month = baseDate.getMonth();
+        
+        const numDays = new Date(year, month + 1, 0).getDate();
+        
+        const firstDayOfWeek = new Date(year, month, 1).getDay();
+        const emptySlots = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+        
+        const days = [];
+        for (let i = 0; i < emptySlots; i++) {
+            days.push({ type: 'empty' });
+        }
+        
+        for (let dayNum = 1; dayNum <= numDays; dayNum++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            const dayPapers = formData.papers.filter(p => p.date === dateStr);
+            const activeHoliday = holidays.find(h => {
+                const sDate = h.start_date.split('T')[0];
+                const eDate = h.end_date.split('T')[0];
+                return dateStr >= sDate && dateStr <= eDate;
+            });
+            
+            days.push({
+                type: 'day',
+                dayNum,
+                dateStr,
+                papers: dayPapers,
+                holiday: activeHoliday
+            });
+        }
+        
+        return {
+            monthName: baseDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+            days
+        };
+    }, [formData.start_date, formData.papers, holidays]);
+
     useEffect(() => {
         loadData();
     }, []);
@@ -90,21 +190,25 @@ export default function ExamScheduler() {
     const loadData = async () => {
         try {
             setIsLoading(true);
-            const [gradeRes, classRes, subRes, staffRes] = await Promise.all([
+            const [gradeRes, classRes, subRes, staffRes, eventsRes] = await Promise.all([
                 getGrades(),
                 getClassrooms(),
                 getSubjectList(),
-                getStaffList()
+                getStaffList(),
+                eventApi.getEvents()
             ]);
             setGrades(gradeRes.data);
             setClassrooms(classRes.data);
             setSubjects(subRes.data);
             setStaff(staffRes.data);
+            setEvents(eventsRes || []);
 
-            if (id) {
-                // Load existing exam logic here if needed
-                await examApi.getExamDetails(parseInt(id));
-                // Map existing to formData...
+            if (id && id !== 'new') {
+                const parsedId = parseInt(id);
+                if (!isNaN(parsedId)) {
+                    // Load existing exam logic here if needed
+                    await examApi.getExamDetails(parsedId);
+                }
             }
         } catch (err) {
             notify('error', 'Critical Error', 'Failed to synchronize configuration data.');
@@ -172,17 +276,24 @@ export default function ExamScheduler() {
                 formData.selectedClassrooms.forEach(cid => {
                     const cls = classrooms.find(c => c.id === cid);
                     const clsSubjects = subjects.filter(s => s.grade_id === cls.grade_id);
-                    clsSubjects.forEach(sub => {
+                    clsSubjects.forEach((sub, subIdx) => {
                         const existing = formData.papers.find(p => p.subject_id === sub.id && p.classroom_id === cid);
                         if (existing) {
                             newPapers.push(existing);
                         } else {
+                            // Smart sequential scheduling (add days based on subject index to avoid overlap)
+                            let examDate = formData.start_date;
+                            if (formData.start_date) {
+                                const start = new Date(formData.start_date);
+                                start.setDate(start.getDate() + subIdx);
+                                examDate = start.toISOString().split('T')[0];
+                            }
                             newPapers.push({
                                 subject_id: sub.id,
                                 classroom_id: cid,
                                 max_marks: 100,
                                 type: 'theory',
-                                date: formData.start_date,
+                                date: examDate,
                                 start_time: '09:00',
                                 end_time: '12:00'
                             });
@@ -263,10 +374,10 @@ export default function ExamScheduler() {
     );
 
     return (
-        <div className="flex gap-10 p-10 bg-[#FBFBFE] min-h-screen">
+        <div className="flex gap-10 p-10 bg-[#FBFBFE] h-screen overflow-hidden">
             {/* Sidebar Summary (Web) */}
-            <aside className="hidden xl:flex flex-col w-[380px] shrink-0 gap-6">
-                <div className="bg-[var(--card-bg)] rounded-[3rem] p-10 border border-[var(--card-border)] shadow-xl shadow-slate-200/40 sticky top-10">
+            <aside className="hidden xl:flex flex-col w-[380px] shrink-0 gap-6 h-full overflow-y-auto pr-2 custom-scrollbar">
+                <div className="bg-[var(--card-bg)] rounded-[3rem] p-10 border border-[var(--card-border)] shadow-xl shadow-slate-200/40">
                     <div className="mb-10">
                         <div className="flex items-center gap-4 mb-4">
                             <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-theme/10">
@@ -323,10 +434,64 @@ export default function ExamScheduler() {
                         <AlertTriangle size={14} /> Discard Plan
                     </button>
                 </div>
+
+                {/* Dynamic Month Layout Visualizer in the Sidebar during Scheduling */}
+                {currentStep === 'schedule' && (
+                    <div className="bg-[var(--card-bg)] p-6 rounded-[3rem] border border-[var(--card-border)] shadow-xl shadow-slate-200/40">
+                        <div className="flex items-center justify-between mb-4 px-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Exam Calendar</span>
+                            <span className="text-xs font-extrabold text-[var(--text-main)] uppercase tracking-wider">{calendarDays.monthName}</span>
+                        </div>
+                        <div className="grid grid-cols-7 gap-1.5 mb-4">
+                            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
+                                <div key={d} className="text-center text-[9px] font-black text-slate-300 uppercase tracking-widest">{d}</div>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-7 gap-1.5">
+                            {calendarDays.days.map((d, idx) => {
+                                const day = d as any;
+                                if (day.type === 'empty') {
+                                     return <div key={`empty-${idx}`} className="aspect-square opacity-0" />;
+                                }
+                                
+                                const isHoliday = !!day.holiday;
+                                const hasExams = day.papers && day.papers.length > 0;
+                                
+                                return (
+                                    <div 
+                                        key={idx} 
+                                        className={`
+                                            aspect-square rounded-xl border transition-all relative flex flex-col items-center justify-center text-[10px] font-bold cursor-pointer group
+                                            ${isHoliday 
+                                                ? 'bg-amber-50 border-amber-200 text-amber-800 hover:border-amber-400' 
+                                                : hasExams 
+                                                    ? 'bg-primary/5 border-primary/20 text-primary hover:border-primary font-black' 
+                                                    : 'bg-slate-50 border-[var(--card-border)]/50 text-[var(--text-muted)] hover:border-slate-300'
+                                            }
+                                        `}
+                                        title={isHoliday ? `Holiday: ${day.holiday.title} (${day.holiday.description || 'No reason specified'})` : undefined}
+                                    >
+                                        <span>{day.dayNum}</span>
+                                        
+                                        {hasExams && (
+                                            <span className="absolute bottom-0.5 bg-primary text-white text-[7px] font-extrabold px-1 py-0.5 rounded shadow-sm scale-75">
+                                                {day.papers.length} P
+                                            </span>
+                                        )}
+                                        
+                                        {isHoliday && (
+                                            <span className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-amber-500 animate-ping" />
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 max-w-5xl mx-auto flex flex-col">
+            <main className="flex-1 max-w-5xl mx-auto flex flex-col h-full overflow-hidden">
                 {/* Step Indicator */}
                 <nav className="mb-12 flex items-center justify-between px-4">
                     {steps.map((s, idx) => {
@@ -356,7 +521,7 @@ export default function ExamScheduler() {
                 </nav>
 
                 {/* Wizard Container */}
-                <div className="bg-[var(--card-bg)] rounded-[4rem] p-12 border border-[var(--card-border)] shadow-2xl shadow-slate-200/30 flex-1 relative overflow-hidden flex flex-col">
+                <div className="bg-[var(--card-bg)] rounded-[3rem] p-8 border border-[var(--card-border)] shadow-2xl shadow-slate-200/30 flex-1 relative overflow-hidden flex flex-col min-h-0">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-primary/50/5 rounded-full blur-[100px] -mr-48 -mt-48" />
 
                     <AnimatePresence mode="wait">
@@ -366,7 +531,7 @@ export default function ExamScheduler() {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
                             transition={{ duration: 0.4 }}
-                            className="relative z-10 flex-1 flex flex-col"
+                            className="relative z-10 flex-1 flex flex-col overflow-y-auto pr-4 custom-scrollbar"
                         >
                             {/* STEP 1: DETAILS */}
                             {currentStep === 'details' && (
@@ -455,9 +620,27 @@ export default function ExamScheduler() {
                                                 <p className="text-[var(--text-muted)] font-medium">Which sections will be participating in this examination cycle?</p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Total Selected</p>
-                                            <p className="text-3xl font-black text-primary">{formData.selectedClassrooms.length} Sections</p>
+
+                                        <div className="flex items-center gap-6">
+                                            <div className="text-right">
+                                                <button
+                                                    onClick={() => {
+                                                        const allSelected = classrooms.length > 0 && classrooms.every(c => formData.selectedClassrooms.includes(c.id));
+                                                        if (allSelected) {
+                                                            setFormData(prev => ({ ...prev, selectedClassrooms: [] }));
+                                                        } else {
+                                                            setFormData(prev => ({ ...prev, selectedClassrooms: classrooms.map(c => c.id) }));
+                                                        }
+                                                    }}
+                                                    className="px-6 py-3 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                                >
+                                                    {classrooms.length > 0 && classrooms.every(c => formData.selectedClassrooms.includes(c.id)) ? 'Deselect All' : 'Select All Classes'}
+                                                </button>
+                                            </div>
+                                            <div className="text-right border-l border-[var(--card-border)] pl-6">
+                                                <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Total Selected</p>
+                                                <p className="text-3xl font-black text-primary">{formData.selectedClassrooms.length} Sections</p>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -598,7 +781,7 @@ export default function ExamScheduler() {
 
                             {/* STEP 4: SCHEDULE */}
                             {currentStep === 'schedule' && (
-                                <div className="space-y-10 flex flex-col h-full">
+                                <div className="space-y-10 flex flex-col h-full overflow-y-auto pr-4 custom-scrollbar pb-12">
                                     <div className="flex items-center gap-6">
                                         <div className="w-16 h-16 bg-surface-dark text-white rounded-[1.5rem] flex items-center justify-center shadow-2xl">
                                             <CalendarIcon size={32} />
@@ -609,94 +792,103 @@ export default function ExamScheduler() {
                                         </div>
                                     </div>
 
-                                    <div className="flex-1 grid grid-cols-12 gap-8 min-h-0">
-                                        <div className="col-span-8 overflow-y-auto pr-4 custom-scrollbar space-y-6">
-                                            {/* Weekly Layout Visualization */}
-                                            <div className="bg-slate-50 p-6 rounded-[2.5rem] border border-[var(--card-border)]">
-                                                <div className="grid grid-cols-7 gap-2 mb-4">
-                                                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
-                                                        <div key={d} className="text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">{d}</div>
-                                                    ))}
-                                                </div>
-                                                <div className="grid grid-cols-7 gap-2">
-                                                    {Array.from({ length: 31 }).map((_, i) => (
-                                                        <div key={i} className="aspect-square bg-[var(--card-bg)] rounded-xl border border-[var(--card-border)]/50 hover:border-primary transition-all cursor-pointer flex items-center justify-center text-xs font-black text-[var(--text-muted)] hover:text-primary">
-                                                            {i + 1}
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                    {/* 1. Dynamic Logic Engine Horizontal Banner */}
+                                    <div className={`p-6 rounded-[2.5rem] border flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all duration-300 w-full flex-shrink-0 ${
+                                        conflicts.length > 0 
+                                            ? 'bg-rose-50 border-rose-200 text-rose-950 shadow-lg shadow-rose-500/5' 
+                                            : 'bg-emerald-50 border-emerald-200 text-emerald-950 shadow-lg shadow-emerald-500/5'
+                                    }`}>
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                                                conflicts.length > 0 ? 'bg-rose-100 text-rose-600 animate-pulse' : 'bg-emerald-100 text-emerald-600'
+                                            }`}>
+                                                <AlertTriangle size={24} />
                                             </div>
-
-                                            <div className="space-y-4">
-                                                <h3 className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest px-4">Scheduling Queue</h3>
-                                                {formData.papers.map((paper, idx) => {
-                                                    const sub = subjects.find(s => s.id === paper.subject_id);
-                                                    const cls = classrooms.find(c => c.id === paper.classroom_id);
-                                                    return (
-                                                        <div key={idx} className="bg-[var(--card-bg)] p-6 rounded-[2rem] border border-[var(--card-border)] flex items-center justify-between group hover:shadow-xl hover:shadow-theme/10/50 transition-all">
-                                                            <div className="flex items-center gap-6">
-                                                                <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-[var(--text-main)] font-black">
-                                                                    {idx + 1}
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-sm font-black text-[var(--text-main)]">{sub?.name}</p>
-                                                                    <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{cls?.name}-{cls?.section}</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="relative">
-                                                                    <CalendarIcon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                                    <input 
-                                                                        type="date" 
-                                                                        value={paper.date || ''}
-                                                                        onChange={e => updatePaper(paper.subject_id, paper.classroom_id, 'date', e.target.value)}
-                                                                        className="pl-12 pr-4 py-3 bg-slate-50 rounded-xl border-none text-[10px] font-black text-[var(--text-main)] focus:bg-[var(--card-bg)] outline-none"
-                                                                    />
-                                                                </div>
-                                                                <div className="relative">
-                                                                    <Clock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                                    <input 
-                                                                        type="time" 
-                                                                        value={paper.start_time || ''}
-                                                                        onChange={e => updatePaper(paper.subject_id, paper.classroom_id, 'start_time', e.target.value)}
-                                                                        className="pl-12 pr-4 py-3 bg-slate-50 rounded-xl border-none text-[10px] font-black text-[var(--text-main)] focus:bg-[var(--card-bg)] outline-none"
-                                                                    />
-                                                                </div>
-                                                                <div className="relative">
-                                                                    <Clock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                                                    <input 
-                                                                        type="time" 
-                                                                        value={paper.end_time || ''}
-                                                                        onChange={e => updatePaper(paper.subject_id, paper.classroom_id, 'end_time', e.target.value)}
-                                                                        className="pl-12 pr-4 py-3 bg-slate-50 rounded-xl border-none text-[10px] font-black text-[var(--text-main)] focus:bg-[var(--card-bg)] outline-none"
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                            <div>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h3 className="text-sm font-black tracking-tight uppercase">Logic Engine</h3>
+                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                                        conflicts.length > 0 ? 'bg-rose-200 text-rose-800' : 'bg-emerald-200 text-emerald-800'
+                                                    }`}>
+                                                        {conflicts.length > 0 ? `${conflicts.length} Alert${conflicts.length > 1 ? 's' : ''}` : 'Zero Conflicts'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-[11px] font-semibold text-slate-500 mt-1 leading-relaxed">
+                                                    {conflicts.length > 0 
+                                                        ? 'Schedule overlaps or holiday conflicts detected. Please resolve them in the queue below.' 
+                                                        : 'All classroom allocations, evaluator slots, and holiday buffers are conflict-free.'}
+                                                </p>
                                             </div>
                                         </div>
+                                        
+                                        {conflicts.length > 0 ? (
+                                            <div className="flex-1 max-w-xl max-h-[80px] overflow-y-auto custom-scrollbar pr-2 space-y-1.5 md:ml-6 w-full">
+                                                {conflicts.map((conflict, idx) => (
+                                                    <div key={idx} className="text-[10px] font-black text-rose-700 bg-white/60 border border-rose-200/50 px-3 py-1.5 rounded-xl leading-relaxed flex items-center gap-2">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 flex-shrink-0" />
+                                                        <span>{conflict}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-right hidden lg:block max-w-xs md:ml-6 flex-shrink-0">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Logic Pro Tip</p>
+                                                <p className="text-[10px] font-bold text-slate-500 leading-relaxed">Ensure a 15-minute buffer between papers for classroom sanitization and transition.</p>
+                                            </div>
+                                        )}
+                                    </div>
 
-                                        <div className="col-span-4 bg-surface-dark rounded-[3rem] p-8 text-white flex flex-col gap-8 shadow-2xl">
-                                            <div className="flex items-center gap-4">
-                                                <AlertTriangle className="text-amber-400" size={24} />
-                                                <h3 className="text-lg font-black tracking-tight">Logic Engine</h3>
-                                            </div>
-                                            <div className="space-y-6">
-                                                <div className="p-6 bg-[var(--card-bg)]/5 rounded-[2rem] border border-white/10">
-                                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Conflicts Detected</p>
-                                                    <p className="text-2xl font-black">Zero</p>
-                                                </div>
-                                                <div className="p-6 bg-[var(--card-bg)]/5 rounded-[2rem] border border-white/10">
-                                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">Availability</p>
-                                                    <p className="text-sm font-medium text-white/60 leading-relaxed">All evaluators are available for the selected time slots.</p>
-                                                </div>
-                                            </div>
-                                            <div className="mt-auto">
-                                                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-4">Pro Tip</p>
-                                                <p className="text-xs font-medium text-white/50 leading-relaxed">Ensure a 15-minute buffer between papers for classroom sanitization and transition.</p>
-                                            </div>
+
+                                    {/* 3. Scheduling Queue (Full Width) */}
+                                    <div className="space-y-4 w-full">
+                                        <h3 className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest px-4">Scheduling Queue</h3>
+                                        <div className="space-y-4">
+                                            {formData.papers.map((paper, idx) => {
+                                                const sub = subjects.find(s => s.id === paper.subject_id);
+                                                const cls = classrooms.find(c => c.id === paper.classroom_id);
+                                                return (
+                                                    <div key={idx} className="bg-[var(--card-bg)] p-6 rounded-[2rem] border border-[var(--card-border)] flex flex-col lg:flex-row lg:items-center justify-between gap-6 group hover:shadow-xl hover:shadow-theme/10/50 transition-all">
+                                                        <div className="flex items-center gap-6 flex-shrink-0">
+                                                            <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-[var(--text-main)] font-black">
+                                                                {idx + 1}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-base font-black text-[var(--text-main)]">{sub?.name}</p>
+                                                                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mt-0.5">{cls?.name}-{cls?.section}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full lg:w-auto flex-1 lg:max-w-2xl">
+                                                            <div className="relative">
+                                                                <CalendarIcon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                                                <input 
+                                                                    type="date" 
+                                                                    value={paper.date || ''}
+                                                                    onChange={e => updatePaper(paper.subject_id, paper.classroom_id, 'date', e.target.value)}
+                                                                    className="pl-12 pr-4 py-3 bg-slate-50 rounded-xl border-none text-xs font-black text-[var(--text-main)] focus:bg-[var(--card-bg)] outline-none w-full"
+                                                                />
+                                                            </div>
+                                                            <div className="relative">
+                                                                <Clock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                                                <input 
+                                                                    type="time" 
+                                                                    value={paper.start_time || ''}
+                                                                    onChange={e => updatePaper(paper.subject_id, paper.classroom_id, 'start_time', e.target.value)}
+                                                                    className="pl-12 pr-4 py-3 bg-slate-50 rounded-xl border-none text-xs font-black text-[var(--text-main)] focus:bg-[var(--card-bg)] outline-none w-full"
+                                                                />
+                                                            </div>
+                                                            <div className="relative">
+                                                                <Clock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                                                <input 
+                                                                    type="time" 
+                                                                    value={paper.end_time || ''}
+                                                                    onChange={e => updatePaper(paper.subject_id, paper.classroom_id, 'end_time', e.target.value)}
+                                                                    className="pl-12 pr-4 py-3 bg-slate-50 rounded-xl border-none text-xs font-black text-[var(--text-main)] focus:bg-[var(--card-bg)] outline-none w-full"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 </div>
@@ -760,7 +952,7 @@ export default function ExamScheduler() {
                     </AnimatePresence>
 
                     {/* Navigation Footer */}
-                    <footer className="mt-auto pt-10 border-t border-slate-50 flex items-center justify-between">
+                    <footer className="shrink-0 mt-6 pt-6 border-t border-[var(--card-border)] flex items-center justify-between">
                         <button
                             onClick={handleBack}
                             disabled={currentStep === 'details'}

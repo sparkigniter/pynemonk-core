@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
     ChevronLeft, GraduationCap, 
     CheckCircle2, Circle, 
@@ -7,8 +7,9 @@ import {
     Award, TrendingUp,
     FileText, Users,
     Plus, ExternalLink,
-    Zap, RefreshCw, BarChart3, Target,
-    ArrowUpRight, Info, CreditCard, X, QrCode, Printer
+    Zap, RefreshCw, Target,
+    ArrowUpRight, Info, CreditCard, X,
+    Layers, Activity, ClipboardList, AlertCircle, LogOut
 } from 'lucide-react';
 import { 
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -20,21 +21,47 @@ import * as integrationApi from '../../api/integration.api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 
+// Custom styles to ensure Quill rendering is consistent in previews and print
+const DOCUMENT_STYLES = `
+  .ql-editor {
+    padding: 0;
+    height: auto;
+    overflow: visible;
+  }
+  .ql-align-center { text-align: center; }
+  .ql-align-right { text-align: right; }
+  .ql-align-justify { text-align: justify; }
+  .ql-indent-1 { padding-left: 3em; }
+  .ql-indent-2 { padding-left: 6em; }
+  .ql-indent-3 { padding-left: 9em; }
+  .ql-font-serif { font-family: serif; }
+  .ql-size-large { font-size: 1.5em; }
+  .ql-size-huge { font-size: 2.5em; }
+  
+  @media print {
+    body * { visibility: hidden; }
+    .print\\:block, .print\\:block * { visibility: visible; }
+    .print\\:block { position: absolute; left: 0; top: 0; width: 100%; }
+  }
+`;
+
 export default function StudentProfile() {
     const { user, can } = useAuth();
     const { notify } = useNotification();
+    const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const [student, setStudent] = useState<any>(null);
     const [grades, setGrades] = useState<gradeApi.Grade[]>([]);
     const [classrooms, setClassrooms] = useState<any[]>([]);
     const [performance, setPerformance] = useState<any[]>([]);
     const [attendance, setAttendance] = useState<any>(null);
+    const [stats, setStats] = useState<any>(null);
     const [integrations, setIntegrations] = useState<integrationApi.IntegrationManifest[]>([]);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'journey' | 'performance' | 'documents' | 'family'>('journey');
+    const [activeTab, setActiveTab] = useState<'journey' | 'performance' | 'documents' | 'family' | 'dossier'>('journey');
     const [selectedYearIdx, setSelectedYearIdx] = useState(0);
-    const [showIDCard, setShowIDCard] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
     const [showAddGuardian, setShowAddGuardian] = useState(false);
     const [guardianForm, setGuardianForm] = useState({
         first_name: '',
@@ -46,8 +73,8 @@ export default function StudentProfile() {
         occupation: '',
         is_emergency: false
     });
-    const [showEditModal, setShowEditModal] = useState(false);
     const [editForm, setEditForm] = useState<any>({});
+
 
     const handleSATSExport = async () => {
         if (!student) return;
@@ -65,31 +92,40 @@ export default function StudentProfile() {
     };
 
     useEffect(() => {
-        const fetchData = async () => {
+        const load = async () => {
             try {
-                const studentId = parseInt(id!);
-                const [studentData, gradeRes, perfData, attrData, integrationsData, classroomRes] = await Promise.all([
-                    studentApi.getStudentProfile(studentId),
-                    gradeApi.getGrades(),
-                    studentApi.getStudentPerformance(studentId),
-                    studentApi.getStudentAttendanceStats(studentId),
-                    integrationApi.getAvailableIntegrations(),
-                    classroomApi.getClassrooms({ limit: 100 })
-                ]);
-                
-                setStudent(studentData);
-                setGrades(gradeRes.data.sort((a, b) => a.sequence_order - b.sequence_order));
-                setPerformance(perfData);
-                setAttendance(attrData);
-                setIntegrations(integrationsData.filter(i => i.isEnabled));
-                setClassrooms(classroomRes.data);
+                if (id) {
+                    const studentId = parseInt(id);
+                    if (isNaN(studentId)) {
+                        setLoading(false);
+                        return;
+                    }
+
+                    const [studentData, gradeRes, perfData, attrData, integrationsData, classroomRes, statsData] = await Promise.all([
+                        studentApi.getStudentProfile(studentId),
+                        gradeApi.getGrades(),
+                        studentApi.getStudentPerformance(studentId),
+                        studentApi.getStudentAttendanceStats(studentId),
+                        integrationApi.getAvailableIntegrations(),
+                        classroomApi.getClassrooms({ limit: 100 }),
+                        studentApi.getStudentAnalytics(studentId)
+                    ]);
+                    
+                    setStudent(studentData);
+                    setGrades(gradeRes.data.sort((a: any, b: any) => a.sequence_order - b.sequence_order));
+                    setPerformance(perfData);
+                    setAttendance(attrData);
+                    setIntegrations(integrationsData.filter((i: any) => i.isEnabled));
+                    setClassrooms(classroomRes.data);
+                    setStats(statsData);
+                }
             } catch (err) {
-                console.error('Failed to fetch profile data', err);
+                console.error('Failed to load student profile:', err);
             } finally {
                 setLoading(false);
             }
         };
-        fetchData();
+        load();
     }, [id]);
 
     if (loading) {
@@ -110,21 +146,54 @@ export default function StudentProfile() {
 
     const canReadFull = can('student:read');
     
+    const isSatsReady = (data: any) => {
+        if (!data) return false;
+        const requiredFields = [
+            'mother_tongue', 'nationality', 'religion', 
+            'phone', 'address', 'date_of_birth', 
+            'gender', 'admission_date'
+        ];
+        return requiredFields.every(field => data[field] && data[field].toString().trim() !== '');
+    };
+
+    const getPerformanceStatus = () => {
+        if (!performance || performance.length === 0) return 'Pending';
+        const latest = performance[0];
+        let total = 0, count = 0;
+        Object.values(latest.terms || {}).forEach((t: any) => {
+            Object.values(t.exams || {}).forEach((e: any) => {
+                e.subjects.forEach((s: any) => {
+                    if (s.marks !== null) {
+                        total += (s.marks / s.max) * 100;
+                        count++;
+                    }
+                });
+            });
+        });
+        const avg = count > 0 ? total / count : 0;
+        if (avg >= 90) return 'Outstanding';
+        if (avg >= 75) return 'Excellent';
+        if (avg >= 60) return 'Good';
+        if (avg >= 40) return 'Average';
+        return 'Needs Attention';
+    };
+
     const tabs = [
-        { id: 'journey', label: 'Academic Journey', icon: TrendingUp },
-        { id: 'performance', label: 'Performance Analytics', icon: BarChart3 },
+        { id: 'journey', label: 'Class History', icon: Layers },
+        { id: 'performance', label: 'Marks & Exams', icon: Activity },
+        { id: 'dossier', label: 'Profile Details', icon: ClipboardList },
+        { id: 'documents', label: 'Documents', icon: FileText },
+        { id: 'family', label: 'Family', icon: Users }
     ];
 
-    if (canReadFull || (student.documents && student.documents.length > 0)) {
-        tabs.push({ id: 'documents', label: 'Document Vault', icon: FileText });
-    }
-    if (canReadFull || (student.guardians && student.guardians.length > 0)) {
-        tabs.push({ id: 'family', label: 'Family & Guardians', icon: Users });
-    }
-
-    // Helper to get marks for a specific grade/year from performance data
     const getGradeStats = (gradeName: string) => {
-        // Find performance entry matching this grade strictly
+        if (stats && student.current_grade_name === gradeName) {
+            return { 
+                avg: stats.gpa + (stats.scale === 'PERCENTAGE' ? '%' : ''), 
+                rank: `#${stats.rank} of ${stats.total_students}` 
+            };
+        }
+
         const yearData = performance.find(p => p.year.toLowerCase().includes(gradeName.toLowerCase()));
         
         if (!yearData) return { avg: '--', rank: '--' };
@@ -151,6 +220,7 @@ export default function StudentProfile() {
 
     return (
         <div className="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-[1600px] mx-auto">
+            <style>{DOCUMENT_STYLES}</style>
             {/* Header / Breadcrumbs */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex items-center gap-6">
@@ -187,8 +257,13 @@ export default function StudentProfile() {
                                         email: student.email,
                                         phone: student.phone,
                                         address: student.address,
+                                        gender: student.gender,
                                         blood_group: student.blood_group,
                                         date_of_birth: student.date_of_birth ? new Date(student.date_of_birth).toISOString().split('T')[0] : '',
+                                        admission_date: student.admission_date ? new Date(student.admission_date).toISOString().split('T')[0] : '',
+                                        religion: student.religion,
+                                        nationality: student.nationality,
+                                        mother_tongue: student.mother_tongue,
                                         classroom_id: student.classroom_id,
                                         academic_year_id: student.enrollment_year_id || (grades.length > 0 ? grades[0].id : '')
                                     });
@@ -199,7 +274,14 @@ export default function StudentProfile() {
                                 Edit Profile
                             </button>
                             <button 
-                                onClick={() => setShowIDCard(true)}
+                                onClick={() => navigate(`/students/designer/${student.id}?type=TRANSFER_CERTIFICATE`)}
+                                className="bg-rose-50 text-rose-600 px-6 py-3 rounded-2xl text-xs font-black hover:bg-rose-100 transition-all border border-rose-100 active:scale-95 flex items-center gap-2"
+                            >
+                                <LogOut size={14} />
+                                Initiate Transfer
+                            </button>
+                            <button 
+                                onClick={() => navigate(`/students/designer/${student.id}?type=ID_CARD`)}
                                 className="bg-surface-dark text-white px-6 py-3 rounded-2xl text-xs font-black hover:opacity-90 transition-all shadow-xl active:scale-95 flex items-center gap-2"
                             >
                                 <CreditCard size={14} />
@@ -218,8 +300,12 @@ export default function StudentProfile() {
                         
                         <div className="flex flex-col items-center text-center space-y-6">
                             <div className="relative group">
-                                <div className="w-32 h-32 rounded-[2.5rem] bg-[var(--background)] flex items-center justify-center text-4xl font-black text-[var(--text-muted)] opacity-50 border-4 border-white shadow-2xl overflow-hidden group-hover:scale-105 transition-transform duration-500">
-                                    {student.avatar_url ? <img src={student.avatar_url} className="w-full h-full object-cover" /> : `${student.first_name[0]}${student.last_name?.[0]}`}
+                                <div className="w-32 h-32 rounded-[2.5rem] bg-[var(--background)] flex items-center justify-center text-4xl font-black text-[var(--text-muted)] border-4 border-white shadow-2xl overflow-hidden group-hover:scale-105 transition-transform duration-500">
+                                    {student.avatar_url ? (
+                                        <img src={student.avatar_url} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="opacity-30">{student.first_name[0]}{student.last_name?.[0]}</span>
+                                    )}
                                 </div>
                                 <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg border-4 border-white rotate-12 group-hover:rotate-0 transition-all">
                                     <Award size={18} />
@@ -243,13 +329,17 @@ export default function StudentProfile() {
                             </div>
                             <div className="p-4 bg-[var(--background)] rounded-2xl">
                                 <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Performance</p>
-                                <p className="text-sm font-black text-emerald-500">Excellent</p>
+                                <p className={`text-sm font-black ${getPerformanceStatus() === 'Needs Attention' ? 'text-error' : 'text-emerald-500'}`}>{getPerformanceStatus()}</p>
+                            </div>
+                            <div className="p-4 bg-[var(--background)] rounded-2xl">
+                                <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Blood Group</p>
+                                <p className="text-sm font-black text-rose-500">{student.blood_group || 'Unknown'}</p>
                             </div>
                             <div className="p-4 bg-[var(--background)] rounded-2xl col-span-2">
-                                <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Medical Status</p>
+                                <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Medical & Conduct</p>
                                 <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-success/100" />
-                                    <p className="text-xs font-bold text-[var(--text-main)]">Fit to Academic Cycle</p>
+                                    <span className={`w-2 h-2 rounded-full ${student.medical_notes ? 'bg-warning' : 'bg-success'}`} />
+                                    <p className="text-xs font-bold text-[var(--text-main)]">{student.medical_notes || 'General Fitness - Clear'}</p>
                                 </div>
                             </div>
                         </div>
@@ -279,14 +369,20 @@ export default function StudentProfile() {
                     {/* Quick Stats Grid */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-surface-dark p-6 rounded-[2rem] text-white">
-                            <Target className="w-6 h-6 mb-4 text-primary" />
-                            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Rank</p>
-                            <p className="text-xl font-black">#04</p>
+                            <CreditCard className="w-6 h-6 mb-4 text-primary" />
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Fees Status</p>
+                            <p className="text-xl font-black">{student.outstanding_balance ? `₹${student.outstanding_balance.toLocaleString()}` : 'No Fees'}</p>
+                            <p className={`text-[8px] font-bold mt-1 uppercase ${student.fee_status === 'overdue' ? 'text-error' : 'opacity-40'}`}>
+                                {student.fee_status === 'no_invoices' ? 'NO FEES' : student.fee_status === 'paid' ? 'PAID' : 'PENDING'}
+                            </p>
                         </div>
                         <div className="bg-primary p-6 rounded-[2rem] text-white">
-                            <TrendingUp className="w-6 h-6 mb-4 text-white/50" />
-                            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">GPA</p>
-                            <p className="text-xl font-black">3.92</p>
+                            <Users className="w-6 h-6 mb-4 text-white/50" />
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Primary Contact</p>
+                            <p className="text-xl font-black truncate">{student.guardians?.[0]?.first_name || 'No Data'}</p>
+                            <p className="text-[11px] font-black opacity-80 mt-1 uppercase truncate tracking-widest">
+                                {student.guardians?.[0]?.phone || 'Contact Missing'}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -315,8 +411,8 @@ export default function StudentProfile() {
                             <div className="space-y-10 animate-in fade-in duration-500">
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-1">
-                                        <h3 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Academic <span className="text-primary">Journey</span></h3>
-                                        <p className="text-xs font-medium text-[var(--text-muted)]">Historical progression through the institution's pedagogical stages.</p>
+                                        <h3 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Class <span className="text-primary">History</span></h3>
+                                        <p className="text-xs font-medium text-[var(--text-muted)]">Previous grades and classes attended in this school.</p>
                                     </div>
                                     <div className="px-4 py-2 bg-[var(--background)] rounded-xl text-[9px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] border border-[var(--card-border)]">Live Metadata</div>
                                 </div>
@@ -338,9 +434,9 @@ export default function StudentProfile() {
                                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-3">
-                                                                <h4 className="text-xl font-black tracking-tight">{grade.name}</h4>
-                                                                {isCurrent && <span className="px-3 py-1 bg-primary text-white rounded-lg text-[8px] font-black uppercase tracking-widest animate-pulse">Active Path</span>}
-                                                                {isPassed && <span className="px-3 py-1 bg-success/100/10 text-emerald-500 rounded-lg text-[8px] font-black uppercase tracking-widest">Completed</span>}
+                                                                 <h4 className="text-xl font-black tracking-tight">{grade.name}</h4>
+                                                                 {isCurrent && <span className="px-3 py-1 bg-primary text-white rounded-lg text-[8px] font-black uppercase tracking-widest animate-pulse">Active Path</span>}
+                                                                 {isPassed && <span className="px-3 py-1 bg-success/100/10 text-emerald-500 rounded-lg text-[8px] font-black uppercase tracking-widest">Completed</span>}
                                                             </div>
                                                             <p className={`text-[10px] font-bold uppercase tracking-widest ${isCurrent ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
                                                                 Academic Cycle Level {grade.sequence_order}
@@ -373,8 +469,8 @@ export default function StudentProfile() {
                             <div className="space-y-10 animate-in fade-in duration-500">
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-1">
-                                        <h3 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Performance <span className="text-primary">Analytics</span></h3>
-                                        <p className="text-xs font-medium text-[var(--text-muted)]">Granular insights into subject-wise mastery and examination trends.</p>
+                                        <h3 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Marks & <span className="text-primary">Exams</span></h3>
+                                        <p className="text-xs font-medium text-[var(--text-muted)]">Detailed marks from various examinations and tests.</p>
                                     </div>
                                     <select 
                                         value={selectedYearIdx}
@@ -387,24 +483,16 @@ export default function StudentProfile() {
 
                                 {performance.length > 0 && performance[selectedYearIdx] ? (
                                     <div className="space-y-10">
-                                        {/* Trends Chart */}
                                         <div className="bg-[var(--background)] p-8 rounded-[2.5rem] border border-[var(--card-border)]">
                                             <div className="flex items-center justify-between mb-8">
                                                 <h4 className="text-sm font-black uppercase tracking-widest text-[var(--text-main)] flex items-center gap-2">
                                                     <TrendingUp size={16} className="text-primary" />
                                                     Score Progression Trend
                                                 </h4>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-3 h-3 rounded-full bg-primary" />
-                                                        <span className="text-[10px] font-bold text-[var(--text-muted)]">Term Marks</span>
-                                                    </div>
-                                                </div>
                                             </div>
                                             <div className="h-[250px] w-full">
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <LineChart data={Object.values(performance[selectedYearIdx].terms).map((t: any) => {
-                                                        // Calculate avg for the term
                                                         let sum = 0;
                                                         let count = 0;
                                                         Object.values(t.exams).forEach((exam: any) => {
@@ -433,7 +521,6 @@ export default function StudentProfile() {
                                             </div>
                                         </div>
 
-                                        {/* Subject Mastery Grid - Show all terms/exams */}
                                         <div className="space-y-12">
                                             {Object.values(performance[selectedYearIdx].terms).map((term: any) => (
                                                 <div key={term.name} className="space-y-6">
@@ -498,6 +585,59 @@ export default function StudentProfile() {
                             </div>
                         )}
 
+                        {activeTab === 'dossier' && (
+                            <div className="space-y-10 animate-in fade-in duration-500">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <h3 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Profile <span className="text-primary">Details</span></h3>
+                                        <p className="text-xs font-medium text-[var(--text-muted)]">Core student information and identity records.</p>
+                                    </div>
+                                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${isSatsReady(student) ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>
+                                        {isSatsReady(student) ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                                        {isSatsReady(student) ? 'Ready for Export' : 'Incomplete Records'}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-6">
+                                        <h4 className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] px-2">Identity Details</h4>
+                                        <div className="bg-[var(--background)] rounded-[2rem] border border-[var(--card-border)] overflow-hidden">
+                                            {[
+                                                { label: 'Mother Tongue', value: student.mother_tongue },
+                                                { label: 'Nationality', value: student.nationality },
+                                                { label: 'Religion', value: student.religion },
+                                                { label: 'Blood Group', value: student.blood_group },
+                                                { label: 'Gender', value: student.gender }
+                                            ].map((item, idx) => (
+                                                <div key={idx} className="flex items-center justify-between p-5 border-b border-[var(--card-border)] last:border-0 hover:bg-white transition-colors">
+                                                    <span className="text-xs font-bold text-[var(--text-muted)]">{item.label}</span>
+                                                    <span className="text-xs font-black text-[var(--text-main)] uppercase">{item.value || 'Not Specified'}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <h4 className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] px-2">Academic Registration</h4>
+                                        <div className="bg-[var(--background)] rounded-[2rem] border border-[var(--card-border)] overflow-hidden">
+                                            {[
+                                                { label: 'Admission Number', value: student.admission_no },
+                                                { label: 'Admission Date', value: student.admission_date ? new Date(student.admission_date).toLocaleDateString() : null },
+                                                { label: 'Current Grade', value: student.current_grade_name },
+                                                { label: 'Current Section', value: student.classroom_section },
+                                                { label: 'Institutional Status', value: student.status || student.enrollment_status }
+                                            ].map((item, idx) => (
+                                                <div key={idx} className="flex items-center justify-between p-5 border-b border-[var(--card-border)] last:border-0 hover:bg-white transition-colors">
+                                                    <span className="text-xs font-bold text-[var(--text-muted)]">{item.label}</span>
+                                                    <span className="text-xs font-black text-[var(--text-main)] uppercase">{item.value || 'N/A'}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === 'documents' && (
                             <div className="space-y-8 animate-in fade-in duration-500">
                                 <div className="flex items-center justify-between">
@@ -550,7 +690,7 @@ export default function StudentProfile() {
                                     </button>
                                 </div>
                                 <div className="space-y-6">
-                                    {student.guardians?.map((guardian: any) => (
+                                    {student.guardians?.map((guardian: any, idx: number) => (
                                         <div key={guardian.id} className="p-8 rounded-[2.5rem] border border-[var(--card-border)] bg-[var(--background)]/50 flex flex-col md:flex-row gap-8 items-start md:items-center group hover:bg-white hover:shadow-xl hover:shadow-slate-100 transition-all">
                                             <div className="w-24 h-24 bg-[var(--card-bg)] rounded-3xl flex items-center justify-center text-3xl font-black text-slate-200 border border-[var(--card-border)] shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform">
                                                 {guardian.avatar_url ? <img src={guardian.avatar_url} className="w-full h-full object-cover rounded-3xl" /> : `${guardian.first_name[0]}${guardian.last_name?.[0]}`}
@@ -562,12 +702,15 @@ export default function StudentProfile() {
                                                         <h4 className="text-2xl font-black text-[var(--text-main)]">{guardian.first_name} {guardian.last_name}</h4>
                                                     </div>
                                                     <div className="flex items-center gap-3">
-                                                        {guardian.is_emergency && (
-                                                            <div className="bg-error/50 text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20">Emergency Primary</div>
+                                                        {idx === 0 && (
+                                                            <div className="bg-primary/10 text-primary border border-primary/20 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest">Primary</div>
                                                         )}
-                                                        <button className="p-3 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl text-[var(--text-muted)] hover:text-primary transition-all">
-                                                            <ArrowUpRight size={18} />
-                                                        </button>
+                                                        {guardian.is_emergency && (
+                                                            <div className="bg-error text-white px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest shadow-lg shadow-error/20 flex items-center gap-1.5">
+                                                                <AlertCircle size={10} />
+                                                                Emergency
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
@@ -576,267 +719,27 @@ export default function StudentProfile() {
                                                         <p className="text-xs font-bold text-[var(--text-main)]">{guardian.occupation || 'N/A'}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 opacity-60">Contact Number</p>
-                                                        <p className="text-xs font-bold text-[var(--text-main)]">{guardian.phone || 'N/A'}</p>
+                                                        <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 opacity-80">Contact Number</p>
+                                                        <p className="text-sm font-black text-[var(--text-main)]">{guardian.phone || 'N/A'}</p>
                                                     </div>
                                                     <div>
                                                         <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 opacity-60">Email Address</p>
                                                         <p className="text-xs font-bold text-[var(--text-main)] lowercase">{guardian.email || 'N/A'}</p>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 opacity-60">Residential Address</p>
-                                                        <p className="text-xs font-bold text-[var(--text-main)] line-clamp-1">{guardian.address || 'Same as student'}</p>
-                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     ))}
-                                    {(!student.guardians || student.guardians.length === 0) && (
-                                        <div className="text-center py-20 bg-[var(--background)] rounded-[2.5rem] border border-dashed border-[var(--card-border)]">
-                                            <p className="text-[var(--text-muted)] font-bold italic text-xs">No guardian records linked to this dossier.</p>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
-        </div>
+            </div>
 
-            {/* ID Card Modal */}
-            {showIDCard && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl relative overflow-hidden group">
-                        {/* Close Button */}
-                        <button 
-                            onClick={() => setShowIDCard(false)}
-                            className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-all z-20"
-                        >
-                            <X size={20} className="text-slate-500" />
-                        </button>
-
-                        <div id="id-card-printable" className="relative bg-white border border-slate-100 rounded-[2rem] overflow-hidden aspect-[1/1.6] shadow-xl p-8 flex flex-col items-center">
-                            {/* Institutional Branding Header */}
-                            <div className="absolute top-0 left-0 w-full h-32 bg-slate-900 flex flex-col items-center justify-center p-6 text-white text-center">
-                                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-2">
-                                    <GraduationCap size={20} />
-                                </div>
-                                <h3 className="text-sm font-black tracking-widest uppercase">LuviaEdu Academic</h3>
-                                <p className="text-[8px] font-bold opacity-60 uppercase tracking-widest mt-0.5">Excellence in Pedagogy</p>
-                            </div>
-
-                            {/* Student Image */}
-                            <div className="mt-24 relative">
-                                <div className="w-36 h-36 rounded-full border-8 border-white bg-slate-50 shadow-2xl flex items-center justify-center overflow-hidden">
-                                    {student.avatar_url ? (
-                                        <img src={student.avatar_url} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <span className="text-4xl font-black text-slate-300">{student.first_name[0]}{student.last_name?.[0]}</span>
-                                    )}
-                                </div>
-                                <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-primary rounded-full border-4 border-white flex items-center justify-center text-white">
-                                    <CheckCircle2 size={20} />
-                                </div>
-                            </div>
-
-                            {/* Student Identity */}
-                            <div className="mt-8 text-center space-y-2">
-                                <h4 className="text-2xl font-black text-slate-900 tracking-tight">{student.first_name} {student.last_name}</h4>
-                                <div className="inline-block px-4 py-1.5 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">
-                                    {student.classroom_name} • {student.current_grade_name}
-                                </div>
-                            </div>
-
-                            {/* Metadata Grid */}
-                            <div className="mt-10 grid grid-cols-2 gap-x-12 gap-y-6 w-full border-t border-slate-100 pt-8">
-                                <div className="space-y-1">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Admission No</p>
-                                    <p className="text-xs font-black text-slate-800 uppercase">{student.admission_no}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Nationality</p>
-                                    <p className="text-xs font-black text-slate-800">{student.nationality || 'Indian'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Academic Year</p>
-                                    <p className="text-xs font-black text-slate-800">2026-2027</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Validity</p>
-                                    <p className="text-xs font-black text-slate-800 uppercase">March 2027</p>
-                                </div>
-                            </div>
-
-                            {/* Security & Footer */}
-                            <div className="mt-auto pt-8 flex items-center justify-between w-full">
-                                <div className="w-16 h-16 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center p-2">
-                                    <QrCode size={40} className="text-slate-900" />
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] font-black text-slate-900 italic mb-1 opacity-20">Principal Signature</p>
-                                    <div className="h-px w-24 bg-slate-200 ml-auto" />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="mt-8 flex gap-4">
-                            <button 
-                                onClick={() => window.print()}
-                                className="flex-1 bg-slate-900 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Printer size={16} />
-                                Print Identification
-                            </button>
-                            <button 
-                                onClick={() => setShowIDCard(false)}
-                                className="px-6 bg-slate-100 text-slate-600 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
-                            >
-                                Dismiss
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Add Guardian Modal */}
-            {showAddGuardian && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full shadow-2xl relative overflow-hidden">
-                        <div className="flex items-center justify-between mb-8">
-                            <div>
-                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Add <span className="text-primary">Guardian</span></h3>
-                                <p className="text-xs font-medium text-slate-500">Register a new point of contact for this student.</p>
-                            </div>
-                            <button onClick={() => setShowAddGuardian(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-all">
-                                <X size={20} className="text-slate-500" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={async (e) => {
-                            e.preventDefault();
-                            setSyncing(true);
-                            try {
-                                await studentApi.addGuardian(student.id, guardianForm);
-                                const updatedStudent = await studentApi.getStudentProfile(student.id);
-                                setStudent(updatedStudent);
-                                setShowAddGuardian(false);
-                            } catch (err) {
-                                console.error('Failed to add guardian:', err);
-                            } finally {
-                                setSyncing(false);
-                            }
-                        }} className="space-y-6">
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">First Name</label>
-                                    <input 
-                                        type="text" required
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
-                                        placeholder="Enter first name"
-                                        value={guardianForm.first_name}
-                                        onChange={e => setGuardianForm({...guardianForm, first_name: e.target.value})}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Last Name</label>
-                                    <input 
-                                        type="text"
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
-                                        placeholder="Enter last name"
-                                        value={guardianForm.last_name}
-                                        onChange={e => setGuardianForm({...guardianForm, last_name: e.target.value})}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Address</label>
-                                    <input 
-                                        type="email" required
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
-                                        placeholder="guardian@example.com"
-                                        value={guardianForm.email}
-                                        onChange={e => setGuardianForm({...guardianForm, email: e.target.value})}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Phone Number</label>
-                                    <input 
-                                        type="tel"
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
-                                        placeholder="+91 XXXXX XXXXX"
-                                        value={guardianForm.phone}
-                                        onChange={e => setGuardianForm({...guardianForm, phone: e.target.value})}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Relation</label>
-                                    <select 
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all appearance-none"
-                                        value={guardianForm.relation}
-                                        onChange={e => setGuardianForm({...guardianForm, relation: e.target.value})}
-                                    >
-                                        <option value="Father">Father</option>
-                                        <option value="Mother">Mother</option>
-                                        <option value="Guardian">Guardian</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Occupation</label>
-                                    <input 
-                                        type="text"
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
-                                        placeholder="Business / Service"
-                                        value={guardianForm.occupation}
-                                        onChange={e => setGuardianForm({...guardianForm, occupation: e.target.value})}
-                                    />
-                                </div>
-                                <div className="col-span-2 space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Address</label>
-                                    <input 
-                                        type="text"
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
-                                        placeholder="Same as student"
-                                        value={guardianForm.address}
-                                        onChange={e => setGuardianForm({...guardianForm, address: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                <input 
-                                    type="checkbox"
-                                    id="is_emergency"
-                                    className="w-5 h-5 rounded-lg border-slate-200 text-primary focus:ring-primary/20"
-                                    checked={guardianForm.is_emergency}
-                                    onChange={e => setGuardianForm({...guardianForm, is_emergency: e.target.checked})}
-                                />
-                                <label htmlFor="is_emergency" className="text-xs font-bold text-slate-600 cursor-pointer select-none">Set as Primary Emergency Contact</label>
-                            </div>
-
-                            <div className="flex gap-4 pt-4">
-                                <button 
-                                    type="submit"
-                                    disabled={syncing}
-                                    className="flex-1 bg-slate-900 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
-                                >
-                                    {syncing ? 'Processing...' : 'Register Guardian'}
-                                </button>
-                                <button 
-                                    type="button"
-                                    onClick={() => setShowAddGuardian(false)}
-                                    className="px-8 bg-slate-100 text-slate-600 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-            {/* Edit Student Modal */}
+            {/* Edit Profile Modal */}
             {showEditModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
                     <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full shadow-2xl relative overflow-hidden">
                         <div className="flex items-center justify-between mb-8">
                             <div>
@@ -854,84 +757,86 @@ export default function StudentProfile() {
                             try {
                                 const { classroom_id, academic_year_id, ...profileData } = editForm;
                                 await studentApi.updateStudentProfile(student.id, profileData);
-                                
                                 if (classroom_id && classroom_id !== '0') {
                                     await studentApi.enrollStudent(student.id, {
                                         classroom_id: parseInt(classroom_id),
                                         academic_year_id: academic_year_id ? parseInt(academic_year_id) : 1 
                                     });
                                 }
-                                
                                 const updatedStudent = await studentApi.getStudentProfile(student.id);
                                 setStudent(updatedStudent);
                                 notify('success', 'Profile Updated', 'Student records have been successfully synchronized.');
                                 setShowEditModal(false);
                             } catch (err: any) {
                                 console.error('Failed to update student:', err);
-                                notify('error', 'Update Failed', err.message || 'An unexpected error occurred.');
+                                notify('error', 'Update Failed', err.message || 'An error occurred.');
                             } finally {
                                 setSyncing(false);
                             }
                         }} className="space-y-6">
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">First Name</label>
-                                    <input 
-                                        type="text" required
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
-                                        value={editForm.first_name}
-                                        onChange={e => setEditForm({...editForm, first_name: e.target.value})}
-                                    />
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">First Name</label>
+                                    <input type="text" required className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold" value={editForm.first_name} onChange={e => setEditForm({...editForm, first_name: e.target.value})} />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Last Name</label>
-                                    <input 
-                                        type="text"
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
-                                        value={editForm.last_name}
-                                        onChange={e => setEditForm({...editForm, last_name: e.target.value})}
-                                    />
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Last Name</label>
+                                    <input type="text" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold" value={editForm.last_name} onChange={e => setEditForm({...editForm, last_name: e.target.value})} />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Mobile Phone</label>
-                                    <input 
-                                        type="tel"
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all"
-                                        value={editForm.phone}
-                                        onChange={e => setEditForm({...editForm, phone: e.target.value})}
-                                    />
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mobile Phone</label>
+                                    <input type="tel" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold" value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Classroom Assignment</label>
-                                    <select 
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:ring-2 ring-primary/20 transition-all appearance-none"
-                                        value={editForm.classroom_id || ''}
-                                        onChange={e => setEditForm({...editForm, classroom_id: e.target.value})}
-                                    >
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Classroom</label>
+                                    <select className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold" value={editForm.classroom_id || ''} onChange={e => setEditForm({...editForm, classroom_id: e.target.value})}>
                                         <option value="">Unassigned</option>
-                                        {classrooms.map(c => (
-                                            <option key={c.id} value={c.id}>{c.name} ({c.section})</option>
-                                        ))}
+                                        {classrooms.map(c => <option key={c.id} value={c.id}>{c.name} ({c.section})</option>)}
                                     </select>
                                 </div>
+                                <div className="col-span-2 space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Residential Address</label>
+                                    <textarea className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold min-h-[100px] resize-none" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} />
+                                </div>
                             </div>
-
                             <div className="flex gap-4 pt-4">
-                                <button 
-                                    type="submit"
-                                    disabled={syncing}
-                                    className="flex-1 bg-slate-900 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
-                                >
+                                <button type="submit" disabled={syncing} className="flex-1 bg-slate-900 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl">
                                     {syncing ? 'Saving...' : 'Update Records'}
                                 </button>
-                                <button 
-                                    type="button"
-                                    onClick={() => setShowEditModal(false)}
-                                    className="px-10 bg-slate-100 text-slate-600 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
-                                >
+                                <button type="button" onClick={() => setShowEditModal(false)} className="px-10 bg-slate-100 text-slate-600 py-4 rounded-2xl text-xs font-black uppercase tracking-widest">
                                     Cancel
                                 </button>
                             </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            
+            {/* Add Guardian Modal */}
+            {showAddGuardian && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full shadow-2xl relative">
+                        <div className="flex items-center justify-between mb-8">
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Add <span className="text-primary">Guardian</span></h3>
+                            <button onClick={() => setShowAddGuardian(false)}><X size={20} /></button>
+                        </div>
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            setSyncing(true);
+                            try {
+                                await studentApi.addGuardian(student.id, guardianForm);
+                                const updated = await studentApi.getStudentProfile(student.id);
+                                setStudent(updated);
+                                setShowAddGuardian(false);
+                            } catch (err) { console.error(err); } finally { setSyncing(false); }
+                        }} className="space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <input type="text" required placeholder="First Name" className="w-full bg-slate-50 p-4 rounded-2xl" value={guardianForm.first_name} onChange={e => setGuardianForm({...guardianForm, first_name: e.target.value})} />
+                                <input type="text" placeholder="Last Name" className="w-full bg-slate-50 p-4 rounded-2xl" value={guardianForm.last_name} onChange={e => setGuardianForm({...guardianForm, last_name: e.target.value})} />
+                                <input type="email" required placeholder="Email" className="w-full bg-slate-50 p-4 rounded-2xl" value={guardianForm.email} onChange={e => setGuardianForm({...guardianForm, email: e.target.value})} />
+                                <input type="tel" placeholder="Phone" className="w-full bg-slate-50 p-4 rounded-2xl" value={guardianForm.phone} onChange={e => setGuardianForm({...guardianForm, phone: e.target.value})} />
+                            </div>
+                            <button type="submit" disabled={syncing} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black">Register Guardian</button>
                         </form>
                     </div>
                 </div>

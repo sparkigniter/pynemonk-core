@@ -5,13 +5,15 @@ import { AdmissionNumberService } from "../services/AdmissionNumberService.js";
 import EnrollmentHelper from "../helpers/EnrollmentHelper.js";
 import ApiResponseHandler from "../../../core/ApiResponseHandler.js";
 import ResourceController from "../../../core/controllers/ResourceController.js";
+import { Pool } from "pg";
 
 @injectable()
 export default class StudentController extends ResourceController {
     constructor(
         @inject(StudentService) private studentService: StudentService,
         @inject(AdmissionNumberService) private admissionNumberService: AdmissionNumberService,
-        @inject(EnrollmentHelper) private enrollmentHelper: EnrollmentHelper
+        @inject(EnrollmentHelper) private enrollmentHelper: EnrollmentHelper,
+        @inject("DB") private db: Pool
     ) {
         super();
     }
@@ -61,6 +63,12 @@ export default class StudentController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const studentId = parseInt(req.params.id, 10);
+            
+            if (isNaN(studentId)) {
+                ApiResponseHandler.badrequest(res, "Student not found");
+                return;
+            }
+
             const scope = await this.getScope(req);
             const user = (req as any).user;
             const canReadFull = user.permissions.includes('student:read') || scope.accessLevel === "FULL";
@@ -84,12 +92,29 @@ export default class StudentController extends ResourceController {
         }
     }
 
+    public async getAnalytics(req: e.Request, res: e.Response): Promise<void> {
+        try {
+            const tenantId = this.getTenantId(req);
+            const studentId = parseInt(req.params.id, 10);
+
+            if (isNaN(studentId)) {
+                ApiResponseHandler.badrequest(res, "Student not found");
+                return;
+            }
+
+            const stats = await this.studentService.getStudentAnalytics(tenantId, studentId);
+            ApiResponseHandler.ok(res, "Success", stats);
+        } catch (error: any) {
+            ApiResponseHandler.badrequest(res, "Failed to calculate analytics");
+        }
+    }
+
     public async list(req: e.Request, res: e.Response): Promise<void> {
         try {
             const tenantId = this.getTenantId(req);
             const scope = await this.getScope(req);
             const user = (req as any).user;
-            const { page, limit, search, classroom_id, academic_year_id, gender, blood_group, religion, nationality, grade_id, unenrolled } = req.query;
+            const { page, limit, search, classroom_id, academic_year_id, gender, blood_group, religion, nationality, grade_id, unenrolled, unallocated_only } = req.query;
             const filters: any = {
                 page: page ? parseInt(page as string, 10) : 1,
                 limit: limit ? parseInt(limit as string, 10) : 10,
@@ -101,7 +126,8 @@ export default class StudentController extends ResourceController {
                 religion: religion as string,
                 nationality: nationality as string,
                 grade_id: grade_id ? parseInt(grade_id as string) : undefined,
-                unenrolled: unenrolled === 'true'
+                unenrolled: unenrolled === 'true',
+                unallocated_only: unallocated_only === 'true'
             };
 
             const canReadFull = user.permissions.includes('student:read') || scope.accessLevel === "FULL";
@@ -148,6 +174,12 @@ export default class StudentController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const studentId = parseInt(req.params.id, 10);
+
+            if (isNaN(studentId)) {
+                ApiResponseHandler.badrequest(res, "Student not found");
+                return;
+            }
+
             const scope = await this.getScope(req);
             const user = (req as any).user;
 
@@ -183,6 +215,12 @@ export default class StudentController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const studentId = parseInt(req.params.id, 10);
+
+            if (isNaN(studentId)) {
+                ApiResponseHandler.badrequest(res, "Student not found");
+                return;
+            }
+
             const scope = await this.getScope(req);
 
             if (scope.accessLevel !== "FULL" && !scope.hasStudent(studentId)) {
@@ -202,11 +240,28 @@ export default class StudentController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const studentId = parseInt(req.params.id, 10);
+
+            if (isNaN(studentId)) {
+                ApiResponseHandler.badrequest(res, "Student not found");
+                return;
+            }
+
             const { classroom_id, academic_year_id, roll_number } = req.body;
             const scope = await this.getScope(req);
 
             if (scope.accessLevel !== "FULL" && !scope.hasStudent(studentId)) {
                 ApiResponseHandler.forbidden(res, "You do not have permission to place this student");
+                return;
+            }
+
+            // Validate Academic Year existence
+            const ayCheck = await this.db.query(
+                "SELECT id FROM school.academic_year WHERE id = $1 AND tenant_id = $2 AND is_deleted = FALSE",
+                [parseInt(academic_year_id), tenantId]
+            );
+
+            if (ayCheck.rows.length === 0) {
+                ApiResponseHandler.badrequest(res, `The academic year reference (${academic_year_id}) is invalid or has been expired. Please refresh your dashboard.`);
                 return;
             }
 
@@ -228,6 +283,12 @@ export default class StudentController extends ResourceController {
         try {
             const tenantId = this.getTenantId(req);
             const studentId = parseInt(req.params.id, 10);
+
+            if (isNaN(studentId)) {
+                ApiResponseHandler.badrequest(res, "Student not found");
+                return;
+            }
+
             const scope = await this.getScope(req);
 
             if (scope.accessLevel !== "FULL" && !scope.hasStudent(studentId)) {

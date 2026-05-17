@@ -180,6 +180,19 @@ export const getBankTransactions = async (): Promise<any[]> => {
     return data.data;
 };
 
+export const getTreasuryInventory = async (): Promise<any[]> => {
+    const data = await fetchWithError(`/banking/treasury`);
+    return data.data;
+};
+
+export const settleTreasuryFunds = async (payload: any) => {
+    const data = await fetchWithError(`/banking/settle`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+    return data.data;
+};
+
 // Automation & Mapping APIs
 export const getSystemMappings = async (): Promise<any[]> => {
     const data = await fetchWithError(`/automation/mappings`);
@@ -253,6 +266,47 @@ export const getAccountingSettings = async () => {
     return data.data;
 };
 
+export const getBalanceSheet = async (date?: string) => {
+    const query = date ? `?date=${date}` : '';
+    const data = await fetchWithError(`/reports/balance-sheet${query}`);
+    return data.data;
+};
+
+export const getCashFlow = async (startDate?: string, endDate?: string) => {
+    const query = (startDate && endDate) ? `?startDate=${startDate}&endDate=${endDate}` : '';
+    const data = await fetchWithError(`/reports/cash-flow${query}`);
+    return data.data;
+};
+
+export const getARAging = async (params: { 
+    sourceType?: string, 
+    fromPartnerId?: number, 
+    toPartnerId?: number, 
+    isDetailed?: boolean,
+    status?: string 
+} = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.sourceType) searchParams.append('sourceType', params.sourceType);
+    if (params.fromPartnerId) searchParams.append('fromPartnerId', params.fromPartnerId.toString());
+    if (params.toPartnerId) searchParams.append('toPartnerId', params.toPartnerId.toString());
+    if (params.isDetailed) searchParams.append('isDetailed', 'true');
+    if (params.status) searchParams.append('status', params.status);
+    
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    const data = await fetchWithError(`/reports/aging/ar${query}`);
+    return data.data;
+};
+
+export const getAPAging = async () => {
+    const data = await fetchWithError(`/reports/aging`);
+    return data.data;
+};
+
+export const getFinancialTrends = async (): Promise<any[]> => {
+    const data = await fetchWithError(`/reports/trends`);
+    return data.data;
+};
+
 export const batchGenerateInvoices = async (installmentId: number) => {
     const data = await fetchWithError(`/fees/invoices/batch-generate`, {
         method: 'POST',
@@ -266,7 +320,7 @@ export const getInstallments = async (): Promise<any[]> => {
     return data.data;
 };
 
-export const getInvoice = async (id: number): Promise<any> => {
+export const getInvoice = async (id: string | number): Promise<any> => {
     const data = await fetchWithError(`/invoices/${id}`);
     return data.data;
 };
@@ -286,3 +340,31 @@ export const updateAccountingSettings = async (payload: any) => {
     });
     return data.data;
 };
+
+// Fiscal Year Lifecycle APIs
+export const getFiscalYears = async (): Promise<any[]> => {
+    const data = await fetchWithError(`/fiscal-years`);
+    return data.data;
+};
+
+export const createFiscalYear = async (payload: any) => {
+    const data = await fetchWithError(`/fiscal-years`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+    return data.data;
+};
+
+export const closeFiscalYear = async (id: number) => {
+    const data = await fetchWithError(`/fiscal-years/${id}/close`, {
+        method: 'POST',
+    });
+    return data.data;
+};
+
+export const getReportTemplates = async (reportType?: string): Promise<any[]> => {
+    const query = reportType ? `?reportType=${reportType}` : '';
+    const data = await fetchWithError(`/reports/templates${query}`);
+    return data.data;
+};
+

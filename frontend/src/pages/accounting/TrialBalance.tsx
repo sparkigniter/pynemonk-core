@@ -42,6 +42,56 @@ export default function TrialBalance() {
         return acc;
     }, { debit: 0, credit: 0 });
 
+    const handlePrint = async () => {
+        try {
+            const session = localStorage.getItem('eduerp_session');
+            const token = session ? JSON.parse(session).accessToken : '';
+            
+            const response = await fetch('http://localhost:3000/api/v1/accounting/reports/trial-balance/export/pdf', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) throw new Error('Failed to generate PDF');
+
+            const buffer = await response.arrayBuffer();
+            const blob = new Blob([buffer], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `trial_balance_${new Date().toISOString().split('T')[0]}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err) {
+            console.error('Print Error:', err);
+            alert('Failed to generate professional PDF report. Falling back to browser print.');
+            window.print();
+        }
+    };
+
+    const exportToCSV = () => {
+        if (!data.length) return;
+        let csv = 'Code,Account,Type,Debit,Credit\n';
+        data.forEach(a => {
+            csv += `${a.code},"${a.name}",${a.type_name},${a.total_debit},${a.total_credit}\n`;
+        });
+        csv += `,,TOTALS,${totals.debit},${totals.credit}\n`;
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.setAttribute('hidden', '');
+        a.setAttribute('href', url);
+        a.setAttribute('download', `trial_balance_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
     return (
         <div className="p-8 space-y-8 max-w-[1200px] mx-auto animate-in fade-in duration-500">
             {/* Header */}
@@ -64,10 +114,14 @@ export default function TrialBalance() {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <button className="p-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl text-[var(--text-muted)] hover:text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
+                    <button 
+                        onClick={handlePrint}
+                        className="p-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl text-[var(--text-muted)] hover:text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
                         <Printer size={18} />
                     </button>
-                    <button className="flex items-center gap-2 px-5 py-2.5 bg-surface-dark text-white rounded-xl font-bold text-sm shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                    <button 
+                        onClick={exportToCSV}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-surface-dark text-white rounded-xl font-bold text-sm shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-[0.98] transition-all">
                         <Download size={18} />
                         Export statement
                     </button>

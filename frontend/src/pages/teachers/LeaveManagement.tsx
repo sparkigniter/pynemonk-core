@@ -66,6 +66,25 @@ export default function LeaveManagement() {
         }
     };
 
+    const getLeaveBalance = (type: any) => {
+        const approvedLeaves = leaves.filter(l => l.leave_type_id === type.id && l.status === 'approved');
+        const approvedDays = approvedLeaves.reduce((sum, leave) => {
+            const start = new Date(leave.start_date);
+            const end = new Date(leave.end_date);
+            const diffTime = Math.abs(end.getTime() - start.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            return sum + diffDays;
+        }, 0);
+        return Math.max(0, type.default_days - approvedDays);
+    };
+
+    const getLeavePercentage = (type: any) => {
+        const balance = getLeaveBalance(type);
+        const total = type.default_days || 1;
+        const percentage = ((total - balance) / total) * 100;
+        return `${Math.min(100, Math.max(0, percentage))}%`;
+    };
+
     const getLeaveIcon = (typeName: string) => {
         const name = typeName.toLowerCase();
         if (name.includes('sick') || name.includes('medical')) return <HeartPulse size={18} />;
@@ -106,11 +125,11 @@ export default function LeaveManagement() {
                             </div>
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">{type.name}</p>
-                                <p className="text-xl font-black text-[var(--text-main)]">Balance: {type.default_days} Days</p>
+                                <p className="text-xl font-black text-[var(--text-main)]">Balance: {getLeaveBalance(type)} Days</p>
                             </div>
                         </div>
                         <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-primary w-1/3" />
+                            <div className="h-full bg-primary transition-all duration-500" style={{ width: getLeavePercentage(type) }} />
                         </div>
                     </div>
                 ))}

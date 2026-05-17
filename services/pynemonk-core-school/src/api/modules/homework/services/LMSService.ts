@@ -8,25 +8,50 @@ export class LMSService {
 
     // --- RESOURCE LIBRARY ---
 
+    async getStudentGrade(tenantId: number, userId: number) {
+        const res = await this.pool.query(
+            `SELECT c.grade_id 
+             FROM school.student s
+             JOIN school.student_enrollment se ON s.id = se.student_id
+             JOIN school.classroom c ON se.classroom_id = c.id
+             WHERE s.user_id = $1 AND s.tenant_id = $2 AND se.status = 'active' AND se.is_deleted = FALSE LIMIT 1`,
+            [userId, tenantId]
+        );
+        return res.rows[0];
+    }
+
     async listResources(tenantId: number, filters: any) {
         let query = `
-            SELECT r.*, s.name as subject_name, g.name as grade_name, c.name as classroom_name
+            SELECT r.*, s.name as subject_name, c.name as classroom_name,
+                   (SELECT string_agg(g.name, ', ') FROM school.grade g WHERE g.id = ANY(r.grade_ids)) as grades_list
             FROM school.lms_resource r
             LEFT JOIN school.subject s ON r.subject_id = s.id
-            LEFT JOIN school.grade g ON r.grade_id = g.id
             LEFT JOIN school.classroom c ON r.classroom_id = c.id
             WHERE r.tenant_id = $1 AND r.is_deleted = FALSE
         `;
         const values: any[] = [tenantId];
         let pIdx = 2;
 
+        // Apply access controls based on user role
+        if (filters.isStudent) {
+            if (filters.studentGradeId) {
+                query += ` AND (r.access_level = 'public' OR (r.access_level = 'grades' AND $${pIdx}::integer = ANY(r.grade_ids)))`;
+                values.push(filters.studentGradeId);
+                pIdx++;
+            } else {
+                query += ` AND r.access_level = 'public'`;
+            }
+        } else if (filters.isTeacher || filters.isAdmin) {
+            // Teachers/Admins can see everything: public, grades, teachers
+        } else {
+            // Unauthenticated or general fallback: only public
+            query += ` AND r.access_level = 'public'`;
+        }
+
+        // Additional query parameter filters
         if (filters.subject_id) {
             query += ` AND r.subject_id = $${pIdx++}`;
             values.push(filters.subject_id);
-        }
-        if (filters.grade_id) {
-            query += ` AND r.grade_id = $${pIdx++}`;
-            values.push(filters.grade_id);
         }
         if (filters.classroom_id) {
             query += ` AND (r.classroom_id = $${pIdx++} OR r.classroom_id IS NULL)`;
@@ -41,14 +66,15 @@ export class LMSService {
     async createResource(tenantId: number, data: any, userId: number) {
         const query = `
             INSERT INTO school.lms_resource 
-            (tenant_id, title, description, resource_type, url, subject_id, grade_id, classroom_id, created_by, tags, is_public)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            (tenant_id, title, description, resource_type, url, subject_id, classroom_id, created_by, tags, is_public, access_level, grade_ids)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING *
         `;
         const values = [
             tenantId, data.title, data.description, data.resource_type, 
-            data.url, data.subject_id, data.grade_id, data.classroom_id, 
-            userId, data.tags || [], data.is_public || false
+            data.url, data.subject_id, data.classroom_id, 
+            userId, data.tags || [], data.is_public || false,
+            data.access_level || 'public', data.grade_ids || null
         ];
         const res = await this.pool.query(query, values);
         return res.rows[0];

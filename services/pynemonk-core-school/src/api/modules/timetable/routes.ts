@@ -32,7 +32,7 @@ router.delete("/:id", apiRateLimiter, sensitiveRateLimiter, requireAuth, require
 });
 
 router.get("/periods", apiRateLimiter, requireAuth, requirePermission(["timetable:read"]), (req, res) => {
-    container.resolve(TimetableController).getUniquePeriods(req, res);
+    container.resolve(TimetableController).getPeriods(req, res);
 });
 
 router.get("/global-schedule", apiRateLimiter, requireAuth, requirePermission(["timetable:read"]), (req, res) => {

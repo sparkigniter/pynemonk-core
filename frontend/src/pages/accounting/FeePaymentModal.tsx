@@ -7,7 +7,7 @@ interface FeePaymentModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    invoiceId: number | null;
+    invoiceId: string | number | null;
 }
 
 export default function FeePaymentModal({ isOpen, onClose, onSuccess, invoiceId }: FeePaymentModalProps) {
@@ -163,9 +163,17 @@ export default function FeePaymentModal({ isOpen, onClose, onSuccess, invoiceId 
                             >
                                 <option value="">Select bank account...</option>
                                 {banks.map(b => (
-                                    <option key={b.id} value={b.id}>{b.account_name} ({b.account_number})</option>
+                                    <option key={b.id} value={b.id}>
+                                        {b.name} — {b.account_no} {b.bank_name ? `(${b.bank_name})` : ''}
+                                    </option>
                                 ))}
                             </select>
+                            {banks.length > 0 && !formData.bank_account_id && (
+                                <p className="text-[10px] font-bold text-primary mt-1 flex items-center gap-1 uppercase tracking-tighter">
+                                    <CheckCircle size={10} />
+                                    Default bank account will be used if none selected
+                                </p>
+                            )}
                         </div>
                     )}
 

@@ -57,6 +57,14 @@ export default class LeaveHelper {
         return res.rows;
     }
 
+    public async getApplication(tenantId: number, id: number): Promise<any> {
+        const res = await this.db.query(
+            `SELECT * FROM school.leave_application WHERE id = $1 AND tenant_id = $2`,
+            [id, tenantId]
+        );
+        return res.rows[0];
+    }
+
     public async updateStatus(tenantId: number, id: number, data: any): Promise<any> {
         const res = await this.db.query(
             `UPDATE school.leave_application

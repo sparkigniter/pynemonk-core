@@ -40,8 +40,9 @@ export default class AdmissionWorkflowService {
     public async updateApplication(tenantId: number, id: number, stage: string, data: any, nextStage?: string): Promise<any> {
         const updateData: any = {};
 
-        if (data.grade_id) updateData.grade_id = parseInt(data.grade_id);
-        if (data.academic_year_id) updateData.academic_year_id = parseInt(data.academic_year_id);
+        if (data.grade_id) updateData.grade_id = parseInt(data.grade_id.toString());
+        if (data.academic_year_id) updateData.academic_year_id = parseInt(data.academic_year_id.toString());
+        if (data.classroom_id) updateData.classroom_id = parseInt(data.classroom_id.toString());
 
         if (stage !== 'enrollment') {
             const stageColumn = this.getStageColumn(stage);
@@ -88,25 +89,31 @@ export default class AdmissionWorkflowService {
         return res.rows;
     }
 
-    public async finalizeAdmission(tenantId: number, id: number, userId: number): Promise<any> {
+    public async finalizeAdmission(tenantId: number, id: number, userId: number, finalData?: any): Promise<any> {
         const app = await this.getApplication(tenantId, id);
         if (!app) throw new Error("Application not found");
 
+        // Merge incoming payload from UI with stored draft data
+        // finalData takes absolute priority as it represents the current UI state
+        const mergedFinance = { ...app.finance_data, ...(finalData?.finance || finalData) };
+        const mergedStudent = { ...app.student_data, ...(finalData?.student || finalData) };
+        const mergedGuardian = { ...app.parent_data, ...(finalData?.guardian || finalData) };
+
         const studentData = {
-            ...app.student_data,
-            admission_no: app.student_data.admission_no || app.application_no
+            ...mergedStudent,
+            admission_no: mergedStudent.admission_no || app.application_no
         };
 
         const admissionRequest = {
             student: studentData,
-            guardian: app.parent_data,
+            guardian: mergedGuardian,
             enrollment: {
-                academic_year_id: app.academic_year_id || app.student_data.academic_year_id,
-                grade_id: app.grade_id || app.student_data.grade_id,
-                classroom_id: app.student_data.classroom_id,
-                section: app.student_data.section || 'A'
+                academic_year_id: finalData?.enrollment?.academic_year_id || app.academic_year_id || studentData.academic_year_id,
+                grade_id: finalData?.enrollment?.grade_id || app.grade_id || studentData.grade_id,
+                classroom_id: finalData?.enrollment?.classroom_id || studentData.classroom_id,
+                section: finalData?.enrollment?.section || studentData.section || 'A'
             },
-            finance: app.finance_data
+            finance: mergedFinance
         };
 
         const result = await this.admissionService.admitStudent(tenantId, admissionRequest, userId);

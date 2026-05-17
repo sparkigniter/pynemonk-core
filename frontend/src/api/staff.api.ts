@@ -37,6 +37,8 @@ export interface Staff {
         subject_name: string;
     }>;
     is_class_teacher: boolean;
+    leave_start_date?: string;
+    leave_end_date?: string;
 }
 
 export interface PaginatedResponse<T> {

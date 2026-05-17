@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import {
     GraduationCap, User, Users,
     ArrowLeft, Sparkles, CheckCircle2, ChevronRight,
-    Loader2, CreditCard, ShieldCheck, Clock, Search, Save, File
+    Loader2, CreditCard, ShieldCheck, Clock, Search, Save,
+    Maximize2, X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAcademics } from '../../contexts/AcademicsContext';
@@ -10,6 +11,8 @@ import * as gradeApi from '../../api/grade.api';
 import * as studentApi from '../../api/student.api';
 import { ComboBox } from '../../components/ui/ComboBox';
 import { useNotification } from '../../contexts/NotificationContext';
+import { getFeeStructures } from '../../api/fee.api';
+import { getBankAccounts } from '../../api/accounting.api';
 
 type AdmissionStep = 'student' | 'guardian' | 'enrollment' | 'documents' | 'test' | 'finance';
 
@@ -23,6 +26,9 @@ export default function StudentAdmission() {
     const [grades, setGrades] = useState<gradeApi.Grade[]>([]);
 
     const [applicationId, setApplicationId] = useState<number | null>(null);
+    const [feeStructures, setFeeStructures] = useState<any[]>([]);
+    const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+    const [showDraftsModal, setShowDraftsModal] = useState(false);
 
     const [formData, setFormData] = useState({
         student: {
@@ -64,6 +70,7 @@ export default function StudentAdmission() {
         },
         test: {
             required: false,
+            skip_assessment: false,
             test_date: '',
             score: '',
             status: 'pending', // pending, cleared, failed
@@ -73,9 +80,12 @@ export default function StudentAdmission() {
             fee_category: 'Regular',
             discount_percent: 0,
             payment_mode: 'Annual',
-            admission_fee: 0,
+            structure_ids: [] as number[],
+            bank_account_id: 0,
+            amount_paid: 0,
             is_paid: false,
-            payment_method: 'cash'
+            payment_method: 'cash',
+            reference: ''
         }
     });
 
@@ -110,8 +120,26 @@ export default function StudentAdmission() {
                 console.error('Failed to load pending applications', err);
             }
         };
+        const loadFeeStructures = async () => {
+            try {
+                const structures = await getFeeStructures();
+                setFeeStructures(structures);
+            } catch (err) {
+                console.error('Failed to load fee structures', err);
+            }
+        };
+        const loadBankAccounts = async () => {
+            try {
+                const accounts = await getBankAccounts();
+                setBankAccounts(accounts);
+            } catch (err) {
+                console.error('Failed to load bank accounts', err);
+            }
+        };
         loadGrades();
         loadPending();
+        loadFeeStructures();
+        loadBankAccounts();
     }, []);
 
     useEffect(() => {
@@ -124,22 +152,19 @@ export default function StudentAdmission() {
                 }
             }));
         }
-
-        const fetchAdmissionNo = async () => {
-            if (!formData.student.admission_no) {
-                try {
-                    const res = await studentApi.getNextAdmissionNumber();
-                    updateStudent('admission_no', res.admission_no);
-                } catch (err) {
-                    const year = new Date().getFullYear();
-                    const random = Math.floor(100 + Math.random() * 900);
-                    updateStudent('admission_no', `ADM/${year}/${random}`);
-                }
-            }
-            setLoading(false);
-        };
-        fetchAdmissionNo();
+        setLoading(false);
     }, [academicYears, currentYear]);
+
+    const fetchLatestAdmissionNo = async () => {
+        try {
+            const res = await studentApi.getNextAdmissionNumber();
+            updateStudent('admission_no', res.admission_no);
+        } catch (err) {
+            const year = new Date().getFullYear();
+            const random = Math.floor(100 + Math.random() * 900);
+            updateStudent('admission_no', `ADM/${year}/${random}`);
+        }
+    };
 
     const resumeApplication = async (app: any) => {
         try {
@@ -157,7 +182,12 @@ export default function StudentAdmission() {
                 },
                 documents: fullApp.document_data || formData.documents,
                 test: fullApp.test_data || formData.test,
-                finance: fullApp.finance_data || formData.finance
+                finance: {
+                    ...formData.finance,
+                    ...(fullApp.finance_data || {}),
+                    structure_ids: fullApp.finance_data?.structure_ids || 
+                                  (fullApp.finance_data?.structure_id ? [fullApp.finance_data.structure_id] : [])
+                }
             });
             const stageMapper: Record<string, AdmissionStep> = {
                 'student_info': 'student',
@@ -170,7 +200,14 @@ export default function StudentAdmission() {
                 'guardian': 'guardian',
                 'finance': 'finance'
             };
-            setActiveStep(stageMapper[fullApp.current_stage] || 'student');
+            const nextStage = stageMapper[fullApp.current_stage] || 'student';
+            setActiveStep(nextStage);
+            
+            // Auto update to latest admission number if resumed at finance stage
+            if (nextStage === 'finance') {
+                fetchLatestAdmissionNo();
+            }
+
             notify('success', 'Draft Resumed', `Continuing application for ${fullApp.student_data?.first_name}`);
         } catch (err: any) {
             notify('error', 'Resume Failed', err.message);
@@ -179,15 +216,39 @@ export default function StudentAdmission() {
 
     const validateStep = (step: AdmissionStep): boolean => {
         const { student, guardian } = formData;
+        const missing: string[] = [];
+
         if (step === 'student') {
-            if (!student.first_name || !student.admission_no || !student.gender || !student.date_of_birth) {
-                notify('warning', 'Missing Information', 'Please fill all required student identity fields.');
+            if (!student.first_name) missing.push('First Name');
+            if (!student.gender) missing.push('Gender');
+            if (!student.date_of_birth) missing.push('Date of Birth');
+            if (!student.mother_tongue) missing.push('Mother Tongue');
+            if (!student.address) missing.push('Residential Address');
+
+            if (missing.length > 0) {
+                notify('error', 'Missing Required Fields', `Please provide: ${missing.join(', ')}`);
                 return false;
             }
         }
+
         if (step === 'guardian') {
-            if (!guardian.first_name || !guardian.phone || !guardian.relation) {
-                notify('warning', 'Missing Information', 'Please fill basic guardian details.');
+            if (!guardian.first_name) missing.push('Guardian Name');
+            if (!guardian.phone) missing.push('Mobile Number');
+            if (!guardian.relation) missing.push('Relationship');
+
+            if (missing.length > 0) {
+                notify('error', 'Missing Information', `Please provide: ${missing.join(', ')}`);
+                return false;
+            }
+        }
+
+        if (step === 'finance') {
+            if (formData.finance.structure_ids.length === 0) {
+                notify('error', 'Selection Required', 'Please select at least one fee structure.');
+                return false;
+            }
+            if (formData.finance.is_paid && (formData.finance.payment_method === 'bank' || formData.finance.payment_method === 'online') && !formData.finance.bank_account_id) {
+                notify('error', 'Bank Selection Required', 'Please select the bank account where the payment was received.');
                 return false;
             }
         }
@@ -209,6 +270,10 @@ export default function StudentAdmission() {
                 stage: 'finance',
                 data: {
                     ...formData.finance,
+                    structure_ids: formData.finance.structure_ids,
+                    bank_account_id: formData.finance.bank_account_id || null,
+                    reference_no: formData.finance.reference || `ADM-${Date.now()}`,
+                    ...formData.student, // Include updated student data (especially admission_no)
                     grade_id: formData.enrollment.grade_id,
                     academic_year_id: formData.enrollment.academic_year_id,
                     classroom_id: formData.enrollment.classroom_id,
@@ -216,7 +281,7 @@ export default function StudentAdmission() {
                     roll_number: formData.enrollment.roll_number
                 }
             });
-            await studentApi.finalizeAdmissionWorkflow(appId!);
+            await studentApi.finalizeAdmissionWorkflow(appId!, formData);
             notify('success', 'Admission Finalized', `${formData.student.first_name} has been officially admitted.`);
             navigate('/students');
         } catch (err: any) {
@@ -245,8 +310,8 @@ export default function StudentAdmission() {
             } else {
                 await studentApi.updateAdmissionWorkflow(applicationId, {
                     stage: activeStep,
-                    data: { 
-                        ...currentData, 
+                    data: {
+                        ...currentData,
                         grade_id: formData.enrollment.grade_id,
                         academic_year_id: formData.enrollment.academic_year_id,
                         classroom_id: formData.enrollment.classroom_id
@@ -273,11 +338,20 @@ export default function StudentAdmission() {
             currentData = formData.guardian;
             next = 'test';
         } else if (activeStep === 'test') {
+            if (!formData.test.skip_assessment && formData.test.status !== 'cleared') {
+                notify('error', 'Evaluation Required', 'The entrance assessment must be marked as "Qualified / Pass" to proceed. You may also choose to skip this step if not required.');
+                return;
+            }
             currentData = formData.test;
             next = 'documents';
         } else if (activeStep === 'documents') {
             currentData = formData.documents;
             next = 'finance';
+            
+            // Auto update to latest admission number when moving to Finance stage
+            fetchLatestAdmissionNo();
+        } else if (activeStep === 'finance' && !validateStep('finance')) {
+            return;
         }
 
         if (currentData) {
@@ -419,14 +493,23 @@ export default function StudentAdmission() {
                     <div className="bg-[var(--background)] rounded-[2rem] p-5 border border-[var(--card-border)]">
                         <div className="flex items-center justify-between mb-3">
                             <h4 className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest">Resume Pending</h4>
-                            <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">{filteredApplications.length}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">{filteredApplications.length}</span>
+                                <button 
+                                    onClick={() => setShowDraftsModal(true)}
+                                    className="p-1 hover:bg-slate-100 rounded-md transition-all text-slate-400 hover:text-primary"
+                                    title="Expand Draft Explorer"
+                                >
+                                    <Maximize2 size={12} />
+                                </button>
+                            </div>
                         </div>
                         <div className="relative mb-3">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={13} />
                             <input type="text" placeholder="Search drafts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl text-[10px] font-bold text-[var(--text-main)] placeholder:text-slate-300 focus:outline-none focus:border-primary transition-all" />
                         </div>
-                        <div className="space-y-2 max-h-[220px] overflow-y-auto">
-                            {filteredApplications.map(app => (
+                        <div className="space-y-2 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                            {filteredApplications.slice(0, 5).map(app => (
                                 <button key={app.id} onClick={() => resumeApplication(app)} className="w-full text-left p-3 bg-[var(--card-bg)] rounded-xl border border-[var(--card-border)] hover:border-primary hover:shadow-md transition-all group">
                                     <div className="flex items-center justify-between mb-0.5">
                                         <span className="text-[11px] font-black text-[var(--text-main)] group-hover:text-primary truncate mr-2">{app.first_name || 'Incomplete'} {app.last_name}</span>
@@ -438,7 +521,23 @@ export default function StudentAdmission() {
                                     </div>
                                 </button>
                             ))}
+                            {filteredApplications.length > 5 && (
+                                <button 
+                                    onClick={() => setShowDraftsModal(true)}
+                                    className="w-full py-2.5 text-[9px] font-black text-primary hover:bg-primary/5 rounded-xl transition-all uppercase tracking-widest"
+                                >
+                                    + {filteredApplications.length - 5} More Drafts
+                                </button>
+                            )}
                         </div>
+                        {filteredApplications.length > 0 && (
+                            <button 
+                                onClick={() => setShowDraftsModal(true)}
+                                className="w-full mt-3 py-3 border-t border-[var(--card-border)] text-[9px] font-black text-[var(--text-muted)] hover:text-primary transition-all uppercase tracking-[0.2em] flex items-center justify-center gap-2"
+                            >
+                                <Maximize2 size={10} /> View All Drafts
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -465,10 +564,6 @@ export default function StudentAdmission() {
                                         <input value={formData.student.last_name} onChange={e => updateStudent('last_name', e.target.value)} className="input-admission" placeholder="Doe" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Admission Number *</label>
-                                        <input required value={formData.student.admission_no} onChange={e => updateStudent('admission_no', e.target.value)} className="input-admission font-mono" placeholder="ADM-2026-XXX" />
-                                    </div>
-                                    <div className="space-y-2">
                                         <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Date of Birth *</label>
                                         <input required type="date" value={formData.student.date_of_birth} onChange={e => updateStudent('date_of_birth', e.target.value)} className="input-admission" />
                                     </div>
@@ -487,7 +582,7 @@ export default function StudentAdmission() {
                                         <input required value={formData.student.mother_tongue} onChange={e => updateStudent('mother_tongue', e.target.value)} className="input-admission" placeholder="Kannada, English, etc." />
                                     </div>
                                     <div className="col-span-2 space-y-2">
-                                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Residential Address</label>
+                                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Residential Address *</label>
                                         <textarea value={formData.student.address} onChange={e => updateStudent('address', e.target.value)} className="input-admission min-h-[100px]" placeholder="Full street address..." />
                                     </div>
                                 </div>
@@ -528,6 +623,10 @@ export default function StudentAdmission() {
                                         <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Occupation</label>
                                         <input value={formData.guardian.occupation} onChange={e => updateGuardian('occupation', e.target.value)} className="input-admission" placeholder="Business / Professional" />
                                     </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Guardian Email</label>
+                                        <input value={formData.guardian.email} onChange={e => updateGuardian('email', e.target.value)} className="input-admission" placeholder="guardian@email.com" />
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -544,41 +643,75 @@ export default function StudentAdmission() {
                                     </div>
                                 </div>
                                 <div className="bg-[var(--background)] p-8 rounded-[2rem] border border-[var(--card-border)] space-y-8">
-                                    <div className="grid grid-cols-2 gap-8">
-                                        <ComboBox
-                                            label="Target Grade *"
-                                            value={formData.enrollment.grade_id}
-                                            onChange={val => updateEnrollment('grade_id', val)}
-                                            options={grades.map(g => ({ value: g.id.toString(), label: g.name }))}
-                                        />
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Assessment Date</label>
-                                            <input type="datetime-local" value={formData.test.test_date} onChange={e => updateTest('test_date', e.target.value)} className="input-admission" />
-                                        </div>
-                                    </div>
-                                    <div className="pt-8 border-t border-[var(--card-border)]">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <h4 className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Evaluation Status</h4>
-                                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${formData.test.status === 'cleared' ? 'bg-emerald-100 text-emerald-600' : formData.test.status === 'failed' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
-                                                {formData.test.status}
-                                            </span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-8">
-                                            <ComboBox
-                                                value={formData.test.status}
-                                                onChange={val => updateTest('status', val)}
-                                                options={[
-                                                    { value: 'pending', label: 'Pending / Scheduled' },
-                                                    { value: 'cleared', label: 'Qualified / Pass' },
-                                                    { value: 'failed', label: 'Not Recommended' },
-                                                ]}
-                                            />
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Internal Remarks</label>
-                                                <input value={formData.test.remarks} onChange={e => updateTest('remarks', e.target.value)} className="input-admission" placeholder="Interview notes..." />
+                                    <div className="flex items-center justify-between p-6 bg-slate-50 rounded-[1.5rem] border border-slate-100">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${formData.test.skip_assessment ? 'bg-amber-100 text-amber-600' : 'bg-primary/10 text-primary'}`}>
+                                                <ShieldCheck size={24} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-black text-[var(--text-main)]">Institutional Requirement</p>
+                                                <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest">Toggle to skip assessment for this applicant</p>
                                             </div>
                                         </div>
+                                        <button
+                                            onClick={() => updateTest('skip_assessment', !formData.test.skip_assessment)}
+                                            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.test.skip_assessment ? 'bg-amber-500 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-400 hover:border-primary/20'}`}
+                                        >
+                                            {formData.test.skip_assessment ? 'Assessment Skipped' : 'Mandatory Assessment'}
+                                        </button>
                                     </div>
+
+                                    {!formData.test.skip_assessment && (
+                                        <>
+                                            <div className="grid grid-cols-2 gap-8">
+                                                <ComboBox
+                                                    label="Target Grade *"
+                                                    value={formData.enrollment.grade_id}
+                                                    onChange={val => updateEnrollment('grade_id', val)}
+                                                    options={grades.map(g => ({ value: g.id.toString(), label: g.name }))}
+                                                />
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Assessment Date</label>
+                                                    <input type="datetime-local" value={formData.test.test_date} onChange={e => updateTest('test_date', e.target.value)} className="input-admission" />
+                                                </div>
+                                            </div>
+                                            <div className="pt-8 border-t border-[var(--card-border)]">
+                                                <div className="flex items-center justify-between mb-6">
+                                                    <h4 className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Evaluation Status</h4>
+                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${formData.test.status === 'cleared' ? 'bg-emerald-100 text-emerald-600' : formData.test.status === 'failed' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                        {formData.test.status === 'cleared' ? 'Qualified / Pass' : formData.test.status === 'failed' ? 'Not Recommended' : 'Pending / Scheduled'}
+                                                    </span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-8">
+                                                    <ComboBox
+                                                        value={formData.test.status}
+                                                        onChange={val => updateTest('status', val)}
+                                                        options={[
+                                                            { value: 'pending', label: 'Pending / Scheduled' },
+                                                            { value: 'cleared', label: 'Qualified / Pass' },
+                                                            { value: 'failed', label: 'Not Recommended' },
+                                                        ]}
+                                                    />
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Internal Remarks</label>
+                                                        <input value={formData.test.remarks} onChange={e => updateTest('remarks', e.target.value)} className="input-admission" placeholder="Interview notes..." />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {formData.test.skip_assessment && (
+                                        <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
+                                            <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center">
+                                                <Sparkles size={32} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-black text-[var(--text-main)]">Assessment Bypassed</p>
+                                                <p className="text-xs text-[var(--text-muted)] font-medium max-w-[280px]">You can proceed to document verification directly as the assessment stage is skipped.</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -596,33 +729,65 @@ export default function StudentAdmission() {
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     {[
-                                        { id: 'birth_certificate', label: 'Birth Certificate', required: true },
-                                        { id: 'previous_marksheet', label: 'Previous Marksheet', required: false },
-                                        { id: 'aadhaar_copy', label: 'Identity Proof (Aadhaar)', required: true },
-                                        { id: 'photo', label: 'Passport Size Photo', required: true },
-                                    ].map(doc => (
-                                        <div key={doc.id} className="p-8 bg-[var(--background)] rounded-[2rem] border border-[var(--card-border)] space-y-4 relative group transition-all hover:shadow-lg">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`p-3 rounded-xl ${((formData.documents as any)[doc.id]) ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-100 text-[var(--text-muted)]'}`}>
-                                                        <File size={20} />
+                                        { id: 'birth_certificate', label: 'Birth Certificate', required: true, icon: GraduationCap },
+                                        { id: 'previous_marksheet', label: 'Previous Marksheet', required: false, icon: Sparkles },
+                                        { id: 'aadhaar_copy', label: 'Identity Proof (Aadhaar)', required: true, icon: ShieldCheck },
+                                        { id: 'photo', label: 'Passport Size Photo', required: true, icon: User },
+                                    ].map(doc => {
+                                        const isUploaded = (formData.documents as any)[doc.id];
+                                        const isUploading = uploadingDoc === doc.id;
+                                        const Icon = doc.icon;
+
+                                        return (
+                                            <div key={doc.id} className={`p-8 rounded-[2.5rem] border transition-all duration-500 relative group overflow-hidden ${isUploaded ? 'bg-emerald-50/50 border-emerald-100 shadow-xl shadow-emerald-500/5' : 'bg-[var(--background)] border-[var(--card-border)] hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5'}`}>
+                                                <div className="flex items-start justify-between mb-8">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${isUploaded ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200 rotate-6' : 'bg-white border border-slate-100 text-[var(--text-muted)] group-hover:text-primary group-hover:scale-110'}`}>
+                                                            <Icon size={24} />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-sm font-black text-[var(--text-main)] uppercase tracking-wider">{doc.label}</h4>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                {doc.required && <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest px-1.5 py-0.5 bg-rose-50 rounded-md">Required</span>}
+                                                                <span className={`text-[8px] font-black uppercase tracking-widest ${isUploaded ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                                    {isUploaded ? 'Verified' : 'Pending Upload'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <span className="text-xs font-black text-[var(--text-main)] uppercase tracking-wider">{doc.label}</span>
-                                                        {doc.required && <div className="text-[8px] font-black text-rose-500 uppercase mt-0.5">Required</div>}
-                                                    </div>
+                                                    {isUploaded && (
+                                                        <div className="w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center animate-in zoom-in-50 duration-300">
+                                                            <CheckCircle2 size={16} />
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                {((formData.documents as any)[doc.id]) && (
-                                                    <div className="w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-200">
-                                                        <CheckCircle2 size={16} />
-                                                    </div>
+
+                                                <button
+                                                    onClick={() => triggerFileUpload(doc.id)}
+                                                    disabled={isUploading}
+                                                    className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 relative z-10 ${isUploaded
+                                                        ? 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                                        : 'bg-primary text-white shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 active:translate-y-0'}`}
+                                                >
+                                                    {isUploading ? (
+                                                        <>
+                                                            <Loader2 size={16} className="animate-spin" />
+                                                            Encrypting...
+                                                        </>
+                                                    ) : isUploaded ? (
+                                                        <>Update Document</>
+                                                    ) : (
+                                                        <>Upload Original</>
+                                                    )}
+                                                </button>
+
+                                                {/* Decorative Background Elements */}
+                                                {!isUploaded && (
+                                                    <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
                                                 )}
                                             </div>
-                                            <button onClick={() => triggerFileUpload(doc.id)} disabled={uploadingDoc === doc.id} className={`w-full py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${((formData.documents as any)[doc.id]) ? 'bg-slate-100 text-slate-600 border border-[var(--card-border)]' : 'bg-primary text-white shadow-xl shadow-primary/20 hover:opacity-90'}`}>
-                                                {uploadingDoc === doc.id ? <Loader2 size={16} className="animate-spin" /> : ((formData.documents as any)[doc.id]) ? <>Update Document</> : <>Upload Original</>}
-                                            </button>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
@@ -639,21 +804,58 @@ export default function StudentAdmission() {
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-8">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Admission Fee</label>
-                                        <input type="number" value={formData.finance.admission_fee} onChange={e => updateFinance('admission_fee', parseInt(e.target.value))} className="input-admission" />
+                                    <div className="col-span-2">
+                                        <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2 block">Assigned Fee Structures (Primary + Optional)</label>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <ComboBox
+                                                placeholder="Add fee structure..."
+                                                value={null}
+                                                onChange={val => {
+                                                    if (!val) return;
+                                                    const id = parseInt(val.toString());
+                                                    if (!formData.finance.structure_ids.includes(id)) {
+                                                        const newIds = [...formData.finance.structure_ids, id];
+                                                        updateFinance('structure_ids', newIds);
+                                                        
+                                                        // Update total amount paid field
+                                                        let total = 0;
+                                                        newIds.forEach(structId => {
+                                                            const s = feeStructures.find(fs => fs.id === structId);
+                                                            if (s) total += s.total_amount;
+                                                        });
+                                                        updateFinance('amount_paid', total);
+                                                    }
+                                                }}
+                                                options={feeStructures.map(s => ({ value: s.id.toString(), label: `${s.name} ($${s.total_amount})` }))}
+                                            />
+                                            <div className="flex flex-wrap gap-2">
+                                                {formData.finance.structure_ids.map(id => {
+                                                    const struct = feeStructures.find(s => s.id === id);
+                                                    return (
+                                                        <div key={id} className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-xl">
+                                                            <span className="text-xs font-black text-primary">{struct?.name}</span>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    const newIds = formData.finance.structure_ids.filter(sid => sid !== id);
+                                                                    updateFinance('structure_ids', newIds);
+                                                                    let total = 0;
+                                                                    newIds.forEach(structId => {
+                                                                        const s = feeStructures.find(fs => fs.id === structId);
+                                                                        if (s) total += s.total_amount;
+                                                                    });
+                                                                    updateFinance('amount_paid', total);
+                                                                }}
+                                                                className="text-primary hover:text-primary-dark"
+                                                            >
+                                                                <X size={14} />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <ComboBox
-                                        label="Fee Category"
-                                        value={formData.finance.fee_category}
-                                        onChange={val => updateFinance('fee_category', val)}
-                                        options={[
-                                            { value: 'Regular', label: 'Regular (Standard)' },
-                                            { value: 'Scholarship', label: 'Full Scholarship' },
-                                            { value: 'StaffChild', label: 'Staff Child' },
-                                        ]}
-                                    />
-                                    <div className="col-span-2 p-8 bg-surface-dark rounded-[2.5rem] flex items-center justify-between">
+                                    <div className="col-span-2 p-8 bg-surface-dark rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6">
                                         <div className="flex items-center gap-6">
                                             <div className={`w-16 h-16 rounded-[1.25rem] flex items-center justify-center transition-all ${formData.finance.is_paid ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-[var(--card-bg)]/10'}`}>
                                                 <CheckCircle2 size={32} className="text-white" />
@@ -663,6 +865,63 @@ export default function StudentAdmission() {
                                                 <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Mark as settled in General Ledger</p>
                                             </div>
                                         </div>
+
+                                        {formData.finance.is_paid && (
+                                            <div className="flex flex-1 flex-col gap-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex-1 min-w-[120px]">
+                                                        <label className="text-[8px] font-black text-white/40 uppercase tracking-widest block mb-1">Amount Collected</label>
+                                                        <input 
+                                                            type="number" 
+                                                            value={formData.finance.amount_paid} 
+                                                            onChange={e => updateFinance('amount_paid', parseFloat(e.target.value))} 
+                                                            className="w-full bg-white/10 border-none rounded-xl px-4 py-2.5 text-white text-sm font-black focus:ring-1 ring-primary/50" 
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 min-w-[120px]">
+                                                        <label className="text-[8px] font-black text-white/40 uppercase tracking-widest block mb-1">Method</label>
+                                                        <select
+                                                            value={formData.finance.payment_method}
+                                                            onChange={e => updateFinance('payment_method', e.target.value)}
+                                                            className="w-full bg-white/10 border-none rounded-xl px-4 py-2.5 text-white text-xs font-black focus:ring-1 ring-primary/50"
+                                                        >
+                                                            <option value="cash" className="text-slate-900">Cash</option>
+                                                            <option value="online" className="text-slate-900">Online / UPI</option>
+                                                            <option value="bank" className="text-slate-900">Bank Transfer</option>
+                                                            <option value="cheque" className="text-slate-900">Cheque</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    {(formData.finance.payment_method === 'bank' || formData.finance.payment_method === 'online') && (
+                                                        <div className="flex-1 min-w-[180px]">
+                                                            <label className="text-[8px] font-black text-white/40 uppercase tracking-widest block mb-1">Destination Bank</label>
+                                                            <select
+                                                                value={formData.finance.bank_account_id}
+                                                                onChange={e => updateFinance('bank_account_id', parseInt(e.target.value))}
+                                                                className="w-full bg-white/10 border-none rounded-xl px-4 py-2.5 text-white text-xs font-black focus:ring-1 ring-primary/50"
+                                                            >
+                                                                <option value={0} className="text-slate-900">Select account...</option>
+                                                                {bankAccounts.map(b => (
+                                                                    <option key={b.id} value={b.id} className="text-slate-900">{b.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex-1 min-w-[140px]">
+                                                        <label className="text-[8px] font-black text-white/40 uppercase tracking-widest block mb-1">Ref No. / Receipt No.</label>
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="TXN / Receipt..."
+                                                            value={formData.finance.reference} 
+                                                            onChange={e => updateFinance('reference', e.target.value)} 
+                                                            className="w-full bg-white/10 border-none rounded-xl px-4 py-2.5 text-white text-xs font-black focus:ring-1 ring-primary/50" 
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <button onClick={() => updateFinance('is_paid', !formData.finance.is_paid)} className={`px-10 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.finance.is_paid ? 'bg-emerald-500 text-white shadow-xl' : 'bg-[var(--card-bg)]/10 text-white/60 hover:bg-[var(--card-bg)]/20'}`}>
                                             {formData.finance.is_paid ? 'Paid & Verified' : 'Mark as Paid'}
                                         </button>
@@ -682,7 +941,10 @@ export default function StudentAdmission() {
                             </button>
                             <button onClick={() => { if (activeStep !== 'finance') nextStep(); else handleAdmission(); }} disabled={isSaving} className="flex-1 px-10 py-5 rounded-[2rem] bg-primary text-white text-xs font-black uppercase tracking-widest hover:opacity-90 flex items-center justify-center gap-3 shadow-2xl shadow-primary/20 transition-all active:scale-[0.98]">
                                 {isSaving ? <Loader2 size={18} className="animate-spin" /> : activeStep === 'finance' ? <CheckCircle2 size={20} /> : <ChevronRight size={20} />}
-                                {activeStep === 'finance' ? 'Complete Enrollment' : 'Save & Continue'}
+                                {activeStep === 'finance'
+                                    ? (formData.finance.is_paid ? 'Finalize & Record Payment' : 'Finalize & Pay Later')
+                                    : 'Save & Continue'
+                                }
                             </button>
                         </div>
                     </div>
@@ -690,6 +952,94 @@ export default function StudentAdmission() {
             </div>
 
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="application/pdf,image/*" />
+
+            {/* Draft Explorer Modal */}
+            {showDraftsModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-5xl h-full max-h-[85vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
+                        <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div>
+                                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Draft Explorer</h3>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage and resume pending applications</p>
+                            </div>
+                            <button 
+                                onClick={() => setShowDraftsModal(false)}
+                                className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-100 hover:bg-rose-50 transition-all shadow-sm"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-10 flex-1 overflow-hidden flex flex-col gap-8">
+                            <div className="relative">
+                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                                <input 
+                                    type="text" 
+                                    placeholder="Search by student name or application number..." 
+                                    value={searchQuery} 
+                                    onChange={e => setSearchQuery(e.target.value)} 
+                                    className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 placeholder:text-slate-300 focus:outline-none focus:border-primary focus:bg-white transition-all shadow-inner" 
+                                />
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                {filteredApplications.length > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {filteredApplications.map(app => (
+                                            <button 
+                                                key={app.id} 
+                                                onClick={() => { resumeApplication(app); setShowDraftsModal(false); }}
+                                                className="text-left p-6 bg-white rounded-[2rem] border border-slate-100 hover:border-primary hover:shadow-xl hover:shadow-primary/5 transition-all group relative overflow-hidden"
+                                            >
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                                        <User size={20} />
+                                                    </div>
+                                                    <span className="text-[10px] font-black text-amber-500 bg-amber-50 px-3 py-1 rounded-full uppercase tracking-widest">
+                                                        {app.current_stage}
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-base font-black text-slate-800 group-hover:text-primary transition-colors mb-1 truncate">
+                                                    {app.first_name || 'Incomplete'} {app.last_name}
+                                                </h4>
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                    <Clock size={12} />
+                                                    {app.application_no}
+                                                </div>
+                                                
+                                                <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between">
+                                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Last updated 2h ago</span>
+                                                    <span className="text-[10px] font-black text-primary flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
+                                                        Resume <ChevronRight size={12} />
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="h-full flex flex-col items-center justify-center text-center p-12 opacity-40">
+                                        <div className="w-20 h-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-6">
+                                            <Search size={32} className="text-slate-300" />
+                                        </div>
+                                        <p className="text-lg font-black text-slate-800">No Drafts Found</p>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Try adjusting your search query</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="px-10 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Showing {filteredApplications.length} pending applications</p>
+                            <button 
+                                onClick={() => setShowDraftsModal(false)}
+                                className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-800 transition-colors"
+                            >
+                                Close Explorer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 .input-admission {
@@ -708,6 +1058,19 @@ export default function StudentAdmission() {
                     border-color: var(--primary);
                     box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 10%, transparent);
                     outline: none;
+                }
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #e2e8f0;
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #cbd5e1;
                 }
             `}</style>
         </div>

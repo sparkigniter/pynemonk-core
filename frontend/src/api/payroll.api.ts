@@ -27,4 +27,5 @@ export interface StaffPayrollDetails {
 export const saveSalaryStructure = (staffId: number, data: any) => post<SalaryStructure>(`/school/payroll/staff/${staffId}/structure`, data);
 export const getStaffPayroll = (staffId: number) => get<StaffPayrollDetails>(`/school/payroll/staff/${staffId}`);
 export const generatePayslip = (data: { staffId: number, month: number, year: number }) => post<Payslip>('/school/payroll/generate', data);
+export const generateBulkPayslips = (data: { month: number, year: number }) => post<any>('/school/payroll/bulk-generate', data);
 export const pay = (id: number) => post<Payslip>(`/school/payroll/${id}/pay`, {});

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { container } from "tsyringe";
 import AdmissionController from "./controllers/AdmissionController.js";
+import CertificateTemplateController from "./controllers/CertificateTemplateController.js";
 import { PublicAdmissionController } from "./controllers/PublicAdmissionController.js";
 import { requireAuth } from "../../core/middleware/requireAuth.js";
 import { requirePermission } from "../../core/middleware/requirePermission.js";
@@ -68,6 +69,23 @@ router.get(
     requireAuth,
     requirePermission(["student:read"]),
     (req, res) => container.resolve(AdmissionController).getApplication(req as AuthenticatedRequest, res),
+);
+
+// 4. Certificate Templates
+router.get(
+    "/templates/:type",
+    apiRateLimiter,
+    requireAuth,
+    requirePermission(["student:read"]),
+    (req, res) => container.resolve(CertificateTemplateController).getTemplate(req as AuthenticatedRequest, res),
+);
+
+router.post(
+    "/templates",
+    apiRateLimiter,
+    requireAuth,
+    requirePermission(["student:write"]),
+    (req, res) => container.resolve(CertificateTemplateController).saveTemplate(req as AuthenticatedRequest, res),
 );
 
 export default router;

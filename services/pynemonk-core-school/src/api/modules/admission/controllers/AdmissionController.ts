@@ -62,7 +62,8 @@ export default class AdmissionController extends ResourceController {
      */
     public finalizeWorkflow = async (req: AuthenticatedRequest, res: Response) => {
         try {
-            const result = await this.workflowService.finalizeAdmission(req.user!.tenantId, parseInt(req.params.id), req.user!.userId);
+            // Pass the request body to allow UI-driven data overrides during finalization
+            const result = await this.workflowService.finalizeAdmission(req.user!.tenantId, parseInt(req.params.id), req.user!.userId, req.body);
             return this.ok(res, "Admission finalized and student profile created", result);
         } catch (error: any) {
             return this.badrequest(res, error.message);

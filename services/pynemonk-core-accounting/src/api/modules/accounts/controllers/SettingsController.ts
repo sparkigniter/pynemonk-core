@@ -23,7 +23,15 @@ export default class SettingsController extends BaseController {
     public updateSettings = async (req: AuthenticatedRequest, res: Response) => {
         try {
             const tenantId = req.user!.tenantId;
-            const settings = await this.settingsHelper.updateSettings(tenantId, req.body);
+            const { base_currency, currency_symbol, fiscal_year_start, fiscal_year_end } = req.body;
+            
+            const settings = await this.settingsHelper.updateSettings(tenantId, {
+                base_currency,
+                currency_symbol,
+                fiscal_year_start,
+                fiscal_year_end
+            });
+            
             return this.ok(res, "Settings updated successfully", settings);
         } catch (error: any) {
             return this.internalservererror(res, error.message);

@@ -187,6 +187,16 @@ export class TimetableController extends ResourceController {
         }
     }
 
+    async getPeriods(req: Request, res: Response) {
+        try {
+            const tenantId = this.getTenantId(req);
+            const data = await this.timetableService.getPeriods(tenantId);
+            return res.json(data);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
+
     async createBreak(req: Request, res: Response) {
         try {
             const scope = await this.getScope(req);

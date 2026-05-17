@@ -41,25 +41,32 @@ export default function LogViewer() {
         }
     };
 
-    const getLevelColor = (line: string) => {
-        if (line.includes('[ERROR]')) return 'text-rose-600 bg-rose-50 border-rose-100';
-        if (line.includes('[WARN]')) return 'text-amber-600 bg-amber-50 border-amber-100';
-        if (line.includes('[DEBUG]')) return 'text-blue-600 bg-blue-50 border-blue-100';
-        return 'text-slate-600 bg-slate-50 border-slate-100';
-    };
-
-    const getLevelIcon = (line: string) => {
-        if (line.includes('[ERROR]')) return <AlertTriangle size={14} />;
-        if (line.includes('[WARN]')) return <Info size={14} />;
-        if (line.includes('[DEBUG]')) return <Bug size={14} />;
-        return <Clock size={14} />;
-    };
-
-    const filteredLogs = logs.filter(line => {
-        const matchesSearch = line.toLowerCase().includes(search.toLowerCase());
-        const matchesLevel = filterLevel === 'ALL' || line.includes(`[${filterLevel}]`);
+    const filteredLogs = logs.map(line => {
+        try {
+            return JSON.parse(line);
+        } catch (err) {
+            return { timestamp: new Date().toISOString(), level: 'INFO', message: line, context: null };
+        }
+    }).filter(log => {
+        const matchesSearch = log.message.toLowerCase().includes(search.toLowerCase()) || 
+                             (log.context && JSON.stringify(log.context).toLowerCase().includes(search.toLowerCase()));
+        const matchesLevel = filterLevel === 'ALL' || log.level === filterLevel;
         return matchesSearch && matchesLevel;
     });
+
+    const getLevelColor = (level: string) => {
+        if (level === 'ERROR') return 'text-rose-600 bg-rose-50 border-rose-100';
+        if (level === 'WARN') return 'text-amber-600 bg-amber-50 border-amber-100';
+        if (level === 'DEBUG') return 'text-blue-600 bg-blue-50 border-blue-100';
+        return 'text-emerald-600 bg-emerald-50 border-emerald-100';
+    };
+
+    const getLevelIcon = (level: string) => {
+        if (level === 'ERROR') return <AlertTriangle size={14} />;
+        if (level === 'WARN') return <Info size={14} />;
+        if (level === 'DEBUG') return <Bug size={14} />;
+        return <Clock size={14} />;
+    };
 
     return (
         <div className="p-8 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -141,17 +148,29 @@ export default function LogViewer() {
                         </div>
                     ) : (
                         <div className="space-y-1.5">
-                            {filteredLogs.map((line, i) => (
-                                <div key={i} className="group flex gap-4 hover:bg-white/5 py-1 px-2 rounded transition-colors">
-                                    <span className="text-slate-700 select-none w-8">{filteredLogs.length - i}</span>
-                                    <div className={`px-2 py-0.5 rounded flex items-center gap-2 whitespace-nowrap border ${getLevelColor(line)}`}>
-                                        {getLevelIcon(line)}
-                                        <span className="text-[10px] font-black">
-                                            {line.includes('[ERROR]') ? 'ERROR' : line.includes('[WARN]') ? 'WARN' : line.includes('[DEBUG]') ? 'DEBUG' : 'INFO'}
-                                        </span>
+                            {filteredLogs.map((log, i) => (
+                                <div key={i} className="group border-b border-white/5 last:border-none py-4 px-4 hover:bg-white/5 transition-all">
+                                    <div className="flex items-start gap-4">
+                                        <span className="text-slate-700 select-none w-8 font-bold">{filteredLogs.length - i}</span>
+                                        <div className="flex-1 min-w-0 space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`px-2 py-0.5 rounded flex items-center gap-2 whitespace-nowrap border ${getLevelColor(log.level)}`}>
+                                                    {getLevelIcon(log.level)}
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">{log.level}</span>
+                                                </div>
+                                                <span className="text-slate-500 text-[10px] font-bold">{new Date(log.timestamp).toLocaleString()}</span>
+                                                <span className="text-primary/40 text-[9px] font-black uppercase tracking-[0.2em] px-2 bg-primary/5 rounded border border-primary/10">Diagnostic Event</span>
+                                            </div>
+                                            <p className="text-slate-200 text-sm leading-relaxed font-bold tracking-tight">{log.message}</p>
+                                            {log.context && (
+                                                <div className="bg-black/40 p-4 rounded-2xl border border-white/5 mt-4">
+                                                    <pre className="text-[10px] text-emerald-400/80 whitespace-pre-wrap break-all leading-normal">
+                                                        {JSON.stringify(log.context, null, 2)}
+                                                    </pre>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                    <span className="text-slate-300 break-all">{line.split('] ').slice(2).join('] ')}</span>
-                                    <span className="text-slate-600 text-[10px] ml-auto shrink-0">{line.match(/\[(.*?)\]/)?.[1]?.split('T')?.[1]?.split('.')?.[0]}</span>
                                 </div>
                             ))}
                         </div>

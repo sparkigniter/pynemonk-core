@@ -99,6 +99,58 @@ export default class StudentService {
         return { ...student, logs, documents, guardians };
     }
 
+    public async getStudentAnalytics(tenantId: number, studentId: number): Promise<any> {
+        // 1. Get latest performance marks
+        const query = `
+            WITH student_results AS (
+                SELECT 
+                    em.student_id,
+                    SUM(em.marks_obtained) as total_obtained,
+                    SUM(ep.max_marks) as total_max,
+                    (SUM(em.marks_obtained)::float / NULLIF(SUM(ep.max_marks), 0)) * 100 as percentage
+                FROM school.exam_marks em
+                JOIN school.exam_paper ep ON em.paper_id = ep.id
+                WHERE em.tenant_id = $1
+                GROUP BY em.student_id
+            ),
+            classroom_ranking AS (
+                SELECT 
+                    sr.student_id,
+                    sr.percentage,
+                    RANK() OVER (ORDER BY sr.percentage DESC) as rank,
+                    COUNT(*) OVER () as total_students
+                FROM student_results sr
+                JOIN school.student_enrollment se ON sr.student_id = se.student_id
+                WHERE se.classroom_id = (SELECT classroom_id FROM school.student_enrollment WHERE student_id = $2 AND status = 'active' LIMIT 1)
+            ),
+            settings AS (
+                SELECT value FROM school.settings WHERE tenant_id = $1 AND key = 'grade_scale'
+            )
+        SELECT 
+            cr.rank,
+            cr.total_students,
+            cr.percentage,
+            s.value as scale
+        FROM classroom_ranking cr
+        CROSS JOIN settings s
+        WHERE cr.student_id = $2;
+        `;
+        const res = await this.db.query(query, [tenantId, studentId]);
+        const stats = res.rows[0] || { rank: 0, total_students: 0, percentage: 0, scale: 'PERCENTAGE' };
+
+        let gpa = stats.percentage.toFixed(2);
+        if (stats.scale === '4_POINT') gpa = ((stats.percentage / 100) * 4).toFixed(2);
+        else if (stats.scale === '10_POINT') gpa = ((stats.percentage / 100) * 10).toFixed(1);
+
+        return {
+            rank: stats.rank,
+            total_students: stats.total_students,
+            gpa: gpa,
+            percentage: stats.percentage,
+            scale: stats.scale
+        };
+    }
+
     public async getStudentByUserId(tenantId: number, userId: number): Promise<any> {
         return this.studentHelper.findByUserId(tenantId, userId);
     }

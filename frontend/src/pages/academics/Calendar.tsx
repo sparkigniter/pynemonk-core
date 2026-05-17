@@ -10,7 +10,9 @@ import {
   Filter,
   Search,
   Plus,
-  Loader2
+  Loader2,
+  Trash2,
+  X
 } from 'lucide-react';
 import { TimetableApi } from '../../api/timetable.api';
 import { examApi } from '../../api/exam.api';
@@ -18,9 +20,11 @@ import { eventApi, type SchoolEvent } from '../../api/event.api';
 import { getStaffList, getMyStaffProfile } from '../../api/staff.api';
 import { getMyStudentProfile } from '../../api/student.api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 
 const Calendar: React.FC = () => {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  const { notify } = useNotification();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
@@ -29,7 +33,62 @@ const Calendar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>(['class', 'exam', 'birthday', 'event']);
 
-  const isAdmin = useMemo(() => user && [1, 2, 3, 4].includes(user.role_id), [user]);
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [isSavingEvent, setIsSavingEvent] = useState(false);
+  const [eventForm, setEventForm] = useState({
+    title: '',
+    description: '',
+    event_type: 'holiday',
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: new Date().toISOString().split('T')[0]
+  });
+
+  const isAdmin = useMemo(() => user && ([1, 2, 3, 4].includes(user.role_id) || can('announcement:write')), [user, can]);
+
+  const handleSaveEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventForm.title.trim()) {
+      notify('error', 'Required Field', 'Please enter a title for the holiday or event.');
+      return;
+    }
+    setIsSavingEvent(true);
+    try {
+      if (modalMode === 'create') {
+        await eventApi.createEvent(eventForm as any);
+        notify('success', 'Event Created', 'Holiday/Event has been successfully added.');
+      } else {
+        if (selectedEventId) {
+          await eventApi.updateEvent(selectedEventId, eventForm as any);
+          notify('success', 'Event Updated', 'Holiday/Event has been successfully updated.');
+        }
+      }
+      setIsModalOpen(false);
+      loadEvents();
+    } catch (err: any) {
+      notify('error', 'Operation Failed', err.message || 'An error occurred while saving the event.');
+    } finally {
+      setIsSavingEvent(false);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!selectedEventId) return;
+    if (!confirm('Are you sure you want to delete this holiday/event?')) return;
+    setIsSavingEvent(true);
+    try {
+      await eventApi.deleteEvent(selectedEventId);
+      notify('success', 'Event Deleted', 'Holiday/Event has been deleted successfully.');
+      setIsModalOpen(false);
+      loadEvents();
+    } catch (err: any) {
+      notify('error', 'Deletion Failed', err.message || 'An error occurred while deleting the event.');
+    } finally {
+      setIsSavingEvent(false);
+    }
+  };
 
   useEffect(() => {
     loadEvents();
@@ -245,7 +304,20 @@ const Calendar: React.FC = () => {
           </div>
 
           {isAdmin && (
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-surface-dark text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-theme/10">
+            <button
+              onClick={() => {
+                setModalMode('create');
+                setEventForm({
+                  title: '',
+                  description: '',
+                  event_type: 'holiday',
+                  start_date: selectedDay ? selectedDay.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                  end_date: selectedDay ? selectedDay.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                });
+                setIsModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-surface-dark text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-theme/10 cursor-pointer"
+            >
               <Plus size={18} />
               <span>Create</span>
             </button>
@@ -378,13 +450,35 @@ const Calendar: React.FC = () => {
                 <div className="space-y-4">
                   {getDayEvents(selectedDay).length > 0 ? (
                     getDayEvents(selectedDay).map((event, idx) => (
-                      <div key={idx} className="group cursor-pointer">
+                      <div 
+                        key={idx} 
+                        onClick={() => {
+                          if (isAdmin && event.type === 'event') {
+                            setModalMode('edit');
+                            setSelectedEventId(event.id);
+                            setEventForm({
+                              title: event.title,
+                              description: event.description || '',
+                              event_type: event.event_type || 'general',
+                              start_date: new Date(event.start_date).toISOString().split('T')[0],
+                              end_date: new Date(event.end_date).toISOString().split('T')[0]
+                            });
+                            setIsModalOpen(true);
+                          }
+                        }}
+                        className={`group cursor-pointer ${isAdmin && event.type === 'event' ? 'hover:scale-[1.01] transition-all' : ''}`}
+                      >
                         <div className={`flex items-start gap-4 p-4 rounded-2xl border transition-all hover:shadow-md hover:-translate-y-0.5 ${event.color}`}>
                           <div className="p-2 bg-[var(--card-bg)]/50 rounded-xl">
                             {event.icon}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="font-bold text-sm leading-tight mb-1">{event.title}</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-bold text-sm leading-tight mb-1 text-slate-800">{event.title}</p>
+                              {isAdmin && event.type === 'event' && (
+                                <span className="text-[8px] bg-slate-200/60 text-slate-700 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider scale-90">Edit</span>
+                              )}
+                            </div>
                             <p className="text-[10px] opacity-70 font-bold uppercase tracking-tight truncate">{event.subtitle}</p>
                             {event.start_time && (
                               <p className="text-[10px] mt-2 font-black flex items-center gap-1.5">
@@ -420,6 +514,125 @@ const Calendar: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-250">
+          <div className="bg-[var(--card-bg)] rounded-[2rem] w-full max-w-lg shadow-2xl border border-[var(--card-border)] overflow-hidden animate-in zoom-in-95 duration-250">
+            <div className="p-8 bg-slate-950 text-white relative">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/20 p-2.5 rounded-xl text-primary">
+                  <CalendarIcon size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black tracking-tight">{modalMode === 'create' ? 'Add Holiday / Event' : 'Edit Holiday / Event'}</h3>
+                  <p className="text-xs text-slate-400 mt-1">Configure global events or holidays for the school year.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="absolute top-8 right-8 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEvent} className="p-8 space-y-6">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Title / Name *</label>
+                <input 
+                  type="text" 
+                  value={eventForm.title}
+                  onChange={e => setEventForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="e.g. Christmas Day, Midterm Break"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-800"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Start Date *</label>
+                  <input 
+                    type="date" 
+                    value={eventForm.start_date}
+                    onChange={e => setEventForm(prev => ({ ...prev, start_date: e.target.value }))}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-800"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">End Date *</label>
+                  <input 
+                    type="date" 
+                    value={eventForm.end_date}
+                    onChange={e => setEventForm(prev => ({ ...prev, end_date: e.target.value }))}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-800"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Event Type</label>
+                <select 
+                  value={eventForm.event_type}
+                  onChange={e => setEventForm(prev => ({ ...prev, event_type: e.target.value }))}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-800"
+                >
+                  <option value="holiday">Holiday</option>
+                  <option value="general">General Event</option>
+                  <option value="cultural">Cultural Festival</option>
+                  <option value="sports">Sports Day</option>
+                  <option value="meeting">Staff Meeting</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Description / Reason</label>
+                <textarea 
+                  value={eventForm.description}
+                  onChange={e => setEventForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Provide additional details or the reason for the holiday..."
+                  rows={3}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-800 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                {modalMode === 'edit' ? (
+                  <button
+                    type="button"
+                    onClick={handleDeleteEvent}
+                    disabled={isSavingEvent}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-black uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-xl text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingEvent}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-surface-dark text-white hover:bg-slate-800 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-theme/10 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSavingEvent && <Loader2 size={14} className="animate-spin" />}
+                    Save
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

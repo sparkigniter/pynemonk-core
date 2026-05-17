@@ -14,11 +14,11 @@ export default class StudentValidator extends Validator {
                         gender: Joi.string().valid("male", "female", "other").allow("", null),
                         date_of_birth: Joi.date().iso().allow("", null),
                         blood_group: Joi.string().allow("", null),
-                        mother_tongue: Joi.string().allow("", null),
+                        mother_tongue: Joi.string().required(),
                         nationality: Joi.string().allow("", null),
                         religion: Joi.string().allow("", null),
                         phone: Joi.string().allow("", null),
-                        address: Joi.string().allow("", null),
+                        address: Joi.string().required(),
                         status: Joi.string().allow("", null)
                     }).required().unknown(true),
                     guardian: Joi.object({
