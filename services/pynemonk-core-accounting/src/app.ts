@@ -14,24 +14,21 @@ export function createApp(opts?: { prefix?: string }): express.Application {
     const app = express();
     const prefix = opts?.prefix ?? "";
 
-    const allowedOrigins = (
-        process.env.ALLOWED_ORIGINS ??
-        "http://localhost:5173,http://localhost:5174,http://localhost:3001"
-    )
-        .split(",")
-        .map((o) => o.trim());
-
     app.use(
         cors({
             origin: (origin, callback) => {
-                if (!origin || allowedOrigins.includes(origin)) {
-                    callback(null, true);
-                } else {
-                    callback(new Error(`CORS: origin '${origin}' not allowed`));
-                }
+                // Dynamically mirror request origin to allow all origins with credentials enabled
+                callback(null, true);
             },
             methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-            allowedHeaders: ["Content-Type", "Authorization"],
+            allowedHeaders: [
+                "Content-Type", 
+                "Authorization", 
+                "x-academic-year-id", 
+                "Accept", 
+                "X-Requested-With",
+                "x-tenant-id"
+            ],
             credentials: true,
         })
     );

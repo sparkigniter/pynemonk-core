@@ -19,33 +19,21 @@ export function createApp(opts?: { prefix?: string }): express.Application {
     const prefix = opts?.prefix ?? "";
 
     // ── CORS ──────────────────────────────────────────────────────────────────
-    const allowedOrigins = (
-        process.env.ALLOWED_ORIGINS ??
-        "http://localhost:5173,http://localhost:5174,http://localhost:3001,http://localhost:8000"
-    )
-        .split(",")
-        .map((o) => o.trim());
-
     app.use(
         cors({
             origin: (origin, callback) => {
-                if (
-                    !origin || 
-                    allowedOrigins.includes(origin) ||
-                    origin.startsWith("capacitor://") ||
-                    origin.startsWith("http://localhost") ||
-                    origin.includes("13.61.11.86") ||
-                    /^(http|https):\/\/192\.168\./.test(origin) ||
-                    /^(http|https):\/\/10\./.test(origin) ||
-                    /^(http|https):\/\/172\./.test(origin)
-                ) {
-                    callback(null, true);
-                } else {
-                    callback(new Error(`CORS: origin '${origin}' not allowed`));
-                }
+                // Dynamically mirror request origin to allow all origins with credentials enabled
+                callback(null, true);
             },
             methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-            allowedHeaders: ["Content-Type", "Authorization"],
+            allowedHeaders: [
+                "Content-Type", 
+                "Authorization", 
+                "x-academic-year-id", 
+                "Accept", 
+                "X-Requested-With",
+                "x-tenant-id"
+            ],
             credentials: true,
         })
     );

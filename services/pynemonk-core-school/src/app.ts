@@ -13,28 +13,21 @@ export function createApp(opts?: { prefix?: string }): express.Application {
     const app = express();
     const prefix = opts?.prefix ?? "";
 
-    const allowedOrigins = [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-    ];
-
     app.use(
         cors({
             origin: (origin, callback) => {
-                if (!origin || allowedOrigins.includes(origin)) {
-                    callback(null, true);
-                } else {
-                    callback(new Error(`CORS: origin '${origin}' not allowed`));
-                }
+                // Dynamically mirror request origin to allow all origins with credentials enabled
+                callback(null, true);
             },
             methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-            allowedHeaders: ["Content-Type", "Authorization", "x-academic-year-id", "Accept", "X-Requested-With"],
+            allowedHeaders: [
+                "Content-Type", 
+                "Authorization", 
+                "x-academic-year-id", 
+                "Accept", 
+                "X-Requested-With",
+                "x-tenant-id"
+            ],
             credentials: true,
         }),
     );
