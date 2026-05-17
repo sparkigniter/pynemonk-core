@@ -44,12 +44,31 @@ async function createUser(client: any, tenantId: number, email: string, roleId: 
 }
 
 async function seed() {
-    const tenantId = 1;
     let client;
 
     try {
         client = await pool.connect();
         await client.query('BEGIN');
+
+        // 0. Fetch or Create default tenant to satisfy foreign key constraints
+        const tenantCheck = await client.query('SELECT id FROM auth.tenant LIMIT 1');
+        let tenantId;
+        if (tenantCheck.rows.length > 0) {
+            tenantId = tenantCheck.rows[0].id;
+        } else {
+            console.log('🏢 No active tenant found. Creating a default tenant...');
+            const defaultPkgRes = await client.query("SELECT id FROM auth.package WHERE slug = 'standard' LIMIT 1");
+            const pkgId = defaultPkgRes.rows[0]?.id || 1;
+            
+            const tenantInsert = await client.query(
+                `INSERT INTO auth.tenant (name, slug, email, package_id) 
+                 VALUES ($1, $2, $3, $4) RETURNING id`,
+                ['Demo Academy', 'demo', 'demo@pynemonk.com', pkgId]
+            );
+            tenantId = tenantInsert.rows[0].id;
+        }
+        console.log(`🏢 Seeding for Tenant ID: ${tenantId}`);
+
         await cleanup(client, tenantId);
 
         // 1. Academic Year
