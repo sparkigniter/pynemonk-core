@@ -148,10 +148,11 @@ export class TimetableService {
         return res.rows;
     }
 
-    async createBreak(tenantId: number, data: { name: string, start_time: string, end_time: string }) {
+    async createBreak(tenantId: number, data: { name: string, start_time: string, end_time: string, is_break?: boolean }) {
+        const isBreak = data.is_break !== undefined ? data.is_break : true;
         const res = await this.pool.query(
-            `INSERT INTO school.period_config (tenant_id, name, start_time, end_time, is_break) VALUES ($1, $2, $3, $4, TRUE) RETURNING *`,
-            [tenantId, data.name, data.start_time, data.end_time]
+            `INSERT INTO school.period_config (tenant_id, name, start_time, end_time, is_break) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [tenantId, data.name, data.start_time, data.end_time, isBreak]
         );
         return res.rows[0];
     }

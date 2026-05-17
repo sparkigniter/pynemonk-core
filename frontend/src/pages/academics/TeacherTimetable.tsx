@@ -42,7 +42,7 @@ const TeacherTimetable: React.FC = () => {
     const [selectedPeriod, setSelectedPeriod] = useState<TimetableEntry | null>(null);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [periods, setPeriods] = useState<{ period_number: number, start_time: string, end_time: string }[]>([]);
-    const [breaks, setBreaks] = useState<{ id: number, name: string, start_time: string, end_time: string }[]>([]);
+    const [breaks, setBreaks] = useState<{ id: number, name: string, start_time: string, end_time: string, is_break: boolean }[]>([]);
     const [holidays, setHolidays] = useState<any[]>([]);
 
     const [settings, setSettings] = useState<any>(null);
@@ -74,10 +74,10 @@ const TeacherTimetable: React.FC = () => {
         const fetchSchedule = async () => {
             setLoading(true);
             try {
-                const [res, periodData, breakData, eventsRes, settingsRes, classroomsRes, profileRes] = await Promise.all([
+                const [res, periodData, breaksData, eventsRes, settingsRes, classroomsRes, profileRes] = await Promise.all([
                     TimetableApi.getGlobalSchedule(),
                     TimetableApi.getPeriods(),
-                    TimetableApi.getBreaks(),
+                    TimetableApi.getPeriods(),
                     eventApi.getEvents().catch(() => []),
                     import('../../api/settings.api').then(m => m.getSettings()).catch(() => null),
                     import('../../api/classroom.api').then(m => m.getClassrooms({ limit: 100 })).catch(() => ({ data: [] })),
@@ -86,8 +86,8 @@ const TeacherTimetable: React.FC = () => {
                 // Filter for current teacher
                 const mySchedule = res.filter((t: any) => String(t.teacher_user_id) === String(user?.sub));
                 setTimetable(mySchedule);
-                setPeriods(periodData.sort((a: any, b: any) => a.period_number - b.period_number));
-                setBreaks(breakData);
+                setPeriods((periodData || []).sort((a: any, b: any) => a.period_number - b.period_number));
+                setBreaks(breaksData || []);
                 setHolidays((eventsRes || []).filter((e: any) => e.event_type === 'holiday'));
                 setSettings(settingsRes);
                 setClassrooms(classroomsRes.data || []);
@@ -334,7 +334,7 @@ const TeacherTimetable: React.FC = () => {
                             <div className="relative">
                                 {periods.map((period) => {
                                     const time = period.start_time.slice(0, 5);
-                                    const breakInfo = breaks.find(b => b.start_time.startsWith(time));
+                                    const breakInfo = breaks.find(b => b.is_break && b.start_time.startsWith(time));
 
                                     return (
                                         <div key={period.period_number} className={`grid grid-cols-7 border-b border-slate-50 min-h-[85px] ${breakInfo ? 'bg-slate-50/50' : ''}`}>

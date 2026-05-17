@@ -275,7 +275,7 @@ const Timetable: React.FC = () => {
     const [activeYearId, setActiveYearId] = useState<number | null>(null);
     const [entries, setEntries] = useState<TimetableEntry[]>([]);
     const [originalEntries, setOriginalEntries] = useState<TimetableEntry[]>([]);
-    const [breaks, setBreaks] = useState<{ id: number, name: string, start_time: string, end_time: string }[]>([]);
+    const [breaks, setBreaks] = useState<{ id: number, name: string, start_time: string, end_time: string, is_break: boolean }[]>([]);
     const [holidays, setHolidays] = useState<any[]>([]);
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -315,12 +315,12 @@ const Timetable: React.FC = () => {
                 getGrades(),
                 getStaffList({ limit: 100 }),
                 academicsApi.getYears(),
-                TimetableApi.getBreaks(),
+                TimetableApi.getPeriods(),
                 eventApi.getEvents().catch(() => [])
             ]);
             setGrades(gradeRes.data);
             setStaff(staffData.data);
-            setBreaks(breaksData);
+            setBreaks(breaksData || []);
             setHolidays((eventsRes || []).filter((e: any) => e.event_type === 'holiday'));
             if (yearsData && yearsData.length > 0) {
                 const activeYear = yearsData.find((y: any) => y.is_current) || yearsData[0];
@@ -415,11 +415,11 @@ const Timetable: React.FC = () => {
         } catch (err: any) { notify('error', 'Update Failed', err.message); }
     };
 
-    const handleCreateBreak = async (data: { name: string, start_time: string, end_time: string }) => {
+    const handleCreateBreak = async (data: { name: string, start_time: string, end_time: string, is_break?: boolean }) => {
         try {
             const res = await TimetableApi.createBreak(data);
             setBreaks([...breaks, res]);
-            notify('success', 'Break Created', `${data.name} added to schedule.`);
+            notify('success', 'Interval Registered', `${data.name} added to schedule.`);
         } catch (err: any) { notify('error', 'Failed', err.message); }
     };
 
@@ -791,7 +791,7 @@ const Timetable: React.FC = () => {
 
                                             <div className="relative">
                                                 {TIME_SLOTS.map((time) => {
-                                                    const breakInfo = breaks.find(b => b.start_time.startsWith(time.split(':')[0]));
+                                                    const breakInfo = breaks.find(b => b.is_break && b.start_time.startsWith(time.split(':')[0]));
                                                     return (
                                                         <div key={time} className={`grid grid-cols-7 border-b border-slate-50 min-h-[110px] ${breakInfo ? 'bg-slate-50/50' : ''}`}>
                                                             <div className="p-4 border-r border-[var(--card-border)] text-[var(--text-muted)] text-[10px] font-bold flex items-center justify-center"><span>{time}</span></div>
@@ -989,7 +989,7 @@ const Timetable: React.FC = () => {
                 <div className="fixed inset-0 modal-overlay backdrop-blur-sm z-[110] flex items-center justify-center p-4 animate-in fade-in duration-300">
                     <div className="bg-[var(--card-bg)] rounded-[2rem] w-full max-w-xl shadow-2xl overflow-hidden">
                         <div className="p-8 bg-surface-dark text-white flex justify-between items-center">
-                            <h2 className="text-lg font-bold uppercase tracking-tight">Institutional Breaks</h2>
+                            <h2 className="text-lg font-bold uppercase tracking-tight">Timing & Periods Setup</h2>
                             <button onClick={() => setIsBreakModalOpen(false)} className="text-white/40 hover:text-white transition-colors"><X /></button>
                         </div>
                         <div className="p-8 space-y-6">
@@ -997,41 +997,61 @@ const Timetable: React.FC = () => {
                                 {breaks.map(b => (
                                     <div key={b.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-[var(--card-border)]">
                                         <div>
-                                            <p className="font-bold text-slate-800">{b.name}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-bold text-slate-800">{b.name}</p>
+                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${b.is_break ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-primary/5 text-primary border border-primary/10'}`}>
+                                                    {b.is_break ? 'Break' : 'Class Period'}
+                                                </span>
+                                            </div>
                                             <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{b.start_time.slice(0, 5)} - {b.end_time.slice(0, 5)}</p>
                                         </div>
                                         <button onClick={() => handleDeleteBreak(b.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={16} /></button>
                                     </div>
                                 ))}
-                                {breaks.length === 0 && <p className="text-center py-8 text-[var(--text-muted)] text-sm italic">No break intervals defined.</p>}
+                                {breaks.length === 0 && <p className="text-center py-8 text-[var(--text-muted)] text-sm italic">No timing periods configured.</p>}
                             </div>
                             
                             <div className="p-6 bg-slate-50/50 border border-[var(--card-border)] rounded-[2rem] space-y-5">
-                                <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest px-1">Define New Interval</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest px-1">Define New Timing Period</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight px-1">Label</label>
-                                        <input id="break-name" placeholder="e.g. Lunch" className="input-field-modern !py-2.5 !text-xs" />
+                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight px-1">Period Name / Label</label>
+                                        <input id="break-name" placeholder="e.g. Period 1, Recess, Lunch" className="input-field-modern !py-2.5 !text-xs" />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight px-1">Start</label>
+                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight px-1">Period Type</label>
+                                        <select id="break-type" className="input-field-modern !py-2.5 !text-xs bg-white border border-[var(--card-border)] rounded-xl w-full">
+                                            <option value="false">Class Period (Available for Timetable)</option>
+                                            <option value="true">Institutional Break (Blocks out slots)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight px-1">Start Time</label>
                                         <input id="break-start" type="time" className="input-field-modern !py-2.5 !text-xs" />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight px-1">End</label>
+                                        <label className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight px-1">End Time</label>
                                         <input id="break-end" type="time" className="input-field-modern !py-2.5 !text-xs" />
                                     </div>
                                 </div>
                                 <button 
                                     onClick={() => {
                                         const n = (document.getElementById('break-name') as HTMLInputElement).value;
+                                        const t = (document.getElementById('break-type') as HTMLSelectElement).value === 'true';
                                         const s = (document.getElementById('break-start') as HTMLInputElement).value;
                                         const e = (document.getElementById('break-end') as HTMLInputElement).value;
-                                        if (n && s && e) handleCreateBreak({ name: n, start_time: s, end_time: e });
+                                        if (n && s && e) {
+                                            handleCreateBreak({ name: n, start_time: s, end_time: e, is_break: t });
+                                            (document.getElementById('break-name') as HTMLInputElement).value = '';
+                                            (document.getElementById('break-start') as HTMLInputElement).value = '';
+                                            (document.getElementById('break-end') as HTMLInputElement).value = '';
+                                        }
                                     }}
                                     className="btn-primary w-full !py-3.5"
                                 >
-                                    Register Interval
+                                    Register Period Setup
                                 </button>
                             </div>
                         </div>

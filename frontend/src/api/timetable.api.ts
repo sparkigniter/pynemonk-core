@@ -38,7 +38,7 @@ export const TimetableApi = {
         del(`${BASE_PATH}/${id}`),
 
     getPeriods: () =>
-        get<{ period_number: number, start_time: string, end_time: string }[]>(`${BASE_PATH}/periods`),
+        get<{ id: number, name: string, start_time: string, end_time: string, is_break: boolean }[]>(`${BASE_PATH}/periods`),
 
     getGlobalSchedule: () =>
         get<(TimetableEntry & { type: 'timetable' })[]>(`${BASE_PATH}/global-schedule`),
@@ -56,9 +56,9 @@ export const TimetableApi = {
         }),
 
     getBreaks: () =>
-        get<{ id: number, name: string, start_time: string, end_time: string }[]>(`${BASE_PATH}/breaks`),
+        get<{ id: number, name: string, start_time: string, end_time: string, is_break: boolean }[]>(`${BASE_PATH}/breaks`),
 
-    createBreak: (data: { name: string, start_time: string, end_time: string }) =>
+    createBreak: (data: { name: string, start_time: string, end_time: string, is_break?: boolean }) =>
         post<any>(`${BASE_PATH}/breaks`, data),
 
     deleteBreak: (id: number) =>
