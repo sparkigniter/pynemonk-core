@@ -37,10 +37,30 @@ async function cleanup(client: any, tenantId: number) {
 
 async function createUser(client: any, tenantId: number, email: string, roleId: number) {
     const existing = await client.query('SELECT id FROM auth.user WHERE email = $1', [email]);
-    if (existing.rows[0]) return existing.rows[0].id;
+    let userId;
+    if (existing.rows[0]) {
+        userId = existing.rows[0].id;
+    } else {
+        const userRes = await client.query('INSERT INTO auth.user (tenant_id, email, role_id) VALUES ($1, $2, $3) RETURNING id', [tenantId, email, roleId]);
+        userId = userRes.rows[0].id;
+    }
+
+    // Ensure user profile exists (so portal does not crash reading name)
+    const profileRes = await client.query('SELECT id FROM auth.user_profile WHERE user_id = $1', [userId]);
+    if (profileRes.rows.length === 0) {
+        const parts = email.split('@');
+        const firstName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+        await client.query('INSERT INTO auth.user_profile (tenant_id, user_id, first_name, last_name) VALUES ($1, $2, $3, $4)', [tenantId, userId, firstName, 'Demo']);
+    }
+
+    // Ensure user credential exists (password: 'password123')
+    const credRes = await client.query('SELECT id FROM auth.user_credential WHERE user_id = $1', [userId]);
+    if (credRes.rows.length === 0) {
+        const passwordHash = '$2b$10$njZZti4N6qN3pm1jzTByS.IyjHg02ZUu2RvOtoqEb7fa2liw3z626';
+        await client.query('INSERT INTO auth.user_credential (tenant_id, user_id, password_hash) VALUES ($1, $2, $3)', [tenantId, userId, passwordHash]);
+    }
     
-    const userRes = await client.query('INSERT INTO auth.user (tenant_id, email, role_id) VALUES ($1, $2, $3) RETURNING id', [tenantId, email, roleId]);
-    return userRes.rows[0].id;
+    return userId;
 }
 
 async function seed() {
