@@ -7,7 +7,7 @@ import { apiRateLimiter, sensitiveRateLimiter } from "../../core/middleware/Rate
 
 const academicsRouter = Router();
 
-academicsRouter.get("/years", apiRateLimiter, requireAuth, requirePermission(["settings:read"]), (req, res) =>
+academicsRouter.get("/years", apiRateLimiter, requireAuth, (req, res) =>
     container.resolve(RolloverController).getYears(req, res),
 );
 

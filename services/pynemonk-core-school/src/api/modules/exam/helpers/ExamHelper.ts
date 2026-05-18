@@ -41,8 +41,8 @@ export class ExamHelper extends BaseModel {
 
     public async createExam(data: any) {
         const query = `
-            INSERT INTO school.exam (tenant_id, academic_year_id, exam_term_id, name, exam_type, start_date, end_date, description)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO school.exam (tenant_id, academic_year_id, exam_term_id, name, exam_type, start_date, end_date, description, is_promotional, min_promotion_threshold)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
         `;
         const values = [
@@ -53,7 +53,9 @@ export class ExamHelper extends BaseModel {
             data.exam_type || 'periodic',
             data.start_date || null,
             data.end_date || null,
-            data.description || null
+            data.description || null,
+            data.is_promotional ?? false,
+            data.min_promotion_threshold ?? 40.00
         ];
         const res = await this.db.query(query, values);
         return res.rows[0];
@@ -420,6 +422,8 @@ export class ExamHelper extends BaseModel {
                 is_published = COALESCE($8, is_published),
                 results_published = COALESCE($9, results_published),
                 description = COALESCE($10, description),
+                is_promotional = COALESCE($11, is_promotional),
+                min_promotion_threshold = COALESCE($12, min_promotion_threshold),
                 updated_at = NOW()
             WHERE tenant_id = $1 AND id = $2
             RETURNING *
@@ -434,7 +438,9 @@ export class ExamHelper extends BaseModel {
             data.end_date,
             data.is_published,
             data.results_published,
-            data.description
+            data.description,
+            data.is_promotional !== undefined ? data.is_promotional : null,
+            data.min_promotion_threshold !== undefined ? data.min_promotion_threshold : null
         ];
         const res = await this.db.query(query, values);
         return res.rows[0];

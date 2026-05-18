@@ -204,18 +204,23 @@ export default function Exams() {
                   <div className="bg-slate-50 w-14 h-14 rounded-2xl flex items-center justify-center group-hover:bg-primary/5 transition-colors">
                     <Calendar className="w-7 h-7 text-slate-300 group-hover:text-primary transition-colors" />
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex items-center justify-end gap-2">
+                    {exam.is_promotional && (
+                      <span className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md shadow-theme/10">
+                        Promotional Final
+                      </span>
+                    )}
                     {exam.results_published ? (
                       <span className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[9px] font-bold uppercase tracking-widest border border-emerald-100">
-                        Finalized
+                        Consolidated
                       </span>
                     ) : isCompleted ? (
                       <span className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-xl text-[9px] font-bold uppercase tracking-widest border border-amber-100">
-                        Pending Evaluation
+                        Evaluation
                       </span>
                     ) : (
                       <span className="px-3 py-1.5 bg-primary/5 text-primary rounded-xl text-[9px] font-bold uppercase tracking-widest border border-primary/10 animate-pulse">
-                        In Progress
+                        Active
                       </span>
                     )}
                   </div>

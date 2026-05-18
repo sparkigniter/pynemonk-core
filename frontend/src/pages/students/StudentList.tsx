@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
     Search, Plus, Filter, GraduationCap, AlertCircle, ChevronRight, 
     CheckCircle2, FileSpreadsheet, RefreshCw, 
-    UserX, LayoutGrid, List, DollarSign
+    UserX, LayoutGrid, List, DollarSign, Upload
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import * as studentApi from '../../api/student.api';
@@ -15,6 +15,7 @@ import { getClassrooms } from '../../api/classroom.api';
 import { useNotification } from '../../contexts/NotificationContext';
 import type { Classroom } from '../../api/classroom.api';
 import { getGrades } from '../../api/grade.api';
+import BulkImportWizard from '../../components/students/BulkImportWizard';
 
 export default function StudentList() {
     const { notify } = useNotification();
@@ -22,6 +23,7 @@ export default function StudentList() {
     const [students, setStudents] = useState<studentApi.Student[]>([]);
     const [loading, setLoading] = useState(true);
     const [exporting, setExporting] = useState(false);
+    const [showImportWizard, setShowImportWizard] = useState(false);
     const navigate = useNavigate();
     const { user, can } = useAuth();
     const [search, setSearch] = useState('');
@@ -224,6 +226,16 @@ export default function StudentList() {
                         >
                             {exporting ? <RefreshCw size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />}
                             {exporting ? 'Syncing...' : 'Export SATS'}
+                        </button>
+                    )}
+                    {canAdmit && (
+                        <button
+                            onClick={() => setShowImportWizard(true)}
+                            disabled={isYearClosed()}
+                            className="btn-dark flex items-center gap-2 !px-6 !py-3 !text-xs disabled:opacity-30 disabled:grayscale"
+                        >
+                            <Upload size={16} />
+                            Bulk Import
                         </button>
                     )}
                     {canAdmit && (
@@ -760,6 +772,16 @@ export default function StudentList() {
                     </div>
                 </div>
             )}
+            <BulkImportWizard
+                isOpen={showImportWizard}
+                onClose={() => setShowImportWizard(false)}
+                onSuccess={() => {
+                    fetchStudents();
+                    fetchUnenrolledCount();
+                }}
+                grades={grades}
+                classrooms={classrooms}
+            />
         </div>
     );
 }

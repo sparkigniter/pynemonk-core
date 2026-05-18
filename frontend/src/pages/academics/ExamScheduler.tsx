@@ -79,6 +79,8 @@ export default function ExamScheduler() {
         start_date: '',
         end_date: '',
         instructions: '',
+        is_promotional: false,
+        min_promotion_threshold: 40.00,
         selectedClassrooms: [] as number[],
         papers: [] as any[], // { subject_id, max_marks, evaluator_id, type, classroom_id }
         schedule: [] as any[] // { paper_id, date, start_time, end_time }
@@ -324,6 +326,8 @@ export default function ExamScheduler() {
                 start_date: formData.start_date,
                 end_date: formData.end_date,
                 description: formData.instructions,
+                is_promotional: formData.is_promotional,
+                min_promotion_threshold: formData.min_promotion_threshold,
             };
             const createdExam = await examApi.createExam(examPayload);
             const examId = createdExam.id;
@@ -592,6 +596,49 @@ export default function ExamScheduler() {
                                                 className="w-full px-8 py-6 bg-slate-50 rounded-[2rem] border-none text-lg font-black text-[var(--text-main)] focus:bg-[var(--card-bg)] focus:ring-8 focus:ring-indigo-500/5 transition-all outline-none"
                                             />
                                         </div>
+                                    </div>
+
+                                    <div className="bg-primary/5 p-8 rounded-[2.5rem] border border-indigo-50/50 space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h4 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                                                    Promotional Exam Designation
+                                                </h4>
+                                                <p className="text-xs text-[var(--text-muted)] font-medium mt-1">
+                                                    Is this the final exam that determines whether students move to the next grade?
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, is_promotional: !formData.is_promotional })}
+                                                className={`w-12 h-6 rounded-full p-1 transition-all flex items-center ${formData.is_promotional ? 'bg-primary' : 'bg-slate-200'}`}
+                                            >
+                                                <div className={`w-4 h-4 bg-[var(--card-bg)] rounded-full shadow-sm transition-all transform ${formData.is_promotional ? 'translate-x-6' : 'translate-x-0'}`} />
+                                            </button>
+                                        </div>
+
+                                        {formData.is_promotional && (
+                                            <div className="pt-4 border-t border-indigo-100/50 grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in-up">
+                                                <div className="space-y-3">
+                                                    <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-2">Promotion Passing Mark Threshold</label>
+                                                    <div className="relative flex items-center">
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            placeholder="e.g. 40.00"
+                                                            value={formData.min_promotion_threshold}
+                                                            onChange={e => setFormData({ ...formData, min_promotion_threshold: parseFloat(e.target.value) || 0 })}
+                                                            className="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none text-base font-black text-[var(--text-main)] focus:bg-[var(--card-bg)] focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
+                                                        />
+                                                        <span className="absolute right-6 text-sm font-bold text-[var(--text-muted)]">% / CGPA</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-indigo-500 font-medium italic ml-2">
+                                                        Note: Will automatically adapt to tenant-configured Percentage or CGPA scales during year-end promotions.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="space-y-4">
@@ -940,7 +987,7 @@ export default function ExamScheduler() {
                                             <div className="p-8 bg-surface-dark text-white rounded-[3rem] shadow-2xl">
                                                 <div className="flex items-center gap-4 mb-4">
                                                     <Layout className="text-indigo-400" size={20} />
-                                                    <p className="text-[10px] font-black uppercase tracking-widest">Workload Analysis</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest">Evaluation Effort Analysis</p>
                                                 </div>
                                                 <p className="text-xs font-medium text-white/60 leading-relaxed">Evaluation will require approximately 40 hours of faculty time across 8 evaluators.</p>
                                             </div>

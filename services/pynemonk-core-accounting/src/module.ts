@@ -31,7 +31,14 @@ export async function init(): Promise<void> {
 }
 
 
+import { requireAuth } from "./api/core/middleware/requireAuth.js";
+import { requireBillingActive } from "./api/core/middleware/requireBillingActive.js";
+
 export const router = Router();
+
+// Secure all accounting routes globally with authentication and billing active checks
+router.use(requireAuth);
+router.use(requireBillingActive);
 
 // Mount all accounting sub-routers under /accounting/...
 router.use("/accounting/fees", feeRouter);

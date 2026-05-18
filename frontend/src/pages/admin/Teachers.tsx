@@ -250,7 +250,7 @@ export default function Teachers() {
                             <div className="mt-auto border-t border-slate-50 pt-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">Assigned Load</span>
+                                        <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1">Assigned Subjects</span>
                                         <span className="text-[12px] font-bold text-slate-700">
                                             {s.assignments?.length || 0} Subjects
                                         </span>
@@ -381,9 +381,9 @@ export default function Teachers() {
                             )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                {/* Academic Load */}
+                                {/* Teaching Assignments */}
                                 <div className="space-y-4">
-                                    <h3 className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest px-2">Academic Load</h3>
+                                    <h3 className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest px-2">Teaching Assignments</h3>
                                     <div className="space-y-3">
                                         {selectedStaff.assignments && selectedStaff.assignments.length > 0 ? (
                                             selectedStaff.assignments.map((a: any, idx: number) => (
@@ -400,7 +400,7 @@ export default function Teachers() {
                                         ) : (
                                             <div className="py-10 text-center bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] shadow-sm">
                                                 <ShieldCheck className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                                                <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">No Load Assigned</p>
+                                                <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">No Subjects Assigned</p>
                                             </div>
                                         )}
                                     </div>

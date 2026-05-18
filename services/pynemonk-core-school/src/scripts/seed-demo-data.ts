@@ -71,21 +71,26 @@ async function seed() {
         await client.query('BEGIN');
 
         // 0. Fetch or Create default tenant to satisfy foreign key constraints
-        const tenantCheck = await client.query('SELECT id FROM auth.tenant LIMIT 1');
+        const officeUserCheck = await client.query("SELECT tenant_id FROM auth.user WHERE email = 'office@demo.edu' LIMIT 1");
         let tenantId;
-        if (tenantCheck.rows.length > 0) {
-            tenantId = tenantCheck.rows[0].id;
+        if (officeUserCheck.rows.length > 0) {
+            tenantId = officeUserCheck.rows[0].tenant_id;
         } else {
-            console.log('🏢 No active tenant found. Creating a default tenant...');
-            const defaultPkgRes = await client.query("SELECT id FROM auth.package WHERE slug = 'standard' LIMIT 1");
-            const pkgId = defaultPkgRes.rows[0]?.id || 1;
-            
-            const tenantInsert = await client.query(
-                `INSERT INTO auth.tenant (name, slug, email, package_id) 
-                 VALUES ($1, $2, $3, $4) RETURNING id`,
-                ['Demo Academy', 'demo', 'demo@pynemonk.com', pkgId]
-            );
-            tenantId = tenantInsert.rows[0].id;
+            const tenantCheck = await client.query('SELECT id FROM auth.tenant LIMIT 1');
+            if (tenantCheck.rows.length > 0) {
+                tenantId = tenantCheck.rows[0].id;
+            } else {
+                console.log('🏢 No active tenant found. Creating a default tenant...');
+                const defaultPkgRes = await client.query("SELECT id FROM auth.package WHERE slug = 'standard' LIMIT 1");
+                const pkgId = defaultPkgRes.rows[0]?.id || 1;
+                
+                const tenantInsert = await client.query(
+                    `INSERT INTO auth.tenant (name, slug, email, package_id) 
+                     VALUES ($1, $2, $3, $4) RETURNING id`,
+                    ['Demo Academy', 'demo', 'demo@pynemonk.com', pkgId]
+                );
+                tenantId = tenantInsert.rows[0].id;
+            }
         }
         console.log(`🏢 Seeding for Tenant ID: ${tenantId}`);
 
@@ -114,6 +119,27 @@ async function seed() {
             const tId = await createUser(client, tenantId, `teacher${i}@demo.edu`, roleMap['teacher']);
             await client.query('INSERT INTO school.staff (tenant_id, user_id, first_name, last_name, employee_code, designation) VALUES ($1, $2, $3, $4, $5, $6)',
                 [tenantId, tId, `Teacher`, `${i}`, `TCH-${i.toString().padStart(3, '0')}`, 'Senior Faculty']);
+        }
+
+        // 2.7 Parents / Guardians
+        console.log('👪 Creating Guardian Accounts...');
+        const parentRoleId = roleMap['parent'];
+        let guardianId: number | undefined;
+        if (parentRoleId) {
+            const pId = await createUser(client, tenantId, 'parent1@demo.edu', parentRoleId);
+            
+            // Create guardian entry in school.guardian
+            const guardianCheck = await client.query('SELECT id FROM school.guardian WHERE user_id = $1', [pId]);
+            if (guardianCheck.rows.length === 0) {
+                const guardianRes = await client.query(
+                    `INSERT INTO school.guardian (tenant_id, user_id, first_name, last_name, gender, phone, email, occupation)
+                     VALUES ($1, $2, 'Ramesh', 'Sharma', 'male', '9876543210', 'parent1@demo.edu', 'Business Owner') RETURNING id`,
+                    [tenantId, pId]
+                );
+                guardianId = guardianRes.rows[0].id;
+            } else {
+                guardianId = guardianCheck.rows[0].id;
+            }
         }
 
         // 3. Grades & Subjects
@@ -181,6 +207,16 @@ async function seed() {
                 [tenantId, invId, feeHeadId]);
 
             await client.query("INSERT INTO school.fee_installment (allocation_id, fee_structure_item_id, invoice_id, amount_due, status, due_date) VALUES ($1, (SELECT id FROM school.fee_structure_item WHERE fee_structure_id = $2 LIMIT 1), $3, 5000, 'UNPAID', CURRENT_DATE)", [sfaId, fsId, invId]);
+
+            // Link parent/guardian (if guardianId exists) to this student
+            if (guardianId) {
+                await client.query(
+                    `INSERT INTO school.student_guardian (tenant_id, student_id, guardian_id, relation, is_emergency)
+                     VALUES ($1, $2, $3, 'Father', true)
+                     ON CONFLICT (student_id, guardian_id) DO NOTHING`,
+                    [tenantId, sId, guardianId]
+                );
+            }
         }
 
         // 6. Exams
@@ -188,12 +224,21 @@ async function seed() {
         const exRes = await client.query("INSERT INTO school.exam (tenant_id, academic_year_id, name, exam_type, start_date, end_date, is_published, status) VALUES ($1, $2, 'Mid-Term 2026', 'periodic', CURRENT_DATE, CURRENT_DATE + 7, true, 'published') RETURNING id", [tenantId, ayId]);
         const exId = exRes.rows[0].id;
 
+        // Seed invitations for all classrooms/grades to this exam
+        for (let i = 0; i < classroomIds.length; i++) {
+            await client.query(
+                `INSERT INTO school.exam_invitation (tenant_id, exam_id, grade_id, classroom_id) 
+                 VALUES ($1, $2, $3, $4)`,
+                [tenantId, exId, gradeIds[i], classroomIds[i]]
+            );
+        }
+
         for (let i = 0; i < 3; i++) {
             const paperRes = await client.query("INSERT INTO school.exam_paper (tenant_id, exam_id, subject_id, max_marks, passing_marks, exam_date, start_time, end_time) VALUES ($1, $2, $3, 100, 35, CURRENT_DATE, '09:00', '12:00') RETURNING id", [tenantId, exId, subjectIds[i]]);
             const paperId = paperRes.rows[0].id;
 
             await client.query(`INSERT INTO school.exam_marks (tenant_id, exam_id, paper_id, student_id, marks_obtained) 
-                SELECT 1, $1, $2, id, floor(random() * 50 + 50) FROM school.student`, [exId, paperId]);
+                SELECT $3, $1, $2, id, floor(random() * 50 + 50) FROM school.student WHERE tenant_id = $3`, [exId, paperId, tenantId]);
         }
 
         await client.query('COMMIT');

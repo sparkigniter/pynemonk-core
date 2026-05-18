@@ -21,6 +21,8 @@ ALTER TABLE school.exam ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL D
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Exam Result View Bridge
 -- ─────────────────────────────────────────────────────────────────────────────
+DROP TABLE IF EXISTS school.exam_result CASCADE;
+DROP VIEW IF EXISTS school.exam_result CASCADE;
 CREATE OR REPLACE VIEW school.exam_result AS
 SELECT 
     em.id,

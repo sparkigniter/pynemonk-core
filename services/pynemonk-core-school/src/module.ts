@@ -26,8 +26,11 @@ import payrollRouter from "./api/modules/payroll/routes.js";
 import systemRouter from "./api/modules/system/routes.js";
 import feeRouter from "./api/modules/finance/routes.js";
 import plannerRouter from "./api/modules/planner/routes.js";
+import announcementRouter from "./api/modules/announcement/routes.js";
+import communicationRouter from "./api/modules/communication/routes.js";
 import { AcademicYearMiddleware } from "./api/core/middleware/AcademicYearMiddleware.js";
 import { requireAuth } from "./api/core/middleware/requireAuth.js";
+import { requireBillingActive } from "./api/core/middleware/requireBillingActive.js";
 
 import { runMigrations } from "./db/MigrationRunner.js";
 import pool from "./db/pg-pool.js";
@@ -44,6 +47,9 @@ const academicYearMiddleware = container.resolve(AcademicYearMiddleware);
 
 // Ensure all school routes are authenticated
 router.use(requireAuth);
+
+// Enforce billing status checks globally
+router.use(requireBillingActive);
 
 // Protect closed academic years from modifications
 router.use(academicYearMiddleware.protectClosedYear.bind(academicYearMiddleware));
@@ -73,3 +79,5 @@ router.use("/school/payroll", payrollRouter);
 router.use("/school/system", systemRouter);
 router.use("/school/finance", feeRouter);
 router.use("/school/planners", plannerRouter);
+router.use("/school/announcements", announcementRouter);
+router.use("/school/communications", communicationRouter);

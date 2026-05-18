@@ -91,8 +91,8 @@ export default function MyClasses() {
                             <CalendarCheck className="text-white w-6 h-6" />
                         </div>
                         <div>
-                            <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none">My Workload</h1>
-                            <p className="text-[var(--text-muted)] font-medium mt-1">Unified access to all your assigned classes and subjects.</p>
+                            <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none">My Classes</h1>
+                            <p className="text-[var(--text-muted)] font-medium mt-1">Unified access to all your assigned classrooms, subjects, and schedules.</p>
                         </div>
                     </div>
 

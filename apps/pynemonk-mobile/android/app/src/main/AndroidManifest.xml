@@ -39,7 +39,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="http" />
                 <data android:scheme="https" />
-                <data android:host="localhost" />
+                <data android:host="    13.61.11.86/" />
             </intent-filter>
 
         </activity>

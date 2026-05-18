@@ -140,6 +140,38 @@ export default function ExamInvitations() {
         }
     };
 
+    const handleExportCSV = () => {
+        if (students.length === 0) {
+            notify('error', 'Export Failed', 'No candidates available to export');
+            return;
+        }
+
+        const headers = ["Candidate Name", "Grade/Section", "Admission No", "Invitation Status", "Exclusion Reason"];
+        const rows = students.map(s => [
+            `"${s.first_name} ${s.last_name}"`,
+            `"${s.classroom_name} - Section ${s.classroom_section}"`,
+            `"${s.admission_no}"`,
+            `"${s.is_excluded ? 'Excluded' : 'Eligible'}"`,
+            `"${s.exclusion_reason || ''}"`
+        ]);
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(row => row.join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Exam_Invitations_${exam?.name || 'List'}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        notify('success', 'Export Complete', 'Candidate list downloaded successfully.');
+    };
+
     if (isLoading) {
         return (
             <div className="h-[80vh] flex flex-col items-center justify-center gap-4">
@@ -172,7 +204,10 @@ export default function ExamInvitations() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-6 py-3.5 bg-[var(--card-bg)] border border-[var(--card-border)] text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                    <button 
+                        onClick={handleExportCSV}
+                        className="flex items-center gap-2 px-6 py-3.5 bg-[var(--card-bg)] border border-[var(--card-border)] text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                    >
                         <Download size={16} />
                         Export List
                     </button>

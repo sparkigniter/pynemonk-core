@@ -7,7 +7,7 @@ import {
     Calendar, RefreshCw, X, ClipboardList, Clock, Sparkles,
     StickyNote, Zap, Shield, BookCheck, Activity, Terminal,
     Wallet, Gift, FileText, Landmark, Upload,
-    BarChart3, Scale
+    BarChart3, Scale, Megaphone, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAvailableIntegrations } from '../../api/integration.api';
@@ -63,6 +63,8 @@ const navigation = {
         { name: 'Knowledge Hub', path: '/lms/library', icon: BookOpen, permissions: ['assignment:read'] },
         { name: 'Academic Planner', path: '/academic-planner', icon: Calendar, permissions: ['assignment:read'] },
         { name: 'School Calendar', path: '/calendar', icon: Calendar, permissions: ['timetable:read'] },
+        { name: 'Notice Board', path: '/notice-board', icon: Megaphone, permissions: ['student.academic:read', 'student:read', 'staff:read'] },
+        { name: 'Communications', path: '/communications', icon: MessageSquare, permissions: ['student.academic:read', 'student:read', 'staff:read'] },
     ],
     fees: [
         { name: 'Fee Collection', path: '/fee-management?tab=overview', icon: Wallet, permissions: ['fee:read'] },
@@ -116,6 +118,28 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
     const navigate = useNavigate();
     const location = useLocation();
     const switcherRef = useRef<HTMLDivElement>(null);
+
+    const isActivePath = (itemPath: string) => {
+        const fullCurrentPath = location.pathname + location.search;
+        let active = fullCurrentPath === itemPath || (location.pathname === itemPath && !itemPath.includes('?'));
+        
+        if (!active && !itemPath.includes('?')) {
+            if (itemPath === '/students') {
+                active = location.pathname.startsWith('/students') || location.pathname.startsWith('/onboarding/students');
+            } else if (itemPath === '/teachers') {
+                active = location.pathname.startsWith('/teachers') || location.pathname.startsWith('/faculty') || location.pathname.startsWith('/onboarding/teachers');
+            } else if (itemPath === '/exams') {
+                active = location.pathname.startsWith('/exams');
+            } else if (itemPath === '/fee-management') {
+                active = location.pathname.startsWith('/fee-management') || location.pathname.startsWith('/bulk-fee-allocation');
+            } else if (itemPath.startsWith('/accounting/')) {
+                active = location.pathname.startsWith(itemPath);
+            } else if (itemPath !== '/' && itemPath !== '/dashboard') {
+                active = location.pathname.startsWith(itemPath + '/');
+            }
+        }
+        return active;
+    };
 
     const currentTenant = tenants.find(t => t.id === user?.tenant_id);
 
@@ -248,8 +272,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                 to={item.path}
                 title={collapsed && !isChild ? item.name : undefined}
                 className={() => {
-                    const fullCurrentPath = location.pathname + location.search;
-                    const isTrulyActive = fullCurrentPath === item.path || (location.pathname === item.path && !item.path.includes('?'));
+                    const isTrulyActive = isActivePath(item.path);
                     
                     return `group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
                     ${collapsed && !isChild ? 'justify-center' : ''}
@@ -259,8 +282,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                 }}
             >
                 {() => {
-                    const fullCurrentPath = location.pathname + location.search;
-                    const isTrulyActive = fullCurrentPath === item.path || (location.pathname === item.path && !item.path.includes('?'));
+                    const isTrulyActive = isActivePath(item.path);
                     
                     return (
                     <>
@@ -478,23 +500,30 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
                     <NavLink
                         to="/settings"
                         title={collapsed ? 'Settings' : undefined}
-                        className={({ isActive }) =>
-                            `group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
+                        className={() => {
+                            const isTrulyActive = isActivePath('/settings') || location.pathname.startsWith('/admin/settings');
+                            
+                            return `group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
                             ${collapsed ? 'justify-center' : ''}
-                            ${isActive ? 'bg-[var(--sidebar-active)] text-[var(--primary)] font-bold' : 'text-[var(--sidebar-text)] hover:bg-slate-200/50 hover:text-[var(--text-main)]'}`
-                        }
+                            ${isTrulyActive 
+                                ? 'bg-[var(--sidebar-active)] text-[var(--sidebar-text-active)] font-bold shadow-sm' 
+                                : 'text-[var(--sidebar-text)] hover:bg-white/5 hover:text-[var(--sidebar-text-active)]'}`;
+                        }}
                     >
-                        {({ isActive }) => (
+                        {() => {
+                            const isTrulyActive = isActivePath('/settings') || location.pathname.startsWith('/admin/settings');
+                            
+                            return (
                             <>
                                 <div
                                     className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all
-                                        ${isActive ? 'text-[var(--sidebar-text-active)]' : 'text-slate-500 group-hover:text-[var(--sidebar-text-active)]'}`}
+                                        ${isTrulyActive ? 'text-[var(--sidebar-text-active)]' : 'text-slate-500 group-hover:text-[var(--sidebar-text-active)]'}`}
                                 >
                                     <Settings size={18} />
                                 </div>
                                 {!collapsed && <span className="text-[13px] flex-1">Settings</span>}
                             </>
-                        )}
+                        )}}
                     </NavLink>
                 </div>
             </nav>

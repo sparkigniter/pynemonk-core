@@ -86,7 +86,11 @@ const TeacherTimetable: React.FC = () => {
                 // Filter for current teacher
                 const mySchedule = res.filter((t: any) => String(t.teacher_user_id) === String(user?.sub));
                 setTimetable(mySchedule);
-                setPeriods((periodData || []).sort((a: any, b: any) => a.period_number - b.period_number));
+                setPeriods((periodData || []).map((p: any, idx: number) => ({
+                    period_number: idx + 1,
+                    start_time: p.start_time,
+                    end_time: p.end_time
+                })).sort((a: any, b: any) => a.period_number - b.period_number));
                 setBreaks(breaksData || []);
                 setHolidays((eventsRes || []).filter((e: any) => e.event_type === 'holiday'));
                 setSettings(settingsRes);

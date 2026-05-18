@@ -43,6 +43,8 @@ import IAM from './pages/admin/IAM';
 import Rollover from './pages/admin/Rollover';
 import WorkflowBuilder from './pages/onboarding/WorkflowBuilder';
 import SchoolCalendar from './pages/academics/Calendar';
+import NoticeBoard from './pages/academics/NoticeBoard';
+import Communications from './pages/academics/Communications';
 
 import { useAuth } from './contexts/AuthContext';
 
@@ -117,7 +119,7 @@ export default function App() {
           <Route path="exams/:id/results" element={<ExamResults />} />
           <Route path="exams/:id/papers" element={<ExamPapers />} />
           <Route path="exams/:id/invitations" element={<ExamInvitations />} />
-          <Route path="exams/:id/overview" element={<Navigate to="/exams/:id" replace />} />
+          <Route path="exams/:id/overview" element={<ExamOverview />} />
           <Route path="faculty" element={<Faculty />} />
           <Route path="teachers" element={<Faculty />} />
           <Route path="teachers/register" element={<StaffRegistration />} />
@@ -132,6 +134,8 @@ export default function App() {
           <Route path="classrooms" element={<Classrooms />} />
           <Route path="teacher-diary" element={<TeacherDiary />} />
           <Route path="homework" element={<Homework />} />
+          <Route path="notice-board" element={<NoticeBoard />} />
+          <Route path="communications" element={<Communications />} />
           <Route path="reports" element={<Reports />} />
           <Route path="integrations" element={<Integrations />} />
           <Route path="iam" element={<IAM />} />

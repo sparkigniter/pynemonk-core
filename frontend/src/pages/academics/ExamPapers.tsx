@@ -94,7 +94,11 @@ export default function ExamPapers() {
             setExam(details);
             setPapers(details.papers || []);
             setSubjects(subjectsData.data);
-            setPeriods(periodsData);
+            setPeriods((periodsData || []).map((p, idx) => ({
+                period_number: idx + 1,
+                start_time: p.start_time,
+                end_time: p.end_time
+            })));
             setStaffList(staffData.data);
         } catch (err) {
             notify('error', 'Error', 'Failed to load exam paper configuration');

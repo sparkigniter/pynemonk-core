@@ -18,6 +18,8 @@ export interface Exam {
   is_published: boolean;
   results_published: boolean;
   progress_percentage?: number;
+  is_promotional?: boolean;
+  min_promotion_threshold?: number;
 }
 
 export interface ExamPaper {
