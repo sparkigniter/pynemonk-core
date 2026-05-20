@@ -45,6 +45,7 @@ import WorkflowBuilder from './pages/onboarding/WorkflowBuilder';
 import SchoolCalendar from './pages/academics/Calendar';
 import NoticeBoard from './pages/academics/NoticeBoard';
 import Communications from './pages/academics/Communications';
+import LandingPage from './pages/public/LandingPage';
 
 import { useAuth } from './contexts/AuthContext';
 
@@ -101,11 +102,11 @@ export default function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<AuthRedirect><LandingPage /></AuthRedirect>} />
         <Route path="/login" element={<AuthRedirect><Login /></AuthRedirect>} />
         <Route path="/school-selection" element={<ProtectedRoute><SchoolSelection /></ProtectedRoute>} />
         
-        <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-          <Route index element={<Navigate to="dashboard" replace />} />
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="students" element={<StudentList />} />
           <Route path="students/register" element={<StudentAdmission />} />
