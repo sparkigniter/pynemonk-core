@@ -117,4 +117,13 @@ export const examApi = {
 
   getExamResults: (id: number) =>
     get<any>(`/school/exams/${id}/results`),
+
+  getPaperQuestions: (examId: number, paperId: number) =>
+    get<any[]>(`/school/exams/${examId}/papers/${paperId}/questions`),
+
+  savePaperQuestions: (examId: number, paperId: number, sections: any[]) =>
+    post<any>(`/school/exams/${examId}/papers/${paperId}/questions`, { sections }),
+
+  generateQuestionPaper: (examId: number, paperId: number, config: any) =>
+    post<any>(`/school/exams/${examId}/papers/${paperId}/generate`, config),
 };

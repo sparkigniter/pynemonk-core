@@ -6,6 +6,7 @@ import {
     TrendingUp, TrendingDown, ChevronRight
 } from 'lucide-react';
 import { getTrialBalance } from '../../api/accounting.api';
+import { getBaseURL } from '../../api/base.api';
 
 export default function TrialBalance() {
     const navigate = useNavigate();
@@ -47,7 +48,7 @@ export default function TrialBalance() {
             const session = localStorage.getItem('eduerp_session');
             const token = session ? JSON.parse(session).accessToken : '';
             
-            const response = await fetch('http://localhost:3000/api/v1/accounting/reports/trial-balance/export/pdf', {
+            const response = await fetch(`${getBaseURL()}/accounting/reports/trial-balance/export/pdf`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`

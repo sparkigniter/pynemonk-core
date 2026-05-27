@@ -10,7 +10,8 @@ import {
     BookOpen,
     RotateCcw,
     ShieldAlert,
-    X
+    X,
+    Sparkles
 } from 'lucide-react';
 import { examApi } from '../../api/exam.api';
 import { getSubjectList } from '../../api/subject.api';
@@ -355,7 +356,13 @@ export default function ExamPapers() {
                                         <span className="text-xs font-bold text-[var(--text-muted)]">Min. Passing</span>
                                     </div>
                                 </div>
-                                <div className="flex items-end justify-end">
+                                <div className="flex items-end justify-end gap-3">
+                                     <button
+                                         onClick={() => navigate(`/exams/${id}/papers/${paper.id}/questions`)}
+                                         className="px-6 py-3 text-emerald-600 bg-emerald-50 hover:bg-emerald-100/60 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 shadow-sm shadow-emerald-600/5 hover:scale-[1.02]"
+                                     >
+                                         <Sparkles size={12} /> Manage Questions
+                                     </button>
                                     <button
                                         disabled={isLocked}
                                         onClick={() => {

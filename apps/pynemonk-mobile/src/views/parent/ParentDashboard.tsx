@@ -48,15 +48,15 @@ export const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
     setLoading(true)
     try {
       const [attRes, examRes, classRes] = await Promise.all([
-        api.get(`/school/guardian/student/\${studentId}/attendance`),
-        api.get(`/school/guardian/student/\${studentId}/exams`),
-        api.get(`/school/guardian/student/\${studentId}/classroom`)
+        api.get(`/school/guardian/student/${studentId}/attendance`),
+        api.get(`/school/guardian/student/${studentId}/exams`),
+        api.get(`/school/guardian/student/${studentId}/classroom`)
       ])
       if (attRes.data.success) setAttendance(attRes.data.data)
       if (examRes.data.success) setExams(examRes.data.data)
       if (classRes.data.success) setClassroom(classRes.data.data)
 
-      const hwRes = await api.get(`/school/homework?classroomId=\${classRes.data.data.classroom.id}`)
+      const hwRes = await api.get(`/school/homework?classroomId=${classRes.data.data.classroom.id}`)
       if (hwRes.data.success) setHomeworks(hwRes.data.data)
     } catch (err) { console.error(err) }
     setLoading(false)
@@ -96,7 +96,7 @@ export const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
               <button
                 key={s.id}
                 onClick={() => setSelectedStudent(s)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all \${selectedStudent?.id === s.id ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-100 text-slate-400'}`}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${selectedStudent?.id === s.id ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-100 text-slate-400'}`}
               >
                 {s.first_name}
               </button>
@@ -275,7 +275,7 @@ export const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
                   const count = attendance?.summary.find((s: any) => s.status === status)?.count || 0;
                   return (
                     <div key={status} className="bg-white p-4 rounded-3xl border border-slate-100 text-center">
-                      <p className={`text-[8px] font-black uppercase mb-1 \${status === 'present' ? 'text-emerald-500' : status === 'absent' ? 'text-rose-500' : 'text-amber-500'}`}>
+                      <p className={`text-[8px] font-black uppercase mb-1 ${status === 'present' ? 'text-emerald-500' : status === 'absent' ? 'text-rose-500' : 'text-amber-500'}`}>
                         {status}
                       </p>
                       <h4 className="text-xl font-black text-slate-900">{count}</h4>
@@ -293,7 +293,7 @@ export const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         <p className="text-sm font-bold text-slate-800">{new Date(rec.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
                         {rec.remarks && <p className="text-[10px] text-slate-400 italic mt-0.5">{rec.remarks}</p>}
                       </div>
-                      <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest \${rec.status === 'present' ? 'bg-emerald-50 text-emerald-600' :
+                      <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${rec.status === 'present' ? 'bg-emerald-50 text-emerald-600' :
                         rec.status === 'absent' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
                         }`}>
                         {rec.status}
@@ -350,7 +350,7 @@ export const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
                       <div className="w-full bg-slate-50 h-2 rounded-full overflow-hidden">
                         <div
                           className="bg-brand-500 h-full rounded-full transition-all duration-1000"
-                          style={{ width: `\${(res.marks / res.max_marks) * 100}%` }}
+                          style={{ width: `${(res.marks / res.max_marks) * 100}%` }}
                         />
                       </div>
                       <div className="flex justify-between items-center mt-2">
@@ -425,23 +425,23 @@ export const ParentDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
       {/* Bottom Nav */}
       <nav className="mobile-bottom-nav">
-        <button onClick={() => setView('home')} className={`flex flex-col items-center gap-1 \${view === 'home' ? 'text-brand-600' : 'text-slate-400'}`}>
+        <button onClick={() => setView('home')} className={`flex flex-col items-center gap-1 ${view === 'home' ? 'text-brand-600' : 'text-slate-400'}`}>
           <Home className="w-6 h-6" />
           <span className="text-[8px] font-black uppercase tracking-widest">Home</span>
         </button>
-        <button onClick={() => setView('attendance')} className={`flex flex-col items-center gap-1 \${view === 'attendance' ? 'text-brand-600' : 'text-slate-400'}`}>
+        <button onClick={() => setView('attendance')} className={`flex flex-col items-center gap-1 ${view === 'attendance' ? 'text-brand-600' : 'text-slate-400'}`}>
           <CheckCircle2 className="w-6 h-6" />
           <span className="text-[8px] font-black uppercase tracking-widest">Attendance</span>
         </button>
-        <button onClick={() => setView('exams')} className={`flex flex-col items-center gap-1 \${view === 'exams' ? 'text-brand-600' : 'text-slate-400'}`}>
+        <button onClick={() => setView('exams')} className={`flex flex-col items-center gap-1 ${view === 'exams' ? 'text-brand-600' : 'text-slate-400'}`}>
           <GraduationCap className="w-6 h-6" />
           <span className="text-[8px] font-black uppercase tracking-widest">Exams</span>
         </button>
-        <button onClick={() => setView('faculty')} className={`flex flex-col items-center gap-1 \${view === 'faculty' ? 'text-brand-600' : 'text-slate-400'}`}>
+        <button onClick={() => setView('faculty')} className={`flex flex-col items-center gap-1 ${view === 'faculty' ? 'text-brand-600' : 'text-slate-400'}`}>
           <Users className="w-6 h-6" />
           <span className="text-[8px] font-black uppercase tracking-widest">Faculty</span>
         </button>
-        <button onClick={() => setView('homework')} className={`flex flex-col items-center gap-1 \${view === 'homework' ? 'text-brand-600' : 'text-slate-400'}`}>
+        <button onClick={() => setView('homework')} className={`flex flex-col items-center gap-1 ${view === 'homework' ? 'text-brand-600' : 'text-slate-400'}`}>
           <BookOpen className="w-6 h-6" />
           <span className="text-[8px] font-black uppercase tracking-widest">Homework</span>
         </button>

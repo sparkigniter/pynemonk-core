@@ -423,7 +423,7 @@ BEGIN
     -- B. Sync to Triadic JWT Layer (client_role_scope) for Internal Clients
     FOR v_client_id IN SELECT id FROM auth.client WHERE is_internal = TRUE LOOP
         INSERT INTO auth.client_role_scope (client_id, role_id, scope_id)
-        SELECT v_client_id, r.id, s.id
+        SELECT DISTINCT v_client_id, r.id, s.id
         FROM auth.role r
         CROSS JOIN LATERAL jsonb_array_elements_text(r.data_scope) as scope_key
         JOIN auth.scope s ON s.value = scope_key

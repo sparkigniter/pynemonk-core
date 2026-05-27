@@ -23,6 +23,36 @@ export default class SettingsController extends BaseController {
                 return acc;
             }, {});
 
+            // Fetch platform billing data
+            const tenantResult = await this.db.query(
+                `SELECT t.billing_status, t.is_active, p.name as package_name, p.price_usd, p.features 
+                 FROM auth.tenant t 
+                 JOIN auth.package p ON t.package_id = p.id 
+                 WHERE t.id = $1 AND t.is_deleted = FALSE`,
+                [tenantId]
+            );
+
+            if (tenantResult.rows.length > 0) {
+                const subscription = tenantResult.rows[0];
+                
+                // Real-time usage calculation
+                const studentCountResult = await this.db.query(
+                    'SELECT COUNT(id) FROM school.student WHERE tenant_id = $1 AND is_deleted = FALSE',
+                    [tenantId]
+                );
+                const staffCountResult = await this.db.query(
+                    'SELECT COUNT(id) FROM school.staff WHERE tenant_id = $1 AND is_deleted = FALSE AND status = \'active\'',
+                    [tenantId]
+                );
+
+                subscription.usage = {
+                    students: parseInt(studentCountResult.rows[0].count, 10),
+                    staff: parseInt(staffCountResult.rows[0].count, 10)
+                };
+
+                settings.platform_subscription = subscription;
+            }
+
             return this.ok(res, "Settings retrieved", settings);
         } catch (error: any) {
             return this.internalservererror(res, error.message);

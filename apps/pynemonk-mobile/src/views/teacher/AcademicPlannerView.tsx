@@ -110,11 +110,11 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
     setLoading(true)
     try {
       const res = await api.get(
-        `/school/planners/by-teacher-subject?staff_id=\${selectedTeacherId}&subject_id=\${selectedSubjectId}&grade_id=\${selectedGradeId}`
+        `/school/planners/by-teacher-subject?staff_id=${selectedTeacherId}&subject_id=${selectedSubjectId}&grade_id=${selectedGradeId}`
       )
       if (res.data?.id || res.data?.data?.id) {
         const id = res.data?.id || res.data?.data?.id
-        const details = await api.get(`/school/planners/\${id}`)
+        const details = await api.get(`/school/planners/${id}`)
         setPlanner(details.data?.success ? details.data.data : details.data)
       } else {
         setPlanner(null)
@@ -141,7 +141,7 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
       const createdRes = await api.post('/school/planners', payload)
       const createdId = createdRes.data?.id || createdRes.data?.data?.id
       setShowInitModal(false)
-      const details = await api.get(`/school/planners/\${createdId}`)
+      const details = await api.get(`/school/planners/${createdId}`)
       setPlanner(details.data?.success ? details.data.data : details.data)
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to initialize academic planner')
@@ -152,7 +152,7 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
     e.preventDefault()
     if (!planner) return
     try {
-      await api.post(`/school/planners/\${planner.id}/chapters`, chapterData)
+      await api.post(`/school/planners/${planner.id}/chapters`, chapterData)
       setShowChapterModal(false)
       setChapterData({ name: '', description: '', estimated_lessons: 5 })
       loadPlanner()
@@ -165,7 +165,7 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
     e.preventDefault()
     if (!planner) return
     try {
-      await api.post(`/school/planners/\${planner.id}/milestones`, milestoneData)
+      await api.post(`/school/planners/${planner.id}/milestones`, milestoneData)
       setShowMilestoneModal(false)
       setMilestoneData({ name: '', target_date: new Date().toISOString().split('T')[0], description: '' })
       loadPlanner()
@@ -180,7 +180,7 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
     else if (currentStatus === 'in_progress') nextStatus = 'completed'
 
     try {
-      await api.put(`/school/planners/chapters/\${chapterId}`, { status: nextStatus })
+      await api.put(`/school/planners/chapters/${chapterId}`, { status: nextStatus })
       loadPlanner()
     } catch (err) {
       console.error('Failed to update status', err)
@@ -193,7 +193,7 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
     
     setLoading(true)
     try {
-      const scheduledRes = await api.post(`/school/planners/\${planner.id}/auto-schedule`, {})
+      const scheduledRes = await api.post(`/school/planners/${planner.id}/auto-schedule`, {})
       setPlanner(scheduledRes.data?.success ? scheduledRes.data.data : scheduledRes.data)
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to auto-schedule planner')
@@ -220,7 +220,7 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
           </button>
           <div>
             <h1 className="text-xl font-black text-slate-900 tracking-tight">Academic Planner</h1>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Syllabus Engine & Target Tracker</p>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Syllabus & Lesson Plan Tracker</p>
           </div>
         </div>
 
@@ -270,7 +270,7 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
             </div>
             <h3 className="text-base font-black text-slate-900">Select Subject & Grade</h3>
             <p className="text-slate-400 text-xs max-w-[240px] mx-auto leading-relaxed">
-              Choose a class section and subject above to build and manage your teaching syllabus targets.
+              Select your class and subject above to manage syllabus and lessons.
             </p>
           </div>
         ) : !planner ? (
@@ -281,14 +281,14 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
             <div>
               <h3 className="text-lg font-black text-slate-900">No Active Planner</h3>
               <p className="text-slate-400 text-xs mt-2 leading-relaxed">
-                Initialize an academic planner to begin adding chapters, scheduling hours, and tracking completion benchmarks.
+                Create a new syllabus plan to add chapters, periods, and track progress.
               </p>
             </div>
             <button
               onClick={() => setShowInitModal(true)}
               className="w-full py-4 bg-brand-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-brand-100"
             >
-              <Plus size={14} /> Initialize Syllabus Planner
+              <Plus size={14} /> Create Syllabus Plan
             </button>
           </div>
         ) : (
@@ -297,15 +297,15 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
             <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white shadow-xl relative overflow-hidden group">
               <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-28 h-28 bg-white/5 rounded-full" />
               <div className="flex justify-between items-start mb-4">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Syllabus Completion</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Syllabus Completed</span>
                 <TrendingUp size={16} className="text-emerald-400 animate-pulse" />
               </div>
               <h3 className="text-4xl font-black">{planner.metrics?.progressPercentage}%</h3>
               <div className="w-full bg-white/10 h-1.5 rounded-full mt-3 overflow-hidden">
-                <div className="bg-emerald-400 h-full rounded-full transition-all duration-500" style={{ width: `\${planner.metrics?.progressPercentage}%` }} />
+                <div className="bg-emerald-400 h-full rounded-full transition-all duration-500" style={{ width: `${planner.metrics?.progressPercentage}%` }} />
               </div>
               <div className="flex justify-between items-center mt-3 text-[9px] font-bold text-white/50 uppercase tracking-wider">
-                <span>{planner.metrics?.completedChapters} / {planner.metrics?.totalChapters} Chapters Finished</span>
+                <span>{planner.metrics?.completedChapters} / {planner.metrics?.totalChapters} Chapters Completed</span>
                 <span>{planner.metrics?.probability || 'On Track'}</span>
               </div>
             </div>
@@ -315,13 +315,13 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
               <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
                 <Clock size={16} className="text-sky-500 mb-2" />
                 <h4 className="text-lg font-black text-slate-900 leading-none">{planner.metrics?.completedLessons} / {planner.metrics?.totalLessons}</h4>
-                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Lesson Periods Covered</p>
+                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Periods Covered</p>
               </div>
 
               <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
                 <CalendarDays size={16} className="text-amber-500 mb-2" />
                 <h4 className="text-lg font-black text-slate-900 leading-none">{planner.metrics?.remainingDays} Days</h4>
-                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Remaining Term Days</p>
+                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Days Left in Term</p>
               </div>
             </div>
 
@@ -331,13 +331,13 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
                 <div className="flex bg-slate-100 p-1 rounded-xl shrink-0">
                   <button
                     onClick={() => setActiveTab('chapters')}
-                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all \${activeTab === 'chapters' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${activeTab === 'chapters' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
                   >
                     Syllabus
                   </button>
                   <button
                     onClick={() => setActiveTab('milestones')}
-                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all \${activeTab === 'milestones' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${activeTab === 'milestones' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
                   >
                     Milestones
                   </button>
@@ -385,7 +385,7 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
                           <div className="flex items-start gap-3">
                             <button
                               onClick={() => handleUpdateChapterStatus(ch.id, ch.status)}
-                              className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-all \${
+                              className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
                                 ch.status === 'completed'
                                 ? 'bg-emerald-500 border-emerald-500 text-white'
                                 : ch.status === 'in_progress'
@@ -399,12 +399,12 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
                             <div>
                               <div className="flex items-center gap-1.5">
                                 <span className="text-[8px] font-black text-slate-400 uppercase">CH {idx + 1}</span>
-                                <span className={`px-1.5 py-0.5 rounded text-[7px] font-black uppercase border \${getStatusStyle(ch.status)}`}>
+                                <span className={`px-1.5 py-0.5 rounded text-[7px] font-black uppercase border ${getStatusStyle(ch.status)}`}>
                                   {ch.status.replace('_', ' ')}
                                 </span>
                               </div>
                               <h5 className="font-black text-slate-900 text-sm mt-1">{ch.name}</h5>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Weight: {ch.estimated_lessons} lessons</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Periods: {ch.estimated_lessons}</p>
                               {ch.start_date && ch.end_date && (
                                 <p className="text-[8px] font-bold text-brand-600 uppercase tracking-wider mt-1.5">
                                   {new Date(ch.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - {new Date(ch.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -450,7 +450,7 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-6 animate-in fade-in duration-300">
           <div className="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl overflow-hidden border border-slate-100">
             <header className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-black text-slate-950">Initialize Planner</h3>
+              <h3 className="text-sm font-black text-slate-950">Create Syllabus Plan</h3>
               <button onClick={() => setShowInitModal(false)} className="text-slate-400 hover:text-slate-950 text-xs font-black uppercase tracking-widest">Cancel</button>
             </header>
             <form onSubmit={handleCreatePlanner} className="p-6 space-y-4">
@@ -475,7 +475,7 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
                 />
               </div>
               <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white py-4 mt-2 font-black uppercase text-[10px] tracking-wider rounded-xl">
-                Initialize Now
+                Create Now
               </button>
             </form>
           </div>
@@ -503,7 +503,7 @@ export const AcademicPlannerView = ({ onBack }: { onBack: () => void }) => {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-black uppercase text-slate-400">Estimated Lessons</label>
+                <label className="text-[9px] font-black uppercase text-slate-400">Periods Required</label>
                 <input 
                   type="number"
                   required

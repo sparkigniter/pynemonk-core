@@ -150,7 +150,7 @@ export const ScheduleView = ({
                   }}
                   className={`
                     premium-card p-6 flex items-center gap-6 relative z-10
-                    \${isOngoing ? 'ring-4 ring-brand-50 border-brand-500 shadow-xl' : isPast ? 'opacity-50 grayscale' : ''}
+                    ${isOngoing ? 'ring-4 ring-brand-50 border-brand-500 shadow-xl' : isPast ? 'opacity-50 grayscale' : ''}
                   `}
                 >
                   {/* Subject Strip */}

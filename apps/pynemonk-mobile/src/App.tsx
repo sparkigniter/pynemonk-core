@@ -103,7 +103,7 @@ const Login = ({ onLogin }: { onLogin: (role: Role, token: string) => void }) =>
                 <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm group-hover:text-brand-600 group-hover:shadow-md transition-all">
                   <Users className="w-6 h-6 text-slate-400 group-hover:text-brand-600" />
                 </div>
-                <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-600">Staff</span>
+                <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-600">Teacher / Staff</span>
               </button>
 
               <button
@@ -114,7 +114,7 @@ const Login = ({ onLogin }: { onLogin: (role: Role, token: string) => void }) =>
                 <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm group-hover:text-brand-600 group-hover:shadow-md transition-all">
                   <Baby className="w-6 h-6 text-slate-400 group-hover:text-brand-600" />
                 </div>
-                <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-600">Guardian</span>
+                <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-600">Parent / Guardian</span>
               </button>
             </div>
           </div>

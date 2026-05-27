@@ -33,6 +33,12 @@ import RolloverService from "./api/modules/academics/services/RolloverService.js
 import RolloverController from "./api/modules/academics/controllers/RolloverController.js";
 import { AcademicPlannerService } from "./api/modules/planner/services/AcademicPlannerService.js";
 import { AcademicPlannerController } from "./api/modules/planner/controllers/AcademicPlannerController.js";
+import { SmartPlannerService } from "./api/modules/planner/services/SmartPlannerService.js";
+import { SmartPlannerController } from "./api/modules/planner/controllers/SmartPlannerController.js";
+import { LessonPlanService } from "./api/modules/planner/services/LessonPlanService.js";
+import { LessonPlanController } from "./api/modules/planner/controllers/LessonPlanController.js";
+import { GlobalContentUploadService } from "./api/modules/planner/services/GlobalContentUploadService.js";
+import { GlobalContentUploadController } from "./api/modules/planner/controllers/GlobalContentUploadController.js";
 
 import { TimetableService } from "./api/modules/timetable/services/TimetableService.js";
 import { TimetableController } from "./api/modules/timetable/controllers/TimetableController.js";
@@ -199,6 +205,12 @@ function setupDI(): void {
     // ── Academic Planner Module ──────────────────────────────────────────────
     container.register(AcademicPlannerService, { useClass: AcademicPlannerService });
     container.register(AcademicPlannerController, { useClass: AcademicPlannerController });
+    container.register(SmartPlannerService, { useClass: SmartPlannerService });
+    container.register(SmartPlannerController, { useClass: SmartPlannerController });
+    container.register(LessonPlanService, { useClass: LessonPlanService });
+    container.register(LessonPlanController, { useClass: LessonPlanController });
+    container.register(GlobalContentUploadService, { useClass: GlobalContentUploadService });
+    container.register(GlobalContentUploadController, { useClass: GlobalContentUploadController });
 }
 
 export default setupDI;

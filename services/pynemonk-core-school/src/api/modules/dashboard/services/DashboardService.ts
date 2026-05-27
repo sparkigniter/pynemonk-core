@@ -18,6 +18,7 @@ export class DashboardService {
 
         switch (role.toLowerCase()) {
             case 'principal':
+                return this.getPrincipalDashboard(tenantId, ayId);
             case 'school_admin':
                 return this.getAdminDashboard(tenantId, ayId, parseInt(data.days || '7'));
             case 'teacher':
@@ -108,6 +109,13 @@ export class DashboardService {
             ORDER BY created_at DESC LIMIT 5
         `, [tenantId, ayId]);
 
+        // Operational health parameters
+        const systemHealth = await this.db.query(`
+            SELECT 
+                (SELECT COUNT(*) FROM school.classroom c WHERE c.tenant_id = $1 AND c.academic_year_id = $2 AND c.is_deleted = FALSE AND NOT EXISTS (SELECT 1 FROM school.timetable t WHERE t.classroom_id = c.id)) as classes_missing_timetable,
+                (SELECT COUNT(*) FROM school.student s JOIN school.student_enrollment se ON s.id = se.student_id WHERE s.tenant_id = $1 AND se.academic_year_id = $2 AND se.is_deleted = FALSE AND NOT EXISTS (SELECT 1 FROM school.student_fee_allocation sfa WHERE sfa.student_id = s.id)) as students_missing_fees
+        `, [tenantId, ayId]);
+
         return {
             type: 'admin',
             stats: stats.rows[0],
@@ -117,8 +125,130 @@ export class DashboardService {
             insights: {
                 gradePerformance: gradePerformance.rows,
                 staffOnLeave: staffOnLeave.rows,
-                recentAdmissions: recentAdmissions.rows
+                recentAdmissions: recentAdmissions.rows,
+                systemHealth: systemHealth.rows[0]
             }
+        };
+    }
+
+    private async getPrincipalDashboard(tenantId: number, ayId?: number) {
+        // 1. KPI Stats Cards
+        // Average Grade across school
+        const avgGrade = await this.db.query(`
+            SELECT COALESCE(ROUND(AVG((er.marks::float / NULLIF(er.max_marks, 0)) * 100)::numeric, 1), 0) as average_grade
+            FROM school.exam_result er
+            JOIN school.exam e ON er.exam_id = e.id
+            WHERE er.tenant_id = $1 AND e.results_published = TRUE AND e.academic_year_id = $2
+        `, [tenantId, ayId]);
+
+        // Student Attendance Rate (Today)
+        const todayAttendance = await this.db.query(`
+            SELECT COALESCE(ROUND(COUNT(CASE WHEN status = 'present' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1), 0) as today_attendance
+            FROM school.attendance
+            WHERE tenant_id = $1 AND date = CURRENT_DATE
+        `, [tenantId]);
+
+        // Fee Collection Efficiency
+        const feeStats = await this.db.query(`
+            SELECT 
+                COALESCE(SUM(fi.amount_due), 0) as total_expected,
+                COALESCE(SUM(fi.amount_paid), 0) as total_collected,
+                COALESCE(SUM(fi.amount_due - fi.amount_paid), 0) as total_outstanding,
+                COUNT(*) FILTER (WHERE fi.due_date < CURRENT_DATE AND fi.status != 'PAID') as late_payments,
+                COALESCE(ROUND(SUM(fi.amount_paid) * 100.0 / NULLIF(SUM(fi.amount_due), 0), 1), 0) as collection_rate
+            FROM school.fee_installment fi
+            JOIN school.student_fee_allocation sfa ON fi.allocation_id = sfa.id
+            WHERE sfa.tenant_id = $1 AND sfa.academic_year_id = $2
+        `, [tenantId, ayId]);
+
+        // Faculty Presence Rate (Today)
+        const facultyStats = await this.db.query(`
+            SELECT 
+                (SELECT COUNT(*) FROM school.staff WHERE tenant_id = $1 AND is_deleted = FALSE) as total_staff,
+                (SELECT COUNT(*) FROM school.staff_leave sl 
+                 WHERE sl.tenant_id = $1 AND CURRENT_DATE BETWEEN sl.start_date AND sl.end_date AND sl.status = 'approved') as staff_on_leave
+        `, [tenantId]);
+
+        const totalStaff = parseInt(facultyStats.rows[0]?.total_staff || '0');
+        const staffOnLeave = parseInt(facultyStats.rows[0]?.staff_on_leave || '0');
+        const facultyPresenceRate = totalStaff > 0 ? Math.round(((totalStaff - staffOnLeave) / totalStaff) * 100) : 100;
+
+        // 2. Syllabus Completion Progress (Top 5 classes needing academic attention)
+        const curriculumCoverage = await this.db.query(`
+            SELECT 
+                c.name as class_name,
+                sub.name as subject_name,
+                COUNT(*) FILTER (WHERE lp.status = 'COMPLETED') as completed_lessons,
+                COUNT(*) as total_lessons,
+                COALESCE(ROUND(COUNT(*) FILTER (WHERE lp.status = 'COMPLETED') * 100.0 / NULLIF(COUNT(*), 0), 1), 0) as completion_percentage
+            FROM school.lesson_plan lp
+            JOIN school.classroom c ON lp.classroom_id = c.id
+            JOIN school.subject sub ON lp.subject_id = sub.id
+            WHERE lp.tenant_id = $1
+            GROUP BY c.id, c.name, sub.id, sub.name
+            ORDER BY completion_percentage ASC
+            LIMIT 5
+        `, [tenantId]);
+
+        // 3. Academic GPA Distribution
+        const gradePerformance = await this.db.query(`
+            SELECT 
+                g.name as grade_name,
+                ROUND(AVG((er.marks::float / NULLIF(er.max_marks, 0)) * 100)::numeric, 1) as average_percentage
+            FROM school.grade g
+            JOIN school.classroom c ON g.id = c.grade_id
+            JOIN school.student_enrollment se ON c.id = se.classroom_id
+            JOIN school.exam_result er ON se.student_id = er.student_id
+            WHERE g.tenant_id = $1 AND se.academic_year_id = $2
+            GROUP BY g.id, g.name
+            ORDER BY g.name
+        `, [tenantId, ayId]);
+
+        // 4. Staff Leaves Awaiting Approval
+        const pendingLeaves = await this.db.query(`
+            SELECT sl.id, s.first_name || ' ' || s.last_name as name, sl.leave_type, sl.start_date, sl.end_date, sl.reason, sl.status
+            FROM school.staff_leave sl
+            JOIN school.staff s ON sl.staff_id = s.id
+            WHERE sl.tenant_id = $1 AND sl.status = 'pending'
+            ORDER BY sl.start_date ASC LIMIT 5
+        `, [tenantId]);
+
+        // 5. Recent Announcements Bulletin
+        const recentNotices = await this.db.query(`
+            SELECT a.title, a.content, a.publish_date, s.first_name || ' ' || s.last_name as publisher_name 
+            FROM school.announcement a
+            JOIN school.staff s ON a.published_by = s.id
+            WHERE a.tenant_id = $1 AND a.is_deleted = FALSE
+            ORDER BY a.publish_date DESC LIMIT 5
+        `, [tenantId]);
+
+        // 6. Global Attendance Trend (Last 30 Days)
+        const attendanceTrends = await this.db.query(`
+            SELECT 
+                TO_CHAR(date, 'Mon DD') as day,
+                ROUND(COUNT(CASE WHEN status = 'present' THEN 1 END) * 100.0 / NULLIF((SELECT COUNT(*) FROM school.student_enrollment WHERE tenant_id = $1 AND academic_year_id = $2 AND is_deleted = FALSE), 0), 1) as percentage
+            FROM school.attendance
+            WHERE tenant_id = $1 AND date > CURRENT_DATE - INTERVAL '30 days'
+            GROUP BY date
+            ORDER BY date ASC
+        `, [tenantId, ayId]);
+
+        return {
+            type: 'principal',
+            stats: {
+                total_students: parseInt((await this.db.query('SELECT COUNT(*) FROM school.student WHERE tenant_id = $1 AND is_deleted = FALSE', [tenantId])).rows[0].count),
+                total_staff: totalStaff,
+                average_grade: parseFloat(avgGrade.rows[0]?.average_grade || '0'),
+                today_attendance: parseFloat(todayAttendance.rows[0]?.today_attendance || '0'),
+                fee_collection_rate: parseFloat(feeStats.rows[0]?.collection_rate || '0'),
+                faculty_presence_rate: facultyPresenceRate
+            },
+            financials: feeStats.rows[0],
+            curriculumCoverage: curriculumCoverage.rows,
+            academicPerformance: gradePerformance.rows,
+            pendingLeaves: pendingLeaves.rows,
+            recentNotices: recentNotices.rows,
+            attendanceTrends: attendanceTrends.rows
         };
     }
 
@@ -188,6 +318,20 @@ export class DashboardService {
             WHERE ta.staff_id = $1 AND ta.academic_year_id = $2 AND ta.is_deleted = FALSE
         `, [staffId, ayId]);
 
+        const syllabusProgress = await this.db.query(`
+            SELECT 
+                c.name as classroom_name,
+                sub.name as subject_name,
+                COUNT(*) FILTER (WHERE lp.status = 'COMPLETED') as completed_lessons,
+                COUNT(*) as total_lessons,
+                COALESCE(ROUND(COUNT(*) FILTER (WHERE lp.status = 'COMPLETED') * 100.0 / NULLIF(COUNT(*), 0), 1), 0) as completion_percentage
+            FROM school.lesson_plan lp
+            JOIN school.classroom c ON lp.classroom_id = c.id
+            JOIN school.subject sub ON lp.subject_id = sub.id
+            WHERE lp.tenant_id = $1 AND lp.staff_id = $2
+            GROUP BY c.id, c.name, sub.id, sub.name
+        `, [tenantId, staffId]);
+
         return {
             type: 'teacher',
             stats: {
@@ -199,7 +343,8 @@ export class DashboardService {
             allAssignments: allAssignments.rows,
             upcomingExams: upcomingExams.rows,
             insights: {
-                urgentMarking: urgentMarking.rows
+                urgentMarking: urgentMarking.rows,
+                syllabusProgress: syllabusProgress.rows
             }
         };
     }

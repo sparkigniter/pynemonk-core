@@ -6,6 +6,7 @@ import {
     AlertCircle
 } from 'lucide-react';
 import { getBalanceSheet, getAccountingSettings } from '../../api/accounting.api';
+import { getBaseURL } from '../../api/base.api';
 
 export default function BalanceSheet() {
     const navigate = useNavigate();
@@ -72,7 +73,7 @@ export default function BalanceSheet() {
             const session = localStorage.getItem('eduerp_session');
             const token = session ? JSON.parse(session).accessToken : '';
             
-            const response = await fetch(`http://localhost:3000/api/v1/accounting/reports/balance-sheet/export/pdf?date=${asOfDate}`, {
+            const response = await fetch(`${getBaseURL()}/accounting/reports/balance-sheet/export/pdf?date=${asOfDate}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`

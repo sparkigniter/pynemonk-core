@@ -28,6 +28,7 @@ import TemplateDesigner from './pages/students/TemplateDesigner';
 import ExamScheduler from './pages/academics/ExamScheduler';
 import ExamPapers from './pages/academics/ExamPapers';
 import ExamInvitations from './pages/academics/ExamInvitations';
+import QuestionPaperBuilder from './pages/academics/QuestionPaperBuilder';
 import ExamResults from './pages/academics/ExamResults';
 import MyClasses from './pages/academics/MyClasses';
 import TeacherTimetable from './pages/academics/TeacherTimetable';
@@ -46,6 +47,7 @@ import SchoolCalendar from './pages/academics/Calendar';
 import NoticeBoard from './pages/academics/NoticeBoard';
 import Communications from './pages/academics/Communications';
 import LandingPage from './pages/public/LandingPage';
+import PaymentCallback from './pages/public/PaymentCallback';
 
 import { useAuth } from './contexts/AuthContext';
 
@@ -119,6 +121,7 @@ export default function App() {
           <Route path="exams/:id" element={<ExamOverview />} />
           <Route path="exams/:id/results" element={<ExamResults />} />
           <Route path="exams/:id/papers" element={<ExamPapers />} />
+          <Route path="exams/:id/papers/:paperId/questions" element={<QuestionPaperBuilder />} />
           <Route path="exams/:id/invitations" element={<ExamInvitations />} />
           <Route path="exams/:id/overview" element={<ExamOverview />} />
           <Route path="faculty" element={<Faculty />} />
@@ -191,6 +194,8 @@ export default function App() {
           <Route path="accounting/invoices/new" element={<CreateInvoice />} />
           <Route path="accounting/invoices/:id" element={<InvoiceDetail />} />
           <Route path="accounting/payroll" element={<Payroll />} />
+          <Route path="payment/success" element={<PaymentCallback status="success" />} />
+          <Route path="payment/failed" element={<PaymentCallback status="failed" />} />
         </Route>
 
         {/* Catch-all */}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Building2, Bell, Shield, Save, Palette, Sparkles, LayoutGrid, ListChecks, Info, Calendar } from 'lucide-react';
+import { User, Building2, Bell, Shield, Save, Palette, Sparkles, LayoutGrid, ListChecks, Info, Calendar, CreditCard, CheckCircle2, AlertTriangle } from 'lucide-react';
 import LeaveTypeSettings from '../../components/admin/LeaveTypeSettings';
 import { useTheme } from '../../contexts/ThemeContext';
 import * as settingsApi from '../../api/settings.api';
@@ -11,6 +11,7 @@ const tabs = [
     { id: 'appearance', name: 'Appearance', icon: Palette },
     { id: 'school', name: 'School Preferences', icon: Building2, permission: 'settings:write' },
     { id: 'leave', name: 'Leave & HR', icon: ListChecks, permission: 'staff.leave:read' },
+    { id: 'subscription', name: 'Platform Subscription', icon: CreditCard, permission: 'billing:read' },
     { id: 'notifications', name: 'Notifications', icon: Bell },
     { id: 'security', name: 'Security', icon: Shield },
 ];
@@ -26,7 +27,7 @@ export default function Settings() {
     });
 
     useEffect(() => {
-        if (activeTab === 'school') {
+        if (activeTab === 'school' || activeTab === 'subscription') {
             settingsApi.getSettings().then(res => {
                 if (res) setSchoolSettings(res);
             });
@@ -206,6 +207,101 @@ export default function Settings() {
                                 Leave Categories
                             </h2>
                             <LeaveTypeSettings />
+                        </div>
+                    )}
+
+                    {/* ── Platform Subscription ── */}
+                    {activeTab === 'subscription' && (
+                        <div className="flex-1 p-6 space-y-8 overflow-y-auto">
+                            <div>
+                                <h2 className="text-lg font-semibold text-[var(--text-main)] font-heading border-b border-[var(--card-border)] pb-4 flex items-center gap-2">
+                                    <CreditCard size={18} className="text-primary" />
+                                    Platform Subscription
+                                </h2>
+                                <p className="text-sm text-[var(--text-muted)] mt-3">Manage your school's SaaS subscription and billing status.</p>
+                            </div>
+
+                            {!schoolSettings.platform_subscription ? (
+                                <div className="text-center p-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                    <p className="text-sm font-medium text-slate-500">Loading subscription details...</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {/* Status Banner */}
+                                    {schoolSettings.platform_subscription.billing_status === 'suspended' ? (
+                                        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3">
+                                            <AlertTriangle className="text-rose-500 mt-0.5" size={20} />
+                                            <div>
+                                                <h3 className="text-sm font-bold text-rose-800">Account Suspended</h3>
+                                                <p className="text-xs text-rose-600 mt-1">Your account has been suspended due to outstanding payments. Please contact support or update your billing method to restore full access.</p>
+                                            </div>
+                                        </div>
+                                    ) : schoolSettings.platform_subscription.billing_status === 'readonly' ? (
+                                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+                                            <AlertTriangle className="text-amber-500 mt-0.5" size={20} />
+                                            <div>
+                                                <h3 className="text-sm font-bold text-amber-800">Read-Only Mode</h3>
+                                                <p className="text-xs text-amber-600 mt-1">Your account is in read-only mode due to an overdue payment. You cannot modify records until the balance is settled.</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3">
+                                            <CheckCircle2 className="text-emerald-500 mt-0.5" size={20} />
+                                            <div>
+                                                <h3 className="text-sm font-bold text-emerald-800">Subscription Active</h3>
+                                                <p className="text-xs text-emerald-600 mt-1">Your account is in good standing. Thank you for being a valued customer!</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Plan Details */}
+                                    <div className="border border-[var(--card-border)] rounded-3xl overflow-hidden bg-white shadow-sm">
+                                        <div className="p-6 bg-slate-50 border-b border-[var(--card-border)] flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Plan</p>
+                                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">{schoolSettings.platform_subscription.package_name}</h3>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-3xl font-black text-primary">${schoolSettings.platform_subscription.price_usd}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Per Month</p>
+                                            </div>
+                                        </div>
+                                        <div className="p-6 space-y-4">
+                                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Included Features</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                {(schoolSettings.platform_subscription.features || []).map((feature: string, idx: number) => (
+                                                    <div key={idx} className="flex items-center gap-2 text-sm text-slate-600">
+                                                        <CheckCircle2 size={16} className="text-primary flex-shrink-0" />
+                                                        <span>{feature}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="p-4 bg-slate-50 border-t border-[var(--card-border)] flex justify-end">
+                                            <button className="px-5 py-2 text-sm font-bold bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-100 transition-colors shadow-sm">
+                                                Manage Payment Methods
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Usage Details */}
+                                    {schoolSettings.platform_subscription.usage && (
+                                        <div className="border border-[var(--card-border)] rounded-3xl overflow-hidden bg-white shadow-sm p-6">
+                                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4">Real-Time Usage</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Students</p>
+                                                    <p className="text-2xl font-black text-slate-900">{schoolSettings.platform_subscription.usage.students}</p>
+                                                </div>
+                                                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Staff</p>
+                                                    <p className="text-2xl font-black text-slate-900">{schoolSettings.platform_subscription.usage.staff}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 

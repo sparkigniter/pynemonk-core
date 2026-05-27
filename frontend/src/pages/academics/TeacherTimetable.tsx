@@ -24,6 +24,7 @@ import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { eventApi } from '../../api/event.api';
 import { useNavigate } from 'react-router-dom';
+import { get, post } from '../../api/base.api';
 
 const DAYS = [
     { id: 1, name: 'Monday', short: 'Mon' },
@@ -33,6 +34,13 @@ const DAYS = [
     { id: 5, name: 'Friday', short: 'Fri' },
     { id: 6, name: 'Saturday', short: 'Sat' }
 ];
+
+const formatDateLocal = (date: Date) => {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+};
 
 const TeacherTimetable: React.FC = () => {
     const { user } = useAuth();
@@ -50,17 +58,28 @@ const TeacherTimetable: React.FC = () => {
     const [myStaffProfile, setMyStaffProfile] = useState<any>(null);
     const [roster, setRoster] = useState<any[]>([]);
     const [loadingRoster, setLoadingRoster] = useState(false);
+    
+    const [lessonPlans, setLessonPlans] = useState<any[]>([]);
+    const [chapters, setChapters] = useState<any[]>([]);
+    const [editingLesson, setEditingLesson] = useState<any>({ 
+        topic_title: '', 
+        teaching_notes: '', 
+        planner_chapter_id: '', 
+        planner_topic_id: '', 
+        status: 'PLANNED' 
+    });
+    const [savingLesson, setSavingLesson] = useState(false);
 
     const getHolidayForDay = (dayId: number) => {
         const dayOfWeek = currentTime.getDay() || 7;
         const diff = dayId - dayOfWeek;
         const targetDate = new Date(currentTime);
         targetDate.setDate(currentTime.getDate() + diff);
-        const dateString = targetDate.toISOString().split('T')[0];
+        const dateString = formatDateLocal(targetDate);
 
         return holidays.find(h => {
-            const start = new Date(h.start_date).toISOString().split('T')[0];
-            const end = new Date(h.end_date).toISOString().split('T')[0];
+            const start = typeof h.start_date === 'string' ? h.start_date.split('T')[0] : formatDateLocal(new Date(h.start_date));
+            const end = typeof h.end_date === 'string' ? h.end_date.split('T')[0] : formatDateLocal(new Date(h.end_date));
             return dateString >= start && dateString <= end;
         });
     };
@@ -74,14 +93,24 @@ const TeacherTimetable: React.FC = () => {
         const fetchSchedule = async () => {
             setLoading(true);
             try {
-                const [res, periodData, breaksData, eventsRes, settingsRes, classroomsRes, profileRes] = await Promise.all([
+                const today = new Date();
+                const startOfWeek = new Date(today);
+                startOfWeek.setDate(today.getDate() - (today.getDay() || 7) + 1);
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+                
+                const startStr = formatDateLocal(startOfWeek);
+                const endStr = formatDateLocal(endOfWeek);
+
+                const [res, periodData, breaksData, eventsRes, settingsRes, classroomsRes, profileRes, lessonsRes] = await Promise.all([
                     TimetableApi.getGlobalSchedule(),
                     TimetableApi.getPeriods(),
                     TimetableApi.getPeriods(),
                     eventApi.getEvents().catch(() => []),
                     import('../../api/settings.api').then(m => m.getSettings()).catch(() => null),
                     import('../../api/classroom.api').then(m => m.getClassrooms({ limit: 100 })).catch(() => ({ data: [] })),
-                    import('../../api/staff.api').then(m => m.getMyStaffProfile()).catch(() => null)
+                    import('../../api/staff.api').then(m => m.getMyStaffProfile()).catch(() => null),
+                    get<any>(`/school/planners/lessons?staff_id=${user?.sub}&start_date=${startStr}&end_date=${endStr}`).catch(() => [])
                 ]);
                 // Filter for current teacher
                 const mySchedule = res.filter((t: any) => String(t.teacher_user_id) === String(user?.sub));
@@ -96,6 +125,7 @@ const TeacherTimetable: React.FC = () => {
                 setSettings(settingsRes);
                 setClassrooms(classroomsRes.data || []);
                 setMyStaffProfile(profileRes);
+                setLessonPlans(lessonsRes || []);
             } catch (err) {
                 console.error('Failed to fetch teacher schedule', err);
             } finally {
@@ -103,28 +133,111 @@ const TeacherTimetable: React.FC = () => {
             }
         };
         fetchSchedule();
-    }, [user]);
+    }, [user?.sub]);
 
     useEffect(() => {
         if (!selectedPeriod) {
             setRoster([]);
             return;
         }
-        const fetchRoster = async () => {
+        const fetchRosterAndPlanner = async () => {
             setLoadingRoster(true);
             try {
-                const todayStr = new Date().toISOString().split('T')[0];
+                const todayStr = formatDateLocal(new Date());
                 const { getAttendanceRoster } = await import('../../api/attendance.api');
                 const rosterData = await getAttendanceRoster(selectedPeriod.classroom_id, todayStr);
                 setRoster(rosterData || []);
+                
+                // Find grade_id from classrooms
+                const classroom = classrooms.find(c => c.id === selectedPeriod.classroom_id);
+                const gradeId = classroom?.grade_id;
+                const resolvedStaffId = myStaffProfile?.id || (user?.sub ? parseInt(user.sub) : null);
+
+                if (gradeId && resolvedStaffId) {
+                    // Fetch academic planner chapters for this subject
+                    const planner = await get<any>(`/school/planners/by-teacher-subject?staff_id=${resolvedStaffId}&subject_id=${selectedPeriod.subject_id}&grade_id=${gradeId}`).catch(() => null);
+                    if (planner) {
+                        const fullPlanner = await get<any>(`/school/planners/${planner.id}`).catch(() => null);
+                        setChapters(fullPlanner?.chapters || []);
+                    } else {
+                        setChapters([]);
+                    }
+                } else {
+                    setChapters([]);
+                }
+                
+                // Check for existing lesson plan
+                const now = new Date();
+                const diff = selectedPeriod.day_of_week - (now.getDay() || 7);
+                const cardDate = new Date(now);
+                cardDate.setDate(now.getDate() + diff);
+                const cardDateStr = formatDateLocal(cardDate);
+                const timeStart = selectedPeriod.start_time.slice(0, 5);
+                const existing = lessonPlans.find(lp => lp.scheduled_date.split('T')[0] === cardDateStr && lp.period_start_time.startsWith(timeStart));
+                if (existing) {
+                    setEditingLesson({ 
+                        ...existing, 
+                        planner_chapter_id: existing.planner_chapter_id?.toString() || '',
+                        planner_topic_id: existing.planner_topic_id?.toString() || ''
+                    });
+                } else {
+                    setEditingLesson({ 
+                        topic_title: '', 
+                        teaching_notes: '', 
+                        planner_chapter_id: '', 
+                        planner_topic_id: '', 
+                        status: 'PLANNED' 
+                    });
+                }
             } catch (err) {
                 console.error(err);
             } finally {
                 setLoadingRoster(false);
             }
         };
-        fetchRoster();
-    }, [selectedPeriod]);
+        fetchRosterAndPlanner();
+    }, [selectedPeriod, lessonPlans, classrooms, myStaffProfile, user?.sub]);
+
+    const handleSaveLessonPlan = async () => {
+        if (!selectedPeriod) return;
+        setSavingLesson(true);
+        try {
+            const now = new Date();
+            const diff = selectedPeriod.day_of_week - (now.getDay() || 7);
+            const cardDate = new Date(now);
+            cardDate.setDate(now.getDate() + diff);
+            const cardDateStr = formatDateLocal(cardDate);
+            
+            const payload = {
+                staff_id: myStaffProfile?.id || (user?.sub ? parseInt(user.sub) : null),
+                classroom_id: selectedPeriod.classroom_id,
+                subject_id: selectedPeriod.subject_id,
+                planner_chapter_id: editingLesson.planner_chapter_id ? parseInt(editingLesson.planner_chapter_id) : null,
+                planner_topic_id: editingLesson.planner_topic_id ? parseInt(editingLesson.planner_topic_id) : null,
+                scheduled_date: cardDateStr,
+                period_start_time: selectedPeriod.start_time,
+                topic_title: editingLesson.topic_title,
+                teaching_notes: editingLesson.teaching_notes,
+                status: editingLesson.status
+            };
+            
+            const saved = await post<any>('/school/planners/lessons', payload);
+            setLessonPlans(prev => {
+                const existingIdx = prev.findIndex(lp => lp.id === saved.id || (lp.scheduled_date.split('T')[0] === cardDateStr && lp.period_start_time === selectedPeriod.start_time));
+                if (existingIdx > -1) {
+                    const newPlans = [...prev];
+                    newPlans[existingIdx] = saved;
+                    return newPlans;
+                }
+                return [...prev, saved];
+            });
+            alert('Lesson plan saved successfully!');
+        } catch (err: any) {
+            alert(err.message || 'Failed to save lesson plan');
+        } finally {
+            setSavingLesson(false);
+        }
+    };
 
     const ongoingClass = useMemo(() => {
         if (!timetable.length || !periods.length) return null;
@@ -414,6 +527,30 @@ const TeacherTimetable: React.FC = () => {
                                                                             </p>
                                                                             <h4 className="font-black text-[var(--text-main)] text-[13px] leading-tight group-hover/card:text-primary transition-colors line-clamp-1">{entry.subject_name}</h4>
                                                                             <p className="text-[var(--text-muted)] text-[9px] font-bold uppercase tracking-widest mt-1">{entry.classroom_name}</p>
+                                                                            {(() => {
+                                                                                const diff = day.id - (now.getDay() || 7);
+                                                                                const cardDate = new Date(now);
+                                                                                cardDate.setDate(now.getDate() + diff);
+                                                                                const cardDateStr = formatDateLocal(cardDate);
+                                                                                const lesson = lessonPlans.find(lp => lp.scheduled_date.split('T')[0] === cardDateStr && lp.period_start_time.startsWith(time));
+                                                                                
+                                                                                if (lesson) {
+                                                                                    const isSmart = lesson.is_smart_plan;
+                                                                                    const isCompleted = lesson.status === 'COMPLETED';
+                                                                                    const badgeClass = isCompleted 
+                                                                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                                                                                        : isSmart 
+                                                                                            ? 'bg-purple-50 text-purple-600 border-purple-100' 
+                                                                                            : 'bg-indigo-50 text-indigo-600 border-indigo-100';
+                                                                                    
+                                                                                    return (
+                                                                                        <div className={`mt-2 px-2 py-1 rounded border text-[8px] font-black uppercase tracking-wider ${badgeClass}`}>
+                                                                                            {isCompleted ? '✓ ' : isSmart ? '⚡ ' : ''}{lesson.topic_title || 'Planned'}
+                                                                                        </div>
+                                                                                    );
+                                                                                }
+                                                                                return null;
+                                                                            })()}
                                                                         </div>
 
                                                                         <div className="flex items-center justify-between mt-3">
@@ -563,6 +700,98 @@ const TeacherTimetable: React.FC = () => {
                                         </div>
                                         Class Notes
                                     </button>
+                                </div>
+                                
+                                {/* Lesson Planner Section */}
+                                <div className="bg-slate-50/50 p-5 rounded-2xl border border-[var(--card-border)] mt-4 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                            <BookOpen size={14} className="text-indigo-400" /> Lesson Plan
+                                        </h4>
+                                        {editingLesson.is_smart_plan && (
+                                            <span className="px-2.5 py-0.5 rounded bg-purple-50 border border-purple-100 text-purple-600 text-[8px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm select-none">
+                                                ⚡ Smart Blueprint
+                                            </span>
+                                        )}
+                                        <select
+                                            value={editingLesson.status}
+                                            onChange={e => setEditingLesson((prev: any) => ({ ...prev, status: e.target.value }))}
+                                            className="bg-white border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-wider rounded-lg px-2 py-1 outline-none"
+                                        >
+                                            <option value="PLANNED">Planned</option>
+                                            <option value="COMPLETED">Completed</option>
+                                            <option value="DELAYED">Delayed</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-[9px] font-black uppercase text-slate-400">Chapter</label>
+                                            <select 
+                                                value={editingLesson.planner_chapter_id}
+                                                onChange={e => {
+                                                    const nextChapId = e.target.value;
+                                                    setEditingLesson((prev: any) => ({ 
+                                                        ...prev, 
+                                                        planner_chapter_id: nextChapId,
+                                                        planner_topic_id: '',
+                                                        topic_title: ''
+                                                    }));
+                                                }}
+                                                className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                                            >
+                                                <option value="">-- Select Chapter --</option>
+                                                {chapters.map(ch => (
+                                                    <option key={ch.id} value={ch.id}>{ch.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        {(() => {
+                                            const selectedChapter = chapters.find(ch => String(ch.id) === String(editingLesson.planner_chapter_id));
+                                            const hasTopics = selectedChapter && selectedChapter.topics && selectedChapter.topics.length > 0;
+                                            return hasTopics ? (
+                                                <div>
+                                                    <label className="text-[9px] font-black uppercase text-slate-400">Topic / Lesson</label>
+                                                    <select
+                                                        value={editingLesson.planner_topic_id || ''}
+                                                        onChange={e => {
+                                                            const val = e.target.value;
+                                                            const matchedTopic = selectedChapter.topics.find((t: any) => String(t.id) === String(val));
+                                                            setEditingLesson((prev: any) => ({
+                                                                ...prev,
+                                                                planner_topic_id: val,
+                                                                topic_title: matchedTopic ? matchedTopic.title : ''
+                                                            }));
+                                                        }}
+                                                        className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                                                    >
+                                                        <option value="">-- Select Topic --</option>
+                                                        {selectedChapter.topics.map((t: any) => (
+                                                            <option key={t.id} value={t.id}>{t.title}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <label className="text-[9px] font-black uppercase text-slate-400">Topic Title</label>
+                                                    <input 
+                                                        type="text"
+                                                        value={editingLesson.topic_title}
+                                                        onChange={e => setEditingLesson((prev: any) => ({ ...prev, topic_title: e.target.value }))}
+                                                        placeholder="What will you teach?"
+                                                        className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                                                    />
+                                                </div>
+                                            );
+                                        })()}
+                                        <button 
+                                            onClick={handleSaveLessonPlan}
+                                            disabled={savingLesson}
+                                            className="w-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 py-2.5 rounded-xl font-black uppercase tracking-wider text-[10px] transition-colors flex justify-center items-center gap-2"
+                                        >
+                                            {savingLesson ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                            {savingLesson ? 'Saving...' : 'Save Lesson Plan'}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 

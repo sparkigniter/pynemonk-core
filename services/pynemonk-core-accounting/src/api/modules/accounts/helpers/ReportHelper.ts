@@ -201,8 +201,12 @@ export default class ReportHelper {
         }
 
         if (filter.sourceType) {
-            params.push(filter.sourceType);
-            conditions += ` AND fi.source_type = $${params.length}`;
+            if (filter.sourceType === 'fee') {
+                conditions += ` AND fi.source_type IN ('fee', 'fee_group', 'fee_allocation')`;
+            } else {
+                params.push(filter.sourceType);
+                conditions += ` AND fi.source_type = $${params.length}`;
+            }
         }
 
         if (filter.fromPartnerId) {

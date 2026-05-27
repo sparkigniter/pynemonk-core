@@ -26,6 +26,9 @@ export class UserModel {
      * This includes roles, current tenant, and aggregated permissions (scopes).
      */
     static async getFullLoginContext(email: string, clientId: string, schoolSlug?: string) {
+        if (schoolSlug === 'undefined' || schoolSlug === 'null' || !schoolSlug || schoolSlug.trim() === '') {
+            schoolSlug = undefined;
+        }
         const query = `
             WITH user_info AS (
                 SELECT u.id, u.tenant_id, u.email, uc.password_hash 

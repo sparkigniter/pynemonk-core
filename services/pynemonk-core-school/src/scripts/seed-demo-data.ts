@@ -32,7 +32,7 @@ const COMMON_SUBJECTS = ['Mathematics', 'English', 'Science', 'Social Studies'];
 
 async function cleanup(client: any, tenantId: number) {
     console.log('🧹 Clearing institutional data...');
-    await client.query('TRUNCATE school.academic_year, school.student, school.staff, school.classroom, school.grade, school.subject, school.student_enrollment, school.fee_installment, school.student_fee_allocation, school.exam, school.exam_paper, school.exam_marks, accounting.invoice, accounting.invoice_line, accounting.journal_entry, accounting.journal_item, accounting.partner CASCADE');
+    await client.query('TRUNCATE school.academic_year, school.student, school.staff, school.classroom, school.grade, school.subject, school.student_enrollment, school.fee_installment, school.student_fee_allocation, school.exam, school.exam_paper, school.exam_marks, school.teacher_assignment, school.timetable, accounting.invoice, accounting.invoice_line, accounting.journal_entry, accounting.journal_item, accounting.partner CASCADE');
 }
 
 async function createUser(client: any, tenantId: number, email: string, roleId: number) {
@@ -115,10 +115,12 @@ async function seed() {
         await client.query('INSERT INTO school.staff (tenant_id, user_id, first_name, last_name, employee_code, designation) VALUES ($1, $2, $3, $4, $5, $6)',
             [tenantId, principalId, 'Dr. Rajesh', 'Khanna', 'PRN-001', 'Principal']);
 
+        const teacherStaffIds = [];
         for (let i = 1; i <= 5; i++) {
             const tId = await createUser(client, tenantId, `teacher${i}@demo.edu`, roleMap['teacher']);
-            await client.query('INSERT INTO school.staff (tenant_id, user_id, first_name, last_name, employee_code, designation) VALUES ($1, $2, $3, $4, $5, $6)',
+            const staffRes = await client.query('INSERT INTO school.staff (tenant_id, user_id, first_name, last_name, employee_code, designation) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
                 [tenantId, tId, `Teacher`, `${i}`, `TCH-${i.toString().padStart(3, '0')}`, 'Senior Faculty']);
+            teacherStaffIds.push(staffRes.rows[0].id);
         }
 
         // 2.7 Parents / Guardians
@@ -153,11 +155,19 @@ async function seed() {
             gradeIds.push(gId);
             
             const cRes = await client.query('INSERT INTO school.classroom (tenant_id, academic_year_id, grade_id, name, section) VALUES ($1, $2, $3, $4, $5) RETURNING id', [tenantId, ayId, gId, `Class ${i}-A`, 'A']);
-            classroomIds.push(cRes.rows[0].id);
+            const classroomId = cRes.rows[0].id;
+            classroomIds.push(classroomId);
+
+            const teacherStaffId = teacherStaffIds[i - 1];
+            await client.query('UPDATE school.classroom SET class_teacher_id = $1 WHERE id = $2', [teacherStaffId, classroomId]);
 
             for (const sub of COMMON_SUBJECTS) {
                 const sRes = await client.query('INSERT INTO school.subject (tenant_id, grade_id, name, code) VALUES ($1, $2, $3, $4) RETURNING id', [tenantId, gId, sub, `${sub.substring(0,3).toUpperCase()}-${i}`]);
-                subjectIds.push(sRes.rows[0].id);
+                const subjectId = sRes.rows[0].id;
+                subjectIds.push(subjectId);
+
+                await client.query('INSERT INTO school.teacher_assignment (tenant_id, staff_id, classroom_id, subject_id, academic_year_id) VALUES ($1, $2, $3, $4, $5)',
+                    [tenantId, teacherStaffId, classroomId, subjectId, ayId]);
             }
         }
 
@@ -217,6 +227,39 @@ async function seed() {
                     [tenantId, sId, guardianId]
                 );
             }
+        }
+
+        // 5.5 Seed Timetable slots for each classroom and its subjects
+        console.log('📅 Seeding Timetable slots...');
+        for (let i = 1; i <= 5; i++) {
+            const classroomId = classroomIds[i - 1];
+            const teacherStaffId = teacherStaffIds[i - 1];
+            const classSubjects = [
+                subjectIds[(i - 1) * 4],
+                subjectIds[(i - 1) * 4 + 1],
+                subjectIds[(i - 1) * 4 + 2],
+                subjectIds[(i - 1) * 4 + 3]
+            ];
+
+            // Monday
+            await client.query('INSERT INTO school.timetable (tenant_id, classroom_id, subject_id, teacher_id, academic_year_id, day_of_week, start_time, end_time) VALUES ($1, $2, $3, $4, $5, 1, \'09:00\', \'09:45\'), ($1, $2, $6, $4, $5, 1, \'09:45\', \'10:30\')',
+                [tenantId, classroomId, classSubjects[0], teacherStaffId, ayId, classSubjects[1]]);
+
+            // Tuesday
+            await client.query('INSERT INTO school.timetable (tenant_id, classroom_id, subject_id, teacher_id, academic_year_id, day_of_week, start_time, end_time) VALUES ($1, $2, $3, $4, $5, 2, \'09:00\', \'09:45\'), ($1, $2, $6, $4, $5, 2, \'09:45\', \'10:30\')',
+                [tenantId, classroomId, classSubjects[2], teacherStaffId, ayId, classSubjects[3]]);
+
+            // Wednesday
+            await client.query('INSERT INTO school.timetable (tenant_id, classroom_id, subject_id, teacher_id, academic_year_id, day_of_week, start_time, end_time) VALUES ($1, $2, $3, $4, $5, 3, \'09:00\', \'09:45\'), ($1, $2, $6, $4, $5, 3, \'09:45\', \'10:30\')',
+                [tenantId, classroomId, classSubjects[0], teacherStaffId, ayId, classSubjects[1]]);
+
+            // Thursday
+            await client.query('INSERT INTO school.timetable (tenant_id, classroom_id, subject_id, teacher_id, academic_year_id, day_of_week, start_time, end_time) VALUES ($1, $2, $3, $4, $5, 4, \'09:00\', \'09:45\'), ($1, $2, $6, $4, $5, 4, \'09:45\', \'10:30\')',
+                [tenantId, classroomId, classSubjects[2], teacherStaffId, ayId, classSubjects[3]]);
+
+            // Friday
+            await client.query('INSERT INTO school.timetable (tenant_id, classroom_id, subject_id, teacher_id, academic_year_id, day_of_week, start_time, end_time) VALUES ($1, $2, $3, $4, $5, 5, \'09:00\', \'09:45\'), ($1, $2, $6, $4, $5, 5, \'09:45\', \'10:30\'), ($1, $2, $7, $4, $5, 5, \'10:30\', \'11:15\'), ($1, $2, $8, $4, $5, 5, \'11:15\', \'12:00\')',
+                [tenantId, classroomId, classSubjects[0], teacherStaffId, ayId, classSubjects[1], classSubjects[2], classSubjects[3]]);
         }
 
         // 6. Exams

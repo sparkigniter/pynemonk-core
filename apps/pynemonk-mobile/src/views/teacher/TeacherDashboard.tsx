@@ -105,11 +105,44 @@ export const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
     return 'Good Evening';
   }, []);
 
-  const nextClass = useMemo(() => {
-    if (!timetable.length) return null;
+  const { nextClass, minutesUntilNextClass, isOngoing, allOverToday } = useMemo(() => {
+    if (!timetable.length) return { nextClass: null, minutesUntilNextClass: 0, isOngoing: false, allOverToday: true };
+    
     const now = new Date();
-    const day = now.getDay() || 7;
-    return timetable.find(t => t.day_of_week === day) || timetable[0];
+    const day = now.getDay() || 7; // Monday = 1, Sunday = 7
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    const timeToMinutes = (tStr: string) => {
+      if (!tStr) return 0;
+      const parts = tStr.split(':');
+      return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
+    };
+    
+    const todayClasses = timetable.filter(t => t.day_of_week === day);
+    
+    // Find if there is an ongoing class right now
+    const ongoing = todayClasses.find(t => {
+      const start = timeToMinutes(t.start_time);
+      const end = timeToMinutes(t.end_time);
+      return currentMinutes >= start && currentMinutes <= end;
+    });
+    
+    if (ongoing) {
+      return { nextClass: ongoing, minutesUntilNextClass: 0, isOngoing: true, allOverToday: false };
+    }
+    
+    // Otherwise, find the next upcoming class today
+    const upcoming = [...todayClasses]
+      .filter(t => timeToMinutes(t.start_time) > currentMinutes)
+      .sort((a, b) => timeToMinutes(a.start_time) - timeToMinutes(b.start_time))[0];
+      
+    if (upcoming) {
+      const diff = timeToMinutes(upcoming.start_time) - currentMinutes;
+      return { nextClass: upcoming, minutesUntilNextClass: diff, isOngoing: false, allOverToday: false };
+    }
+    
+    // If there were classes today but they are all done, or if it is Sunday/no classes today:
+    return { nextClass: null, minutesUntilNextClass: 0, isOngoing: false, allOverToday: true };
   }, [timetable]);
 
   useEffect(() => {
@@ -132,7 +165,7 @@ export const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const fetchClassStudents = async (classroomId: number) => {
     setLoading(true)
     try {
-      const res = await api.get(`/school/staff/teacher/class/\${classroomId}/students`)
+      const res = await api.get(`/school/staff/teacher/class/${classroomId}/students`)
       if (res.data.success) {
         setStudents(res.data.data)
         const initial: Record<number, 'present' | 'absent'> = {}
@@ -296,10 +329,10 @@ export const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                   <h1 className="text-2xl font-black text-slate-900 leading-tight">{greeting}, Professor</h1>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                      {data?.assignments.length || 0} Classes Today
+                      {timetable.filter(t => t.day_of_week === (new Date().getDay() || 7)).length} Classes Today
                     </span>
                     <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                      <Clock size={10} /> Next in 15m
+                      <Clock size={10} /> {isOngoing ? 'Class Ongoing' : minutesUntilNextClass > 0 ? `Next in ${minutesUntilNextClass}m` : 'No Class Left'}
                     </span>
                   </div>
                 </div>
@@ -308,45 +341,69 @@ export const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 </div>
               </div>
 
-              {/* Focus Card: Next Class */}
-              {nextClass && (
+              {/* Focus Card: Next Class or Celebration */}
+              {allOverToday ? (
                 <motion.div
-                  whileTap={{ scale: 0.98 }}
-                  className="bg-indigo-600 rounded-[2.5rem] p-7 text-white shadow-xl shadow-indigo-200 relative overflow-hidden group"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-emerald-100 relative overflow-hidden text-center"
                 >
-                  <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-6">
-                      <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">Upcoming Session</span>
-                      <div className="flex items-center gap-1 text-[10px] font-black text-white/80">
-                        <Timer size={14} className="animate-pulse" /> Starts in 14:52
-                      </div>
+                  <div className="relative z-10 space-y-4">
+                    <div className="w-16 h-16 bg-white/20 rounded-[2rem] flex items-center justify-center mx-auto shadow-sm backdrop-blur-md">
+                      <Trophy size={28} className="text-white" />
                     </div>
-
-                    <h3 className="text-2xl font-black mb-1">{nextClass.subject_name}</h3>
-                    <p className="text-white/60 text-sm font-bold uppercase tracking-widest mb-8">{nextClass.classroom_name}</p>
-
-                    <div className="flex items-center gap-4 mb-8 text-xs font-bold text-white/80">
-                      <span className="flex items-center gap-1.5"><Clock size={14} /> {nextClass.start_time} - {nextClass.end_time}</span>
-                      <span className="flex items-center gap-1.5"><MapPin size={14} /> Room 302</span>
+                    <div>
+                      <h3 className="text-2xl font-black tracking-tight">All Done For Today!</h3>
+                      <p className="text-white/80 text-xs font-bold uppercase tracking-widest mt-1.5">You have no more classes scheduled today.</p>
                     </div>
-
-                    <button
-                      onClick={() => {
-                        const asgn = data?.assignments.find(a => a.classroom_name === nextClass.classroom_name);
-                        if (asgn) {
-                          setSelectedClass(asgn);
-                          fetchClassStudents(asgn.classroom_id);
-                          setView('attendance');
-                        }
-                      }}
-                      className="w-full bg-white text-indigo-600 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg group-active:scale-95 transition-transform"
-                    >
-                      <PlayCircle size={18} />
-                      Start Class Now
-                    </button>
+                    <p className="text-white/60 text-xs italic max-w-xs mx-auto">
+                      "Teaching is the one profession that creates all other professions." — Have a peaceful rest of your day!
+                    </p>
                   </div>
-                  <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+                  <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-white/10 rounded-full blur-2xl pointer-events-none" />
                 </motion.div>
+              ) : (
+                nextClass && (
+                  <motion.div
+                    whileTap={{ scale: 0.98 }}
+                    className="bg-indigo-600 rounded-[2.5rem] p-7 text-white shadow-xl shadow-indigo-200 relative overflow-hidden group"
+                  >
+                    <div className="relative z-10">
+                      <div className="flex justify-between items-start mb-6">
+                        <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">
+                          {isOngoing ? 'Ongoing Session' : 'Upcoming Session'}
+                        </span>
+                        <div className="flex items-center gap-1 text-[10px] font-black text-white/80">
+                          <Timer size={14} className="animate-pulse" /> {isOngoing ? 'Ongoing' : minutesUntilNextClass > 0 ? `Starts in ${minutesUntilNextClass}m` : `Starts at ${nextClass.start_time.substring(0, 5)}`}
+                        </div>
+                      </div>
+
+                      <h3 className="text-2xl font-black mb-1">{nextClass.subject_name}</h3>
+                      <p className="text-white/60 text-sm font-bold uppercase tracking-widest mb-8">{nextClass.classroom_name}</p>
+
+                      <div className="flex items-center gap-4 mb-8 text-xs font-bold text-white/80">
+                        <span className="flex items-center gap-1.5"><Clock size={14} /> {nextClass.start_time.substring(0, 5)} - {nextClass.end_time.substring(0, 5)}</span>
+                        <span className="flex items-center gap-1.5"><MapPin size={14} /> Classroom {nextClass.classroom_name}</span>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const asgn = data?.assignments.find(a => a.classroom_name === nextClass.classroom_name);
+                          if (asgn) {
+                            setSelectedClass(asgn);
+                            fetchClassStudents(asgn.classroom_id);
+                            setView('attendance');
+                          }
+                        }}
+                        className="w-full bg-white text-indigo-600 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg group-active:scale-95 transition-transform"
+                      >
+                        <PlayCircle size={18} />
+                        Start Class Now
+                      </button>
+                    </div>
+                    <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+                  </motion.div>
+                )
               )}
 
               {/* Actionable Quick Stats */}
@@ -385,8 +442,8 @@ export const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                     <BookOpen size={22} className="text-white" />
                   </div>
                   <div>
-                    <h4 className="text-base font-black">Academic Planner</h4>
-                    <p className="text-white/70 text-[9px] font-black uppercase tracking-wider mt-0.5">Syllabus Engine & Target Tracker</p>
+                    <h4 className="text-base font-black">Syllabus & Lesson Plan</h4>
+                    <p className="text-white/70 text-[9px] font-black uppercase tracking-wider mt-0.5">Track Chapter & Syllabus Progress</p>
                   </div>
                 </div>
                 <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-white/20 transition-all">
@@ -1044,7 +1101,7 @@ export const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                       try {
                         const payload = {
                           ...hwFormData,
-                          due_date: `\${hwFormData.due_date}T\${hwFormData.due_time}:00`,
+                          due_date: `${hwFormData.due_date}T${hwFormData.due_time}:00`,
                           description: JSON.stringify(hwFormData.blocks),
                           subject_id: data?.assignments.find(a => a.classroom_id === hwFormData.classroom_id)?.subject_id
                         };

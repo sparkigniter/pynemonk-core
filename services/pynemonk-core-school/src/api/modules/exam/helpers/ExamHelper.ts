@@ -516,4 +516,108 @@ export class ExamHelper extends BaseModel {
             workQueue: workQueue.slice(0, 5)
         };
     }
+
+    // ─── Question Paper Preparation & AI Generation ─────────────────────────
+
+    public async getPaperSections(tenantId: number, paperId: number): Promise<any[]> {
+        const query = `
+            SELECT eps.* FROM school.exam_paper_section eps
+            JOIN school.exam_paper ep ON eps.paper_id = ep.id
+            WHERE ep.tenant_id = $1 AND ep.id = $2
+            ORDER BY eps.sequence_order ASC
+        `;
+        const res = await this.db.query(query, [tenantId, paperId]);
+        return res.rows;
+    }
+
+    public async getPaperQuestions(tenantId: number, paperId: number): Promise<any[]> {
+        const query = `
+            SELECT 
+                epq.id as paper_question_id,
+                epq.section_id,
+                epq.sequence_order,
+                epq.marks_allocated,
+                qb.id as question_id,
+                qb.topic_id,
+                qb.question_type,
+                qb.difficulty,
+                qb.taxonomy_level,
+                qb.question_text,
+                qb.options,
+                qb.answer_key,
+                t.title as topic_title,
+                c.title as chapter_title
+            FROM school.exam_paper_question epq
+            JOIN school.question_bank qb ON epq.question_id = qb.id
+            JOIN school.exam_paper_section eps ON epq.section_id = eps.id
+            JOIN school.exam_paper ep ON eps.paper_id = ep.id
+            LEFT JOIN school.global_topic t ON qb.topic_id = t.id
+            LEFT JOIN school.global_chapter c ON t.chapter_id = c.id
+            WHERE ep.tenant_id = $1 AND ep.id = $2
+            ORDER BY eps.sequence_order ASC, epq.sequence_order ASC
+        `;
+        const res = await this.db.query(query, [tenantId, paperId]);
+        return res.rows;
+    }
+
+    public async getQuestionBankPool(tenantId: number, subjectId: number, chapterIds?: number[]): Promise<any[]> {
+        let chapterFilter = '';
+        const params: any[] = [tenantId, subjectId];
+        if (chapterIds && chapterIds.length > 0) {
+            chapterFilter = `AND c.id = ANY($3)`;
+            params.push(chapterIds);
+        }
+
+        const query = `
+            SELECT qb.*, t.title as topic_title, c.title as chapter_title, c.id as chapter_id
+            FROM school.question_bank qb
+            JOIN school.global_topic t ON qb.topic_id = t.id
+            JOIN school.global_chapter c ON t.chapter_id = c.id
+            JOIN school.global_syllabus gs ON c.syllabus_id = gs.id
+            JOIN school.school_syllabus_subscription sss ON sss.global_syllabus_id = gs.id
+            WHERE sss.tenant_id = $1 AND sss.school_subject_id = $2
+            ${chapterFilter}
+        `;
+        const res = await this.db.query(query, params);
+        return res.rows;
+    }
+
+    public async clearPaperSections(tenantId: number, paperId: number): Promise<void> {
+        const query = `
+            DELETE FROM school.exam_paper_section 
+            WHERE paper_id = (
+                SELECT id FROM school.exam_paper WHERE tenant_id = $1 AND id = $2
+            )
+        `;
+        await this.db.query(query, [tenantId, paperId]);
+    }
+
+    public async createPaperSection(paperId: number, name: string, instructions?: string, seq?: number): Promise<any> {
+        const query = `
+            INSERT INTO school.exam_paper_section (paper_id, section_name, instructions, sequence_order)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `;
+        const res = await this.db.query(query, [paperId, name, instructions || null, seq || 0]);
+        return res.rows[0];
+    }
+
+    public async addQuestionToSection(sectionId: number, questionId: number, seq: number, marks: number): Promise<any> {
+        const query = `
+            INSERT INTO school.exam_paper_question (section_id, question_id, sequence_order, marks_allocated)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `;
+        const res = await this.db.query(query, [sectionId, questionId, seq, marks]);
+        return res.rows[0];
+    }
+
+    public async getPaperSubjectId(tenantId: number, paperId: number): Promise<number | null> {
+        const query = `
+            SELECT subject_id FROM school.exam_paper 
+            WHERE tenant_id = $1 AND id = $2 AND is_deleted = FALSE
+        `;
+        const res = await this.db.query(query, [tenantId, paperId]);
+        return res.rows[0]?.subject_id || null;
+    }
 }

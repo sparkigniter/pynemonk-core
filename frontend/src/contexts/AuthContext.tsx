@@ -197,7 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             grant_type: 'password' 
         };
 
-        if (schoolSlug && schoolSlug.trim() !== '') {
+        if (schoolSlug && schoolSlug.trim() !== '' && schoolSlug !== 'undefined' && schoolSlug !== 'null') {
             payload.school_slug = schoolSlug;
         }
 

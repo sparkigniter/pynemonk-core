@@ -225,11 +225,12 @@ export const paySalary = async (id: number) => {
 };
 
 // AR / Student Fee APIs
-export const getInvoices = async (params: { search?: string, status?: string } = {}): Promise<any[]> => {
+export const getInvoices = async (params: { search?: string, status?: string, studentId?: number | string } = {}): Promise<any[]> => {
     let query = '';
     const searchParams = new URLSearchParams();
     if (params.search) searchParams.append('search', params.search);
     if (params.status) searchParams.append('status', params.status);
+    if (params.studentId) searchParams.append('studentId', params.studentId.toString());
     if (searchParams.toString()) query = `?${searchParams.toString()}`;
 
     const data = await fetchWithError(`/invoices${query}`);
@@ -370,5 +371,24 @@ export const getReportTemplates = async (reportType?: string): Promise<any[]> =>
     const query = reportType ? `?reportType=${reportType}` : '';
     const data = await fetchWithError(`/reports/templates${query}`);
     return data.data;
+};
+
+// Payment APIs
+export const getPaymentConfig = async (): Promise<any> => {
+    const data = await fetchWithError(`/payments/config`);
+    return data.data ?? data;
+};
+
+export const createCheckoutSession = async (payload: { invoiceId: number, amount: number }): Promise<any> => {
+    const data = await fetchWithError(`/payments/checkout-session`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+    return data.data ?? data;
+};
+
+export const getPaymentTransactions = async (): Promise<any[]> => {
+    const data = await fetchWithError(`/payments/transactions`);
+    return data.data ?? data;
 };
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { 
     LayoutDashboard, School, 
-    ShieldCheck, LogOut, ChevronRight, Menu, X 
+    ShieldCheck, LogOut, ChevronRight, Menu, X, Database
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
@@ -20,6 +20,7 @@ const AdminLayout: React.FC = () => {
         { name: 'Dashboard', path: '/', icon: LayoutDashboard },
         { name: 'Schools', path: '/schools', icon: School },
         { name: 'Identity & Access', path: '/clients', icon: ShieldCheck },
+        { name: 'Global Content', path: '/global-content', icon: Database },
     ];
 
     return (

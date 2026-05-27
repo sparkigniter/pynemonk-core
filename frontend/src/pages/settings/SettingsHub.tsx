@@ -384,12 +384,12 @@ export default function SettingsHub() {
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Payment Gateway</label>
                                     <select 
                                         className="settings-input appearance-none"
-                                        value={settings.payment_gateway || 'STRIPE'}
+                                        value={settings.payment_gateway || 'MOCK_DEMO'}
                                         onChange={e => updateValue('payment_gateway', e.target.value)}
                                     >
+                                        <option value="MOCK_DEMO">Mock/Demo Payment Portal</option>
                                         <option value="STRIPE">Stripe Connect</option>
                                         <option value="RAZORPAY">Razorpay Institutional</option>
-                                        <option value="PAYPAL">PayPal Business</option>
                                         <option value="OFFLINE">Offline/Cash Only</option>
                                     </select>
                                 </div>
@@ -403,6 +403,74 @@ export default function SettingsHub() {
                                         onChange={e => updateValue('tax_id', e.target.value)}
                                     />
                                 </div>
+
+                                {settings.payment_gateway === 'STRIPE' && (
+                                    <div className="col-span-2 p-6 bg-slate-50 rounded-3xl border border-slate-100/80 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="col-span-2">
+                                            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Stripe Credentials Configuration</h4>
+                                            <p className="text-[10px] font-medium text-slate-400 mt-1">Provide API credentials from your Stripe Dashboard to enable automated card payments.</p>
+                                        </div>
+                                        <div className="space-y-2 col-span-2 md:col-span-1">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Stripe Publishable Key</label>
+                                            <input 
+                                                type="text" 
+                                                className="settings-input bg-white border border-slate-100"
+                                                placeholder="pk_test_..."
+                                                value={settings.stripe_publishable_key || ''}
+                                                onChange={e => updateValue('stripe_publishable_key', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2 col-span-2 md:col-span-1">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Stripe Secret Key</label>
+                                            <input 
+                                                type="password" 
+                                                className="settings-input bg-white border border-slate-100"
+                                                placeholder="sk_test_••••••••••••••••••••"
+                                                value={settings.stripe_secret_key || ''}
+                                                onChange={e => updateValue('stripe_secret_key', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2 col-span-2">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Stripe Webhook Secret Key</label>
+                                            <input 
+                                                type="password" 
+                                                className="settings-input bg-white border border-slate-100"
+                                                placeholder="whsec_••••••••••••••••••••"
+                                                value={settings.stripe_webhook_secret || ''}
+                                                onChange={e => updateValue('stripe_webhook_secret', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {settings.payment_gateway === 'RAZORPAY' && (
+                                    <div className="col-span-2 p-6 bg-slate-50 rounded-3xl border border-slate-100/80 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="col-span-2">
+                                            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Razorpay Credentials Configuration</h4>
+                                            <p className="text-[10px] font-medium text-slate-400 mt-1">Provide Key ID and Secret Key from your Razorpay Dashboard to enable UPI, Cards, and Netbanking.</p>
+                                        </div>
+                                        <div className="space-y-2 col-span-2 md:col-span-1">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Razorpay Key ID</label>
+                                            <input 
+                                                type="text" 
+                                                className="settings-input bg-white border border-slate-100"
+                                                placeholder="rzp_test_..."
+                                                value={settings.razorpay_key_id || ''}
+                                                onChange={e => updateValue('razorpay_key_id', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2 col-span-2 md:col-span-1">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Razorpay Key Secret</label>
+                                            <input 
+                                                type="password" 
+                                                className="settings-input bg-white border border-slate-100"
+                                                placeholder="••••••••••••••••••••••••"
+                                                value={settings.razorpay_secret || ''}
+                                                onChange={e => updateValue('razorpay_secret', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="space-y-2 col-span-2 pt-8 border-t border-slate-100">
                                     <FiscalYearSettings />
                                 </div>

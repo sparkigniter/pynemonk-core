@@ -5,6 +5,14 @@ import { Pool } from 'pg';
 export class AcademicPlannerService {
     constructor(@inject('DB') private pool: Pool) {}
 
+    async resolveStaffId(staffId: number): Promise<number> {
+        const staffRes = await this.pool.query(
+            `SELECT id FROM school.staff WHERE user_id = $1 OR id = $1 LIMIT 1`,
+            [staffId]
+        );
+        return staffRes.rows.length > 0 ? staffRes.rows[0].id : staffId;
+    }
+
     async listPlanners(tenantId: number, filters: any) {
         let query = `
             SELECT p.*, s.name as subject_name, g.name as grade_name, 
@@ -19,8 +27,9 @@ export class AcademicPlannerService {
         let pIdx = 2;
 
         if (filters.staff_id) {
+            const resolvedStaffId = await this.resolveStaffId(parseInt(filters.staff_id));
             query += ` AND p.staff_id = $${pIdx++}`;
-            values.push(filters.staff_id);
+            values.push(resolvedStaffId);
         }
         if (filters.subject_id) {
             query += ` AND p.subject_id = $${pIdx++}`;
@@ -36,16 +45,33 @@ export class AcademicPlannerService {
         return res.rows;
     }
 
-    async getPlannerByTeacherAndSubject(tenantId: number, staffId: number, subjectId: number, gradeId: number) {
-        const res = await this.pool.query(
-            `SELECT * FROM school.academic_planner 
-             WHERE tenant_id = $1 AND staff_id = $2 AND subject_id = $3 AND grade_id = $4`,
-            [tenantId, staffId, subjectId, gradeId]
-        );
-        return res.rows[0] || null;
+    async getPlannerByTeacherAndSubject(tenantId: number, staffId: number, subjectId: number, gradeId: number, academicYearId?: number) {
+        const resolvedStaffId = await this.resolveStaffId(staffId);
+        let query = `SELECT * FROM school.academic_planner 
+             WHERE tenant_id = $1 AND staff_id = $2 AND subject_id = $3 AND grade_id = $4`;
+        const params: any[] = [tenantId, resolvedStaffId, subjectId, gradeId];
+
+        if (academicYearId) {
+            query += ` AND academic_year_id = $5`;
+            params.push(academicYearId);
+        } else {
+            const currentYear = await this.pool.query(
+                `SELECT id FROM school.academic_year WHERE tenant_id = $1 AND is_current = TRUE AND is_deleted = FALSE LIMIT 1`,
+                [tenantId]
+            );
+            if (currentYear.rows.length > 0) {
+                query += ` AND academic_year_id = $5`;
+                params.push(currentYear.rows[0].id);
+            }
+        }
+
+        const res = await this.pool.query(query, params);
+        if (res.rows.length === 0) return null;
+        return this.getPlannerDetails(tenantId, res.rows[0].id);
     }
 
     async createPlanner(tenantId: number, data: any) {
+        const resolvedStaffId = await this.resolveStaffId(data.staff_id);
         const res = await this.pool.query(
             `INSERT INTO school.academic_planner 
              (tenant_id, academic_year_id, staff_id, subject_id, grade_id, start_date, end_date)
@@ -56,7 +82,7 @@ export class AcademicPlannerService {
             [
                 tenantId, 
                 data.academic_year_id, 
-                data.staff_id, 
+                resolvedStaffId, 
                 data.subject_id, 
                 data.grade_id, 
                 data.start_date || new Date().toISOString().split('T')[0], 
@@ -90,6 +116,22 @@ export class AcademicPlannerService {
             [id]
         );
 
+        // Fetch topics for these chapters
+        const chapterIds = chapters.rows.map(c => c.id);
+        let topics: any[] = [];
+        if (chapterIds.length > 0) {
+            const topicsRes = await this.pool.query(
+                `SELECT * FROM school.planner_topic WHERE chapter_id = ANY($1) ORDER BY sequence_order ASC, id ASC`,
+                [chapterIds]
+            );
+            topics = topicsRes.rows;
+        }
+
+        const chaptersWithTopics = chapters.rows.map(chapter => ({
+            ...chapter,
+            topics: topics.filter(t => t.chapter_id === chapter.id)
+        }));
+
         // Get holiday events for this planner duration
         const holidaysRes = await this.pool.query(
             `SELECT start_date, end_date FROM school.event 
@@ -122,10 +164,10 @@ export class AcademicPlannerService {
         };
 
         // Perform smart predictions
-        const totalChapters = chapters.rows.length;
-        const completedChapters = chapters.rows.filter(c => c.status === 'completed');
+        const totalChapters = chaptersWithTopics.length;
+        const completedChapters = chaptersWithTopics.filter(c => c.status === 'completed');
         const completedCount = completedChapters.length;
-        const totalLessons = chapters.rows.reduce((sum, c) => sum + (c.estimated_lessons || 1), 0);
+        const totalLessons = chaptersWithTopics.reduce((sum, c) => sum + (c.estimated_lessons || 1), 0);
         const completedLessons = completedChapters.reduce((sum, c) => sum + (c.estimated_lessons || 1), 0);
         const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
@@ -167,7 +209,7 @@ export class AcademicPlannerService {
 
         return {
             ...planner,
-            chapters: chapters.rows,
+            chapters: chaptersWithTopics,
             milestones: milestones.rows,
             metrics: {
                 totalChapters,
@@ -234,6 +276,10 @@ export class AcademicPlannerService {
         if (data.end_date !== undefined) {
             fields.push(`end_date = $${pIdx++}`);
             values.push(data.end_date);
+        }
+        if (data.sequence_order !== undefined) {
+            fields.push(`sequence_order = $${pIdx++}`);
+            values.push(data.sequence_order);
         }
 
         const query = `
@@ -307,5 +353,256 @@ export class AcademicPlannerService {
         }
 
         return this.getPlannerDetails(tenantId, plannerId);
+    }
+
+    async importGlobalSyllabus(tenantId: number, plannerId: number, globalSyllabusId: number) {
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // Find current max sequence
+            const maxSeqRes = await client.query(
+                `SELECT COALESCE(MAX(sequence_order), 0) as max_seq FROM school.planner_chapter WHERE planner_id = $1`,
+                [plannerId]
+            );
+            let currentSeq = maxSeqRes.rows[0].max_seq;
+
+            // Fetch global chapters
+            const chaptersRes = await client.query(
+                `SELECT gc.id, gc.title, gc.description, gc.sequence_order, gc.recommended_periods 
+                 FROM school.global_chapter gc
+                 WHERE gc.syllabus_id = $1
+                 ORDER BY gc.sequence_order ASC`,
+                [globalSyllabusId]
+            );
+
+            const globalChapters = chaptersRes.rows;
+
+            for (const gChap of globalChapters) {
+                currentSeq++;
+                const insertedChapRes = await client.query(
+                    `INSERT INTO school.planner_chapter 
+                     (planner_id, name, description, sequence_order, estimated_lessons, status)
+                     VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING id`,
+                    [
+                        plannerId, 
+                        gChap.title, 
+                        gChap.description || '', 
+                        currentSeq, 
+                        gChap.recommended_periods || 5
+                    ]
+                );
+                const chapterId = insertedChapRes.rows[0].id;
+
+                // Fetch global topics for this chapter
+                const topicsRes = await client.query(
+                    `SELECT title, description, sequence_order FROM school.global_topic
+                     WHERE chapter_id = $1 ORDER BY sequence_order ASC`,
+                    [gChap.id]
+                );
+
+                for (const gTopic of topicsRes.rows) {
+                    await client.query(
+                        `INSERT INTO school.planner_topic (chapter_id, title, description, sequence_order)
+                         VALUES ($1, $2, $3, $4)`,
+                        [chapterId, gTopic.title, gTopic.description || '', gTopic.sequence_order]
+                    );
+                }
+            }
+
+            await client.query('COMMIT');
+            return this.getPlannerDetails(tenantId, plannerId);
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    async deleteChapter(tenantId: number, chapterId: number) {
+        // Find chapter first to get planner_id
+        const chapRes = await this.pool.query(
+            `SELECT planner_id FROM school.planner_chapter WHERE id = $1`,
+            [chapterId]
+        );
+        if (chapRes.rows.length === 0) throw new Error("Chapter not found");
+        const plannerId = chapRes.rows[0].planner_id;
+
+        await this.pool.query(
+            `DELETE FROM school.planner_chapter WHERE id = $1`,
+            [chapterId]
+        );
+        return this.getPlannerDetails(tenantId, plannerId);
+    }
+
+    async moveChapter(tenantId: number, chapterId: number, direction: 'up' | 'down') {
+        const chapRes = await this.pool.query(
+            `SELECT id, planner_id, sequence_order FROM school.planner_chapter WHERE id = $1`,
+            [chapterId]
+        );
+        if (chapRes.rows.length === 0) throw new Error("Chapter not found");
+        const chap = chapRes.rows[0];
+
+        let swapRes;
+        if (direction === 'up') {
+            swapRes = await this.pool.query(
+                `SELECT id, sequence_order FROM school.planner_chapter 
+                 WHERE planner_id = $1 AND sequence_order < $2 
+                 ORDER BY sequence_order DESC LIMIT 1`,
+                [chap.planner_id, chap.sequence_order]
+            );
+        } else {
+            swapRes = await this.pool.query(
+                `SELECT id, sequence_order FROM school.planner_chapter 
+                 WHERE planner_id = $1 AND sequence_order > $2 
+                 ORDER BY sequence_order ASC LIMIT 1`,
+                [chap.planner_id, chap.sequence_order]
+            );
+        }
+
+        if (swapRes.rows.length > 0) {
+            const swapChap = swapRes.rows[0];
+            const client = await this.pool.connect();
+            try {
+                await client.query('BEGIN');
+                await client.query(
+                    `UPDATE school.planner_chapter SET sequence_order = $1 WHERE id = $2`,
+                    [swapChap.sequence_order, chap.id]
+                );
+                await client.query(
+                    `UPDATE school.planner_chapter SET sequence_order = $1 WHERE id = $2`,
+                    [chap.sequence_order, swapChap.id]
+                );
+                await client.query('COMMIT');
+            } catch (err) {
+                await client.query('ROLLBACK');
+                throw err;
+            } finally {
+                client.release();
+            }
+        }
+        return this.getPlannerDetails(tenantId, chap.planner_id);
+    }
+
+    // Topic Operations
+    async addTopic(tenantId: number, chapterId: number, data: any) {
+        // Find current max sequence for topics in this chapter
+        const maxSeqRes = await this.pool.query(
+            `SELECT COALESCE(MAX(sequence_order), 0) as max_seq FROM school.planner_topic WHERE chapter_id = $1`,
+            [chapterId]
+        );
+        const nextSeq = maxSeqRes.rows[0].max_seq + 1;
+
+        const res = await this.pool.query(
+            `INSERT INTO school.planner_topic 
+             (chapter_id, title, description, sequence_order)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [chapterId, data.title, data.description || '', nextSeq]
+        );
+        return res.rows[0];
+    }
+
+    async updateTopic(tenantId: number, topicId: number, data: any) {
+        const fields: string[] = [];
+        const values: any[] = [];
+        let pIdx = 1;
+
+        if (data.title !== undefined) {
+            fields.push(`title = $${pIdx++}`);
+            values.push(data.title);
+        }
+        if (data.description !== undefined) {
+            fields.push(`description = $${pIdx++}`);
+            values.push(data.description);
+        }
+        if (data.sequence_order !== undefined) {
+            fields.push(`sequence_order = $${pIdx++}`);
+            values.push(data.sequence_order);
+        }
+
+        if (fields.length === 0) {
+            const current = await this.pool.query(`SELECT * FROM school.planner_topic WHERE id = $1`, [topicId]);
+            return current.rows[0];
+        }
+
+        values.push(topicId);
+        const query = `
+            UPDATE school.planner_topic 
+            SET ${fields.join(', ')}, updated_at = NOW() 
+            WHERE id = $${pIdx} 
+            RETURNING *
+        `;
+
+        const res = await this.pool.query(query, values);
+        return res.rows[0];
+    }
+
+    async deleteTopic(tenantId: number, topicId: number) {
+        const res = await this.pool.query(
+            `DELETE FROM school.planner_topic WHERE id = $1 RETURNING *`,
+            [topicId]
+        );
+        return res.rows[0];
+    }
+
+    async moveTopic(tenantId: number, topicId: number, direction: 'up' | 'down') {
+        const topicRes = await this.pool.query(
+            `SELECT * FROM school.planner_topic WHERE id = $1`,
+            [topicId]
+        );
+        if (topicRes.rows.length === 0) {
+            throw new Error("Topic not found");
+        }
+        const topic = topicRes.rows[0];
+        const chapterId = topic.chapter_id;
+        const currentSeq = topic.sequence_order;
+
+        // Find adjacent topic in the same chapter
+        let adjRes;
+        if (direction === 'up') {
+            adjRes = await this.pool.query(
+                `SELECT * FROM school.planner_topic 
+                 WHERE chapter_id = $1 AND sequence_order < $2 
+                 ORDER BY sequence_order DESC LIMIT 1`,
+                [chapterId, currentSeq]
+            );
+        } else {
+            adjRes = await this.pool.query(
+                `SELECT * FROM school.planner_topic 
+                 WHERE chapter_id = $1 AND sequence_order > $2 
+                 ORDER BY sequence_order ASC LIMIT 1`,
+                [chapterId, currentSeq]
+            );
+        }
+
+        if (adjRes.rows.length === 0) {
+            return topic; // Already at edge
+        }
+
+        const adjTopic = adjRes.rows[0];
+        const adjSeq = adjTopic.sequence_order;
+
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(
+                `UPDATE school.planner_topic SET sequence_order = $1 WHERE id = $2`,
+                [adjSeq, topicId]
+            );
+            await client.query(
+                `UPDATE school.planner_topic SET sequence_order = $1 WHERE id = $2`,
+                [currentSeq, adjTopic.id]
+            );
+            await client.query('COMMIT');
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
+        }
+
+        return { ...topic, sequence_order: adjSeq };
     }
 }

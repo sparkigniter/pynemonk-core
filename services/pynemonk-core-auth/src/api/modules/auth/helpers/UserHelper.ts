@@ -223,6 +223,9 @@ class UserHelper {
      * Fetches: Credentials, Tenants, Roles, and Effective Scopes in one trip.
      */
     public async getFullLoginContext(email: string, clientId: string, schoolSlug?: string): Promise<any> {
+        if (schoolSlug === 'undefined' || schoolSlug === 'null' || !schoolSlug || schoolSlug.trim() === '') {
+            schoolSlug = undefined;
+        }
         const query = `
             WITH user_info AS (
                 -- Identify the user and their home tenant

@@ -19,7 +19,8 @@ export default class ReceivableController extends BaseController {
             const tenantId = req.user!.tenantId;
             const search = req.query.search as string;
             const status = req.query.status as string;
-            const invoices = await this.invoiceHelper.list(tenantId, { search, status });
+            const studentId = req.query.studentId ? parseInt(req.query.studentId as string) : undefined;
+            const invoices = await this.invoiceHelper.list(tenantId, { search, status, studentId });
             return this.ok(res, "Receivables retrieved", invoices);
         } catch (error: any) {
             return this.internalservererror(res, error.message);

@@ -4,6 +4,7 @@ import { container } from "tsyringe";
 import setupDI from "./di.js";
 import feeRouter from "./api/modules/fee/routes.js";
 import accountsRouter from "./api/modules/accounts/routes.js";
+import paymentRouter from "./api/modules/payment/routes.js";
 
 import AccountingAutomationSubscriber from "./api/modules/accounts/subscribers/AccountingAutomationSubscriber.js";
 
@@ -36,10 +37,21 @@ import { requireBillingActive } from "./api/core/middleware/requireBillingActive
 
 export const router = Router();
 
+import PaymentController from "./api/modules/payment/controllers/PaymentController.js";
+
+// Mount public Webhook BEFORE global authentication so gateways can post callbacks safely
+router.post("/accounting/payments/webhook", (req, res) => {
+    return container.resolve(PaymentController).handleWebhook(req, res);
+});
+
 // Secure all accounting routes globally with authentication and billing active checks
 router.use(requireAuth);
 router.use(requireBillingActive);
 
+// Mount secure payment endpoints (config, checkout-session, transactions)
+router.use("/accounting/payments", paymentRouter);
+
 // Mount all accounting sub-routers under /accounting/...
 router.use("/accounting/fees", feeRouter);
 router.use("/accounting", accountsRouter); // This will handle /accounting/coa, /accounting/journals etc.
+

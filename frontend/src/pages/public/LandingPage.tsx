@@ -2,7 +2,7 @@ import { motion, useScroll, useMotionValueEvent, useTransform } from 'framer-mot
 import {
     ArrowRight, GraduationCap, BarChart3, Play, Menu, X,
     ShieldCheck, Database, CreditCard, Smartphone, FileCheck,
-    Activity, Users, BookOpen, Calculator, Briefcase, Bell
+    Users, BookOpen, Calculator, Briefcase, Bell
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -166,6 +166,36 @@ export default function LandingPage() {
     const y1 = useTransform(scrollYProgress, [0, 1], [0, 300]);
     const y2 = useTransform(scrollYProgress, [0, 1], [0, -300]);
 
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'dossier' | 'notice' | 'communication'>('dashboard');
+
+    const demoScreenshots = {
+        dashboard: {
+            title: "Admin Control Center",
+            desc: "Comprehensive campus intelligence metrics, student count distributions, and live attendance insights at a glance.",
+            img: "/admin_dashboard.png"
+        },
+        attendance: {
+            title: "Live Attendance Roster",
+            desc: "Classroom-wise presence lists showing real-time on-time, late, and absent tracking cards.",
+            img: "/attendance_roster.png"
+        },
+        dossier: {
+            title: "Detailed Student Dossier",
+            desc: "Complete 360-degree student profile detailing academic history, attendance percentages, and grade sheets.",
+            img: "/student_dossier.png"
+        },
+        notice: {
+            title: "School Announcement Board",
+            desc: "Publish and broadcast campus bulletins, circulars, and notice postings for staff and parents.",
+            img: "/notice_board.png"
+        },
+        communication: {
+            title: "Interactive Communications Hub",
+            desc: "Real-time support ticket tracking and communication chat bridging parents and administration.",
+            img: "/communication_hub.png"
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-600 selection:text-white antialiased">
             {/* Inject clean Google Font import natively */}
@@ -252,61 +282,67 @@ export default function LandingPage() {
 
                         {/* Interactive UI Mockup Showcase */}
                         <div className="lg:col-span-6 relative">
+                            {/* Tabs Selector */}
+                            <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-900/60 border border-slate-800/80 rounded-2xl mb-4 overflow-x-auto backdrop-blur-sm shadow-lg">
+                                {(Object.keys(demoScreenshots) as Array<keyof typeof demoScreenshots>).map((key) => (
+                                    <button
+                                        key={key}
+                                        onClick={() => setActiveTab(key)}
+                                        className={`px-3.5 py-2 rounded-xl text-[10px] font-bold tracking-wider uppercase transition-all whitespace-nowrap ${activeTab === key
+                                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                                            }`}
+                                    >
+                                        {key}
+                                    </button>
+                                ))}
+                            </div>
+
                             <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
+                                initial={{ opacity: 0, scale: 0.98 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.8 }}
-                                className="relative bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80 shadow-2xl"
+                                transition={{ duration: 0.5 }}
+                                className="relative bg-slate-900/60 p-2.5 rounded-2xl border border-slate-800/80 shadow-2xl"
                             >
                                 <div className="absolute inset-0 bg-indigo-600/5 blur-xl rounded-2xl pointer-events-none" />
-                                <div className="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner aspect-[16/10] flex flex-col">
+                                <div className="bg-slate-950 rounded-xl border border-slate-800/50 overflow-hidden shadow-inner flex flex-col relative">
                                     {/* Mock Window Controls */}
-                                    <div className="bg-slate-900/50 px-4 py-3 border-b border-slate-900 flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="w-2.5 h-2.5 rounded-full bg-slate-800" />
-                                            <div className="w-2.5 h-2.5 rounded-full bg-slate-800" />
-                                            <div className="w-2.5 h-2.5 rounded-full bg-slate-800" />
+                                    <div className="bg-slate-900/40 px-4 py-3 border-b border-slate-900/60 flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+                                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
                                         </div>
-                                        <div className="w-32 h-4 bg-slate-900 rounded-md" />
-                                        <div className="w-4 h-4 rounded bg-slate-900" />
+                                        <div className="text-[10px] text-slate-400 font-bold tracking-wider font-outfit uppercase truncate px-4">
+                                            {demoScreenshots[activeTab].title}
+                                        </div>
+                                        <div className="w-4 h-4 rounded bg-slate-900 shrink-0" />
                                     </div>
-                                    {/* Mock Dashboard Body Content */}
-                                    <div className="p-4 flex-1 grid grid-cols-3 gap-3 bg-slate-950">
-                                        <div className="col-span-2 bg-slate-900/40 rounded-lg border border-slate-900 p-4 space-y-3">
-                                            <div className="h-4 bg-slate-800 rounded w-1/3" />
-                                            <div className="h-24 bg-gradient-to-t from-indigo-950/20 to-indigo-900/20 rounded-lg border border-indigo-900/30 flex items-end p-2 justify-between">
-                                                <div className="w-4 h-12 bg-indigo-600/40 rounded-sm" />
-                                                <div className="w-4 h-16 bg-indigo-600/60 rounded-sm" />
-                                                <div className="w-4 h-8 bg-indigo-600/30 rounded-sm" />
-                                                <div className="w-4 h-20 bg-indigo-600 rounded-sm" />
-                                            </div>
-                                        </div>
-                                        <div className="bg-slate-900/40 rounded-lg border border-slate-900 p-4 space-y-4">
-                                            <div className="h-4 bg-slate-800 rounded w-2/3" />
-                                            <div className="space-y-2">
-                                                <div className="h-2 bg-slate-800 rounded" />
-                                                <div className="h-2 bg-slate-800 rounded w-5/6" />
-                                                <div className="h-2 bg-slate-800 rounded w-4/5" />
-                                            </div>
-                                        </div>
+                                    
+                                    {/* Mock Dashboard Body Content - Displaying Descriptive Image */}
+                                    <div className="bg-slate-950 relative aspect-[16/10] overflow-hidden flex items-start justify-center">
+                                        <motion.img
+                                            key={activeTab}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ duration: 0.3 }}
+                                            src={demoScreenshots[activeTab].img}
+                                            alt={demoScreenshots[activeTab].title}
+                                            className="w-full h-auto object-cover object-top filter brightness-[0.95]"
+                                        />
                                     </div>
                                 </div>
-
-                                {/* Floating Metrics Overlay */}
-                                <motion.div
-                                    animate={{ y: [0, -6, 0] }}
-                                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                                    className="absolute -top-6 -left-6 bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg hidden xl:flex items-center gap-3"
-                                >
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-950 border border-indigo-900 flex items-center justify-center text-indigo-400">
-                                        <Activity size={16} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">System Health</p>
-                                        <p className="text-sm font-bold text-white font-outfit">Optimal (100%)</p>
-                                    </div>
-                                </motion.div>
                             </motion.div>
+
+                            {/* Active Tab Description */}
+                            <motion.p
+                                key={`desc-${activeTab}`}
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-xs text-slate-400 text-center mt-4 leading-relaxed italic px-4"
+                            >
+                                "{demoScreenshots[activeTab].desc}"
+                            </motion.p>
                         </div>
                     </div>
                 </div>

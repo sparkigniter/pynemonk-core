@@ -3,6 +3,7 @@ import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './pages/AdminDashboard';
 import Schools from './pages/Schools';
 import OAuthClients from './pages/OAuthClients';
+import GlobalSyllabusManager from './pages/GlobalSyllabusManager';
 import Login from './pages/Login';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -27,6 +28,7 @@ function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="schools" element={<Schools />} />
           <Route path="clients" element={<OAuthClients />} />
+          <Route path="global-content" element={<GlobalSyllabusManager />} />
         </Route>
       </Routes>
     </Router>

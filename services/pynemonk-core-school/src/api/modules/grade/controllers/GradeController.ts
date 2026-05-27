@@ -33,12 +33,13 @@ export class GradeController extends ResourceController {
         try {
             const tenantId = req.user.tenantId;
             const scope = await this.getScope(req);
-            const { page, limit, search, ignoreScope } = req.query;
+            const { page, limit, search, ignoreScope, academic_year_id } = req.query;
             
             const filters: any = {
                 page: page ? parseInt(page as string) : 1,
                 limit: limit ? parseInt(limit as string) : 100,
                 search: search as string,
+                academic_year_id: academic_year_id ? parseInt(academic_year_id as string) : undefined,
             };
 
             const canIgnoreScope = ignoreScope === 'true' && (

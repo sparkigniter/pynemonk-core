@@ -6,6 +6,7 @@ import {
     TrendingUp, ChevronRight
 } from 'lucide-react';
 import { getProfitAndLoss } from '../../api/accounting.api';
+import { getBaseURL } from '../../api/base.api';
 
 export default function ProfitAndLoss() {
     const navigate = useNavigate();
@@ -60,7 +61,7 @@ export default function ProfitAndLoss() {
             const session = localStorage.getItem('eduerp_session');
             const token = session ? JSON.parse(session).accessToken : '';
             
-            const response = await fetch(`http://localhost:3000/api/v1/accounting/reports/profit-loss/export/pdf?startDate=${dateRange.start}&endDate=${dateRange.end}`, {
+            const response = await fetch(`${getBaseURL()}/accounting/reports/profit-loss/export/pdf?startDate=${dateRange.start}&endDate=${dateRange.end}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`

@@ -8,7 +8,11 @@ import * as authApi from '../../api/auth.api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 
-const BASE = (import.meta as any).env?.VITE_AUTH_API_URL ?? 'http://localhost:3000';
+const BASE = (import.meta as any).env?.VITE_AUTH_API_URL ?? (
+    typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:3000`
+        : 'http://localhost:3000'
+);
 
 type View = 'CLIENT_LIST' | 'CLIENT_EDIT';
 

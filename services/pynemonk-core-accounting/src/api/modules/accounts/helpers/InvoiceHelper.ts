@@ -19,7 +19,8 @@ export default class InvoiceHelper {
                 SELECT 
                     'GEN-' || i.id as id, i.tenant_id, i.invoice_no, i.total_amount, i.net_amount, i.paid_amount, i.due_amount, 
                     i.status, i.source_type, i.created_at, i.due_date,
-                    p.name as partner_name, p.type as partner_type
+                    p.name as partner_name, p.type as partner_type,
+                    CASE WHEN p.external_ref_type = 'student' THEN p.external_ref_id ELSE NULL END as student_id
                 FROM accounting.invoice i
                 JOIN accounting.partner p ON i.partner_id = p.id
                 WHERE i.tenant_id = $1 AND i.is_deleted = FALSE
@@ -38,12 +39,13 @@ export default class InvoiceHelper {
                         ELSE 'unpaid'
                     END as status,
                     'fee_allocation' as source_type, MIN(fi.created_at) as created_at, MIN(fi.due_date) as due_date,
-                    s.first_name || ' ' || s.last_name as partner_name, 'student' as partner_type
+                    s.first_name || ' ' || s.last_name as partner_name, 'student' as partner_type,
+                    sfa.student_id as student_id
                 FROM school.fee_installment fi
                 JOIN school.student_fee_allocation sfa ON fi.allocation_id = sfa.id
                 JOIN school.student s ON sfa.student_id = s.id
                 WHERE sfa.tenant_id = $1 AND fi.invoice_id IS NULL
-                GROUP BY sfa.id, sfa.tenant_id, s.first_name, s.last_name
+                GROUP BY sfa.id, sfa.tenant_id, s.first_name, s.last_name, sfa.student_id
             )
             SELECT * FROM all_invoices WHERE 1=1
         `;
@@ -57,6 +59,11 @@ export default class InvoiceHelper {
         if (options.search) {
             params.push(`%${options.search}%`);
             query += ` AND (invoice_no ILIKE $${params.length} OR partner_name ILIKE $${params.length})`;
+        }
+
+        if (options.studentId) {
+            params.push(options.studentId);
+            query += ` AND student_id = $${params.length}`;
         }
 
         query += ` ORDER BY created_at DESC`;

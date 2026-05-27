@@ -261,4 +261,37 @@ export class ExamController extends ResourceController {
             return this.internalservererror(res, error.message);
         }
     }
+
+    public async getPaperQuestions(req: Request, res: Response) {
+        try {
+            const tenantId = this.getTenantId(req);
+            const paperId = parseInt(req.params.paperId);
+            const data = await this.examService.getPaperQuestions(tenantId, paperId);
+            return this.ok(res, "Paper sections and questions retrieved", data);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
+
+    public async savePaperQuestions(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenantId;
+            const paperId = parseInt(req.params.paperId);
+            const data = await this.examService.savePaperQuestions(tenantId, paperId, req.body.sections);
+            return this.ok(res, "Paper questions saved successfully", data);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
+
+    public async generateQuestionPaper(req: Request, res: Response) {
+        try {
+            const tenantId = (req as any).user.tenantId;
+            const paperId = parseInt(req.params.paperId);
+            const data = await this.examService.generateQuestionPaper(tenantId, paperId, req.body);
+            return this.ok(res, "Paper questions generated successfully", data);
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
 }

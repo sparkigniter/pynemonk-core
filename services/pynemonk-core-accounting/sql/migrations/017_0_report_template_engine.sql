@@ -16,4 +16,5 @@ CREATE TABLE IF NOT EXISTS accounting.report_template (
 INSERT INTO accounting.report_template (tenant_id, report_type, name, template_html, is_default)
 VALUES 
 (1, 'profit_loss', 'Standard P&L', '<h1>Profit & Loss</h1><table>...</table>', TRUE),
-(1, 'balance_sheet', 'Standard Balance Sheet', '<h1>Balance Sheet</h1><table>...</table>', TRUE);
+(1, 'balance_sheet', 'Standard Balance Sheet', '<h1>Balance Sheet</h1><table>...</table>', TRUE)
+ON CONFLICT (tenant_id, report_type, is_default) DO NOTHING;

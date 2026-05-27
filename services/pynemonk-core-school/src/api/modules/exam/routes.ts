@@ -89,6 +89,21 @@ router.post("/:id/papers/:paperId/marks", apiRateLimiter, sensitiveRateLimiter, 
     return controller.saveMarks(req, res);
 });
 
+router.get("/:id/papers/:paperId/questions", apiRateLimiter, requirePermission(["exam:read", "student.academic:read"]), (req, res) => {
+    const controller = container.resolve(ExamController);
+    return controller.getPaperQuestions(req, res);
+});
+
+router.post("/:id/papers/:paperId/questions", apiRateLimiter, sensitiveRateLimiter, requirePermission(["exam:write", "student.academic:write"]), (req, res) => {
+    const controller = container.resolve(ExamController);
+    return controller.savePaperQuestions(req, res);
+});
+
+router.post("/:id/papers/:paperId/generate", apiRateLimiter, sensitiveRateLimiter, requirePermission(["exam:write", "student.academic:write"]), (req, res) => {
+    const controller = container.resolve(ExamController);
+    return controller.generateQuestionPaper(req, res);
+});
+
 router.patch("/:id/status", apiRateLimiter, sensitiveRateLimiter, requirePermission(["exam:write", "student.academic:write"]), (req, res) => {
     const controller = container.resolve(ExamController);
     return controller.updateStatus(req, res);

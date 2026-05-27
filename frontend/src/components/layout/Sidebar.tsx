@@ -192,6 +192,14 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: { mobileOpen?: boolean; setMobil
         const isPrincipal = roles.includes('principal');
         const isTeacher = roles.includes('teacher');
         const isStudent = roles.includes('student');
+        const isParent = roles.includes('parent') || roles.includes('guardian');
+
+        // Parent specific path restrictions
+        if (isParent) {
+            const allowedPaths = ['/dashboard', '/calendar', '/notice-board', '/communications'];
+            if (item.path && !allowedPaths.includes(item.path)) return false;
+            if (item.children && item.children.length > 0) return false;
+        }
 
         // 1. Role Filter Check
         if (item.roleFilter) {

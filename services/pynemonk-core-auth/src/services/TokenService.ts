@@ -25,12 +25,11 @@ class TokenService {
      * @returns 
      */
     public generateToken(tokenPayload: TokenPayload): string {
-
+        const { exp, iat, ...rest } = tokenPayload as any;
         const token: TokenPayload = {
-            ...tokenPayload,
+            ...rest,
             iat: Math.floor(Date.now() / 1000)
-
-        }
+        };
         return jwt.sign(token, this.JWT_ACCESS_SECRET, {
             expiresIn: this.accessTokenExpiryTime,
             algorithm: "HS256"
@@ -43,12 +42,11 @@ class TokenService {
      * @returns 
      */
     public generateRefreshToken(tokenPayload: TokenPayload): string {
-
+        const { exp, iat, ...rest } = tokenPayload as any;
         const token: TokenPayload = {
-            ...tokenPayload,
+            ...rest,
             iat: Math.floor(Date.now() / 1000)
-
-        }
+        };
         return jwt.sign(token, this.JWT_REFRESH_SECRET, {
             expiresIn: this.refreshTokenExpiryTime,
             algorithm: "HS256"
