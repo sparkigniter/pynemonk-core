@@ -15,6 +15,40 @@ import { AcademicPlannerView } from './AcademicPlannerView'
 import { MobileNoticeBoardView } from '../shared/MobileNoticeBoardView'
 import { MobileCommunicationsView } from '../shared/MobileCommunicationsView'
 
+const getISTTime = () => {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    const parts = formatter.formatToParts(new Date());
+    const hour = (parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)) % 24;
+    const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+    return { hour, minute };
+  } catch (e) {
+    const now = new Date();
+    return { hour: now.getHours(), minute: now.getMinutes() };
+  }
+};
+
+const getISTDay = () => {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      weekday: 'short'
+    });
+    const weekdayStr = formatter.format(new Date());
+    const mapping: Record<string, number> = {
+      'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7
+    };
+    return mapping[weekdayStr] || new Date().getDay() || 7;
+  } catch (e) {
+    return new Date().getDay() || 7;
+  }
+};
+
 type TeacherView = 'home' | 'schedule' | 'classes' | 'class_detail' | 'attendance' | 'homework' | 'homework_new' | 'calendar' | 'profile' | 'inbox' | 'notices' | 'exams' | 'planner' | 'more'
 
 interface TeacherDashboardData {
@@ -99,7 +133,7 @@ export const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
   })
 
   const greeting = useMemo(() => {
-    const hour = new Date().getHours();
+    const { hour } = getISTTime();
     if (hour < 12) return 'Good Morning';
     if (hour < 17) return 'Good Afternoon';
     return 'Good Evening';
@@ -108,9 +142,9 @@ export const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const { nextClass, minutesUntilNextClass, isOngoing, allOverToday } = useMemo(() => {
     if (!timetable.length) return { nextClass: null, minutesUntilNextClass: 0, isOngoing: false, allOverToday: true };
     
-    const now = new Date();
-    const day = now.getDay() || 7; // Monday = 1, Sunday = 7
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const { hour, minute } = getISTTime();
+    const day = getISTDay();
+    const currentMinutes = hour * 60 + minute;
     
     const timeToMinutes = (tStr: string) => {
       if (!tStr) return 0;
@@ -329,7 +363,7 @@ export const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                   <h1 className="text-2xl font-black text-slate-900 leading-tight">{greeting}, Professor</h1>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                      {timetable.filter(t => t.day_of_week === (new Date().getDay() || 7)).length} Classes Today
+                      {timetable.filter(t => t.day_of_week === getISTDay()).length} Classes Today
                     </span>
                     <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
                       <Clock size={10} /> {isOngoing ? 'Class Ongoing' : minutesUntilNextClass > 0 ? `Next in ${minutesUntilNextClass}m` : 'No Class Left'}
@@ -492,9 +526,21 @@ export const TeacherDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 <div className="relative pl-6 space-y-4">
                   <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-slate-100"></div>
 
-                  {timetable.filter(t => t.day_of_week === (new Date().getDay() || 7)).map((item, i) => {
-                    const isCompleted = i === 0;
-                    const isActive = i === 1;
+                  {timetable.filter(t => t.day_of_week === getISTDay()).sort((a, b) => a.start_time.localeCompare(b.start_time)).map((item, i) => {
+                    const { hour: istH, minute: istM } = getISTTime();
+                    const currentMinutes = istH * 60 + istM;
+                    
+                    const timeToMinutes = (tStr: string) => {
+                      if (!tStr) return 0;
+                      const parts = tStr.split(':');
+                      return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
+                    };
+                    
+                    const startMin = timeToMinutes(item.start_time);
+                    const endMin = timeToMinutes(item.end_time);
+                    
+                    const isActive = currentMinutes >= startMin && currentMinutes <= endMin;
+                    const isCompleted = currentMinutes > endMin;
 
                     return (
                       <div key={i} className="relative">

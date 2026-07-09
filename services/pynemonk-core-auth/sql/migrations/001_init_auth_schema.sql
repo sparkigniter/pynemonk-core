@@ -205,7 +205,8 @@ CREATE TABLE IF NOT EXISTS auth.user_profile (
     date_of_birth DATE,
     is_deleted    BOOLEAN DEFAULT FALSE,
     created_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_user_profile_user_id UNIQUE (user_id)
 );
 
 CREATE TABLE IF NOT EXISTS auth.user_credential (

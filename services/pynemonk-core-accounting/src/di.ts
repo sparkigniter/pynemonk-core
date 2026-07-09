@@ -26,7 +26,6 @@ import VendorController from "./api/modules/accounts/controllers/VendorControlle
 import BankingController from "./api/modules/accounts/controllers/BankingController.js";
 import AutomationController from "./api/modules/accounts/controllers/AutomationController.js";
 import PayrollController from "./api/modules/accounts/controllers/PayrollController.js";
-import ReportController from "./api/modules/accounts/controllers/ReportController.js";
 
 
 function setupDI(): void {
@@ -59,7 +58,6 @@ function setupDI(): void {
     container.register(BankingController, { useClass: BankingController });
     container.register(AutomationController, { useClass: AutomationController });
     container.register(PayrollController, { useClass: PayrollController });
-    container.register(ReportController, { useClass: ReportController });
 }
 
 export default setupDI;

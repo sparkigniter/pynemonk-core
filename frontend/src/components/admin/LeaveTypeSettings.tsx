@@ -49,6 +49,17 @@ export default function LeaveTypeSettings() {
         }
     };
 
+    const handleDelete = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this leave category?')) return;
+        try {
+            await leaveApi.deleteLeaveType(id);
+            notify('success', 'Leave Category Deleted', 'The leave type has been removed.');
+            fetchLeaveTypes();
+        } catch (err: any) {
+            notify('error', 'Deletion Failed', err.message || 'Could not delete leave category.');
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -162,7 +173,10 @@ export default function LeaveTypeSettings() {
                                 <button className="p-2 text-slate-400 hover:text-primary transition-colors">
                                     <Edit2 size={14} />
                                 </button>
-                                <button className="p-2 text-slate-400 hover:text-rose-500 transition-colors">
+                                <button 
+                                    onClick={() => handleDelete(type.id)}
+                                    className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                                >
                                     <Trash2 size={14} />
                                 </button>
                             </div>

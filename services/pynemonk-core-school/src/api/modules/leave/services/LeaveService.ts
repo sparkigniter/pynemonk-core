@@ -57,4 +57,8 @@ export default class LeaveService {
             tenant_id: tenantId
         });
     }
+
+    public async deleteLeaveType(tenantId: number, id: number) {
+        return this.leaveHelper.deleteLeaveType(tenantId, id);
+    }
 }

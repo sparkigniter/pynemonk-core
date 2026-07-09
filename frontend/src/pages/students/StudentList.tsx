@@ -200,9 +200,10 @@ export default function StudentList() {
         setPagination(p => ({ ...p, page: 1 }));
     };
 
-    const canAdmit = can('student:write');
+    const canAdmit = can('student:admin');
     const canSeeFees = can('fee:read');
-    const canSyncSats = can('report:export') || can('student:write');
+    const canSyncSats = can('report:export') || can('student:admin');
+    const canAdminAdmissions = can('student:admin');
 
     const readyCount = students.filter(isSatsReady).length;
     const attentionCount = students.length - readyCount;
@@ -298,26 +299,28 @@ export default function StudentList() {
             </div>
 
             {/* View Switching Tabs */}
-            <div className="bg-[var(--card-bg)] p-1.5 rounded-2xl border border-[var(--card-border)] shadow-sm flex items-center gap-1 w-fit">
-                <button
-                    onClick={() => setActiveTab('directory')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all
-                        ${activeTab === 'directory' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-[var(--text-muted)] hover:bg-[var(--background)] hover:text-[var(--text-main)]'}`}
-                >
-                    <List size={16} />
-                    Active Directory
-                </button>
-                <button
-                    onClick={() => setActiveTab('admissions')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all
-                        ${activeTab === 'admissions' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-[var(--text-muted)] hover:bg-[var(--background)] hover:text-[var(--text-main)]'}`}
-                >
-                    <GraduationCap size={16} />
-                    New Admissions
-                </button>
-            </div>
+            {canAdminAdmissions && (
+                <div className="bg-[var(--card-bg)] p-1.5 rounded-2xl border border-[var(--card-border)] shadow-sm flex items-center gap-1 w-fit">
+                    <button
+                        onClick={() => setActiveTab('directory')}
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all
+                            ${activeTab === 'directory' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-[var(--text-muted)] hover:bg-[var(--background)] hover:text-[var(--text-main)]'}`}
+                    >
+                        <List size={16} />
+                        Active Directory
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('admissions')}
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all
+                            ${activeTab === 'admissions' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-[var(--text-muted)] hover:bg-[var(--background)] hover:text-[var(--text-main)]'}`}
+                    >
+                        <GraduationCap size={16} />
+                        New Admissions
+                    </button>
+                </div>
+            )}
 
-            {activeTab === 'directory' ? (
+            {activeTab === 'directory' || !canAdminAdmissions ? (
                 <div className="flex flex-col lg:flex-row gap-8">
                     {!showUnenrolledOnly && (
                         <div className="w-full lg:w-72 flex-shrink-0">

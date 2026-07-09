@@ -2,7 +2,6 @@ import { Router } from "express";
 import { container } from "tsyringe";
 import AccountController from "./controllers/AccountController.js";
 import JournalController from "./controllers/JournalController.js";
-import ReportController from "./controllers/ReportController.js";
 import VendorController from "./controllers/VendorController.js";
 import BankingController from "./controllers/BankingController.js";
 import AutomationController from "./controllers/AutomationController.js";
@@ -130,50 +129,6 @@ router.post("/payroll/generate", requireAuth, requirePermission("staff.payroll:w
 });
 router.post("/payroll/pay/:id", requireAuth, requirePermission("staff.payroll:write"), (req, res) => {
     return container.resolve(PayrollController).pay(req, res);
-});
-
-// ── Report Routes ───────────────────────────────────────────────────────────
-router.get("/reports/trial-balance", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).getTrialBalance(req, res);
-});
-router.get("/reports/trial-balance/export/pdf", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).exportTrialBalancePDF(req, res);
-});
-router.get("/reports/profit-loss/export/pdf", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).exportProfitLossPDF(req, res);
-});
-router.get("/reports/balance-sheet/export/pdf", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).exportBalanceSheetPDF(req, res);
-});
-router.get("/reports/profit-loss", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).getProfitAndLoss(req, res);
-});
-router.get("/reports/summary", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).getSummary(req, res);
-});
-router.get("/reports/aging/ar", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).getARAgingReport(req, res);
-});
-router.get("/reports/aging", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).getAgingReport(req, res);
-});
-router.get("/reports/ledger", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).getLedger(req, res);
-});
-router.get("/reports/balance-sheet", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).getBalanceSheet(req, res);
-});
-router.get("/reports/cash-flow", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).getCashFlow(req, res);
-});
-router.get("/reports/trends", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).getTrends(req, res);
-});
-router.get("/reports/templates", requireAuth, requirePermission("report.financial:read"), (req, res) => {
-    return container.resolve(ReportController).getTemplates(req, res);
-});
-router.post("/reports/templates", requireAuth, requirePermission("settings:write"), (req, res) => {
-    return container.resolve(ReportController).saveTemplate(req, res);
 });
 
 // ── Settings Routes ─────────────────────────────────────────────────────────

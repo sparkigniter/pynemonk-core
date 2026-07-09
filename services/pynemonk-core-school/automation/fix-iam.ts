@@ -24,7 +24,8 @@ async function fix() {
             'assignment:read', 'assignment:write', 'assignment:delete',
             'timetable:read', 'timetable:write', 'timetable:delete',
             'report:read', 'report:write',
-            'settings:read', 'settings:write'
+            'settings:read', 'settings:write',
+            'student:admin', 'student:write'
         ];
 
         // 1. Register Scopes & Permissions

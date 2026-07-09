@@ -78,7 +78,7 @@ export default function ReportTemplateDesigner() {
 
     const handleSave = async () => {
         try {
-            await post('/accounting/reports/templates', {
+            await post('/reports/templates', {
                 name: templateName,
                 reportType: selectedReport.id,
                 html: editorRef.current?.innerHTML || content,

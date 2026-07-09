@@ -41,4 +41,9 @@ leaveRouter.post("/types", requireAuth, requirePermission(["staff.leave:write"])
     return ctrl.createLeaveType(req, res);
 });
 
+leaveRouter.delete("/types/:id", requireAuth, requirePermission(["staff.leave:write"]), (req, res) => {
+    const ctrl = container.resolve(LeaveController);
+    return ctrl.deleteLeaveType(req, res);
+});
+
 export default leaveRouter;

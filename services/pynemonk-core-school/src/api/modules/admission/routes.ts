@@ -25,7 +25,7 @@ router.post(
     apiRateLimiter,
     sensitiveRateLimiter,
     requireAuth,
-    requirePermission(["student:write"]),
+    requirePermission(["student:admin"]),
     (req, res) => container.resolve(AdmissionController).admit(req as AuthenticatedRequest, res),
 );
 
@@ -34,7 +34,7 @@ router.post(
     "/workflow/start",
     apiRateLimiter,
     requireAuth,
-    requirePermission(["student:write"]),
+    requirePermission(["student:admin"]),
     (req, res) => container.resolve(AdmissionController).startWorkflow(req as AuthenticatedRequest, res),
 );
 
@@ -42,7 +42,7 @@ router.patch(
     "/workflow/:id",
     apiRateLimiter,
     requireAuth,
-    requirePermission(["student:write"]),
+    requirePermission(["student:admin"]),
     (req, res) => container.resolve(AdmissionController).updateWorkflow(req as AuthenticatedRequest, res),
 );
 
@@ -50,7 +50,7 @@ router.post(
     "/workflow/:id/finalize",
     apiRateLimiter,
     requireAuth,
-    requirePermission(["student:write"]),
+    requirePermission(["student:admin"]),
     (req, res) => container.resolve(AdmissionController).finalizeWorkflow(req as AuthenticatedRequest, res),
 );
 
@@ -59,7 +59,7 @@ router.get(
     "/applications",
     apiRateLimiter,
     requireAuth,
-    requirePermission(["student:read"]),
+    requirePermission(["student:admin"]),
     (req, res) => container.resolve(AdmissionController).listApplications(req as AuthenticatedRequest, res),
 );
 
@@ -67,7 +67,7 @@ router.get(
     "/workflow/:id",
     apiRateLimiter,
     requireAuth,
-    requirePermission(["student:read"]),
+    requirePermission(["student:admin"]),
     (req, res) => container.resolve(AdmissionController).getApplication(req as AuthenticatedRequest, res),
 );
 
@@ -76,7 +76,7 @@ router.get(
     "/templates/:type",
     apiRateLimiter,
     requireAuth,
-    requirePermission(["student:read"]),
+    requirePermission(["student:admin"]),
     (req, res) => container.resolve(CertificateTemplateController).getTemplate(req as AuthenticatedRequest, res),
 );
 
@@ -84,7 +84,7 @@ router.post(
     "/templates",
     apiRateLimiter,
     requireAuth,
-    requirePermission(["student:write"]),
+    requirePermission(["student:admin"]),
     (req, res) => container.resolve(CertificateTemplateController).saveTemplate(req as AuthenticatedRequest, res),
 );
 

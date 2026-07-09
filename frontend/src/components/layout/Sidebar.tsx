@@ -91,10 +91,10 @@ const navigation = {
         {
             name: 'Onboard',
             icon: Sparkles,
-            permissions: ['user:invite', 'student:write', 'staff:write'],
+            permissions: ['user:invite', 'student:admin', 'staff:write'],
             children: [
                 { name: 'Talent Recruitment', path: '/onboarding/teachers', permissions: ['staff:write'] },
-                { name: 'Student Admission', path: '/onboarding/students', permissions: ['student:write'] },
+                { name: 'Student Admission', path: '/onboarding/students', permissions: ['student:admin'] },
                 { name: 'Workflow Builder', path: '/workflow-builder', permissions: ['settings:write'] },
             ]
         },

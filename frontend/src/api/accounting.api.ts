@@ -77,6 +77,36 @@ const fetchWithError = async (path: string, options?: RequestInit) => {
     return data;
 };
 
+const fetchReportWithError = async (path: string, options?: RequestInit) => {
+    const token = getAuthToken();
+    const headers: any = {
+        'Content-Type': 'application/json',
+        ...(options?.headers || {}),
+    };
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${BASE_URL}/api/v1${path}`, {
+        ...options,
+        headers,
+    });
+
+    const text = await res.text();
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch {
+        throw new Error(`Invalid response from server: ${text.substring(0, 100)}...`);
+    }
+
+    if (!res.ok) {
+        throw new Error(data.message || 'API request failed');
+    }
+    return data;
+};
+
 export const getCOA = async (): Promise<Account[]> => {
     const data = await fetchWithError(`/coa/chart`);
     return data.data;
@@ -109,18 +139,26 @@ export const createJournal = async (payload: any) => {
 };
 
 export const getTrialBalance = async () => {
-    const data = await fetchWithError(`/reports/trial-balance`);
+    const data = await fetchReportWithError(`/reports/generate/trial_balance?format=json`);
     return data.data;
 };
 
 export const getProfitAndLoss = async (startDate?: string, endDate?: string) => {
-    const query = (startDate && endDate) ? `?startDate=${startDate}&endDate=${endDate}` : '';
-    const data = await fetchWithError(`/reports/profit-loss${query}`);
-    return data.data;
+    const query = (startDate && endDate) ? `&startDate=${startDate}&endDate=${endDate}` : '';
+    const response = await fetchReportWithError(`/reports/generate/profit_loss?format=json${query}`);
+    if (response.data) {
+        return {
+            ...response.data,
+            revenue: response.data.revenue_accounts || [],
+            expenses: response.data.expense_accounts || [],
+            netProfit: response.data.net_profit || 0
+        };
+    }
+    return response.data;
 };
 
 export const getAccountingSummary = async () => {
-    const data = await fetchWithError(`/reports/summary`);
+    const data = await fetchReportWithError(`/reports/generate/summary?format=json`);
     return data.data;
 };
 
@@ -272,14 +310,14 @@ export const getAccountingSettings = async () => {
 };
 
 export const getBalanceSheet = async (date?: string) => {
-    const query = date ? `?date=${date}` : '';
-    const data = await fetchWithError(`/reports/balance-sheet${query}`);
+    const query = date ? `&endDate=${date}` : '';
+    const data = await fetchReportWithError(`/reports/generate/balance_sheet?format=json${query}`);
     return data.data;
 };
 
 export const getCashFlow = async (startDate?: string, endDate?: string) => {
-    const query = (startDate && endDate) ? `?startDate=${startDate}&endDate=${endDate}` : '';
-    const data = await fetchWithError(`/reports/cash-flow${query}`);
+    const query = (startDate && endDate) ? `&startDate=${startDate}&endDate=${endDate}` : '';
+    const data = await fetchReportWithError(`/reports/generate/cash_flow?format=json${query}`);
     return data.data;
 };
 
@@ -291,6 +329,8 @@ export const getARAging = async (params: {
     status?: string 
 } = {}) => {
     const searchParams = new URLSearchParams();
+    searchParams.append('format', 'json');
+    searchParams.append('subType', 'ar');
     if (params.sourceType) searchParams.append('sourceType', params.sourceType);
     if (params.fromPartnerId) searchParams.append('fromPartnerId', params.fromPartnerId.toString());
     if (params.toPartnerId) searchParams.append('toPartnerId', params.toPartnerId.toString());
@@ -298,17 +338,17 @@ export const getARAging = async (params: {
     if (params.status) searchParams.append('status', params.status);
     
     const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
-    const data = await fetchWithError(`/reports/aging/ar${query}`);
+    const data = await fetchReportWithError(`/reports/generate/aging${query}`);
     return data.data;
 };
 
 export const getAPAging = async () => {
-    const data = await fetchWithError(`/reports/aging`);
+    const data = await fetchReportWithError(`/reports/generate/aging?format=json&subType=ap`);
     return data.data;
 };
 
 export const getFinancialTrends = async (): Promise<any[]> => {
-    const data = await fetchWithError(`/reports/trends`);
+    const data = await fetchReportWithError(`/reports/generate/trends?format=json`);
     return data.data;
 };
 
@@ -369,7 +409,7 @@ export const closeFiscalYear = async (id: number) => {
 
 export const getReportTemplates = async (reportType?: string): Promise<any[]> => {
     const query = reportType ? `?reportType=${reportType}` : '';
-    const data = await fetchWithError(`/reports/templates${query}`);
+    const data = await fetchReportWithError(`/reports/templates${query}`);
     return data.data;
 };
 

@@ -6,6 +6,11 @@ import { AuthenticatedRequest } from "./AuthMiddleware.js";
  * Assumes AuthMiddleware (requireAuth) has already run and attached `req.user`.
  * @param requiredPermissions Array of permission keys (e.g. ['student:read', 'staff:write'])
  */
+const SCOPE_HIERARCHY: Record<string, string[]> = {
+    'student:admin': ['student:write', 'student:read'],
+    'student:write': ['student:read'],
+};
+
 export function requirePermission(requiredPermissions: string[]) {
     return async (req: e.Request, res: e.Response, next: e.NextFunction): Promise<void> => {
         const user = (req as AuthenticatedRequest).user;
@@ -20,7 +25,13 @@ export function requirePermission(requiredPermissions: string[]) {
             return;
         }
 
-        const hasPermission = requiredPermissions.some(p => user.permissions.includes(p));
+        const hasPermission = requiredPermissions.some(p => {
+            if (user.permissions.includes(p)) return true;
+            return user.permissions.some(userPerm => {
+                const implied = SCOPE_HIERARCHY[userPerm];
+                return implied && implied.includes(p);
+            });
+        });
 
         if (!hasPermission) {
             res.status(403).json({

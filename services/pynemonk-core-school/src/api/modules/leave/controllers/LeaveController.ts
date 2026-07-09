@@ -102,4 +102,15 @@ export default class LeaveController extends BaseController {
             return this.internalservererror(res, error.message);
         }
     }
+
+    public async deleteLeaveType(req: Request, res: Response) {
+        try {
+            const { tenantId } = (req as any).user;
+            const { id } = req.params;
+            await this.leaveService.deleteLeaveType(tenantId, parseInt(id));
+            return this.ok(res, "Leave type deleted successfully");
+        } catch (error: any) {
+            return this.internalservererror(res, error.message);
+        }
+    }
 }

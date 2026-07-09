@@ -53,6 +53,8 @@ export default class StudentHelper {
                     g.id as current_grade_id, 
                     g.name as current_grade_name, 
                     g.sequence_order as current_grade_sequence,
+                    COALESCE(vfs.financial_status, 'no_invoices') as fee_status,
+                    COALESCE(vfs.outstanding_balance, 0) as outstanding_balance,
                     (SELECT jsonb_object_agg(system_slug, external_id) 
                      FROM school.external_identity 
                      WHERE tenant_id = s.tenant_id AND entity_type = 'student' AND entity_id = s.id
@@ -61,6 +63,7 @@ export default class StudentHelper {
              LEFT JOIN school.student_enrollment se ON s.id = se.student_id AND se.status = 'active' AND se.is_deleted = FALSE
              LEFT JOIN school.classroom c ON se.classroom_id = c.id
              LEFT JOIN school.grade g ON c.grade_id = g.id
+             LEFT JOIN accounting.v_student_financial_status vfs ON s.id = vfs.student_id
              WHERE s.id = $1 AND s.tenant_id = $2 AND s.is_deleted = false`,
             [studentId, tenantId],
         );

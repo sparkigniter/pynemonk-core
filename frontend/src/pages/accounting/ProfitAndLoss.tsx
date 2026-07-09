@@ -60,8 +60,7 @@ export default function ProfitAndLoss() {
         try {
             const session = localStorage.getItem('eduerp_session');
             const token = session ? JSON.parse(session).accessToken : '';
-            
-            const response = await fetch(`${getBaseURL()}/accounting/reports/profit-loss/export/pdf?startDate=${dateRange.start}&endDate=${dateRange.end}`, {
+            const response = await fetch(`${getBaseURL()}/reports/generate/profit_loss?format=pdf&startDate=${dateRange.start}&endDate=${dateRange.end}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`

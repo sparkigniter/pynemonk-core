@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-    Clock, CheckCircle2, 
-    BookOpen, PenTool,
-    CalendarCheck, BookCheck,
-    Search, LayoutGrid, List
+     Clock, CheckCircle2, 
+     BookOpen, PenTool,
+     CalendarCheck, BookCheck,
+     Search, LayoutGrid, List,
+     Crown, Users
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as classroomApi from '../../api/classroom.api';
@@ -133,6 +134,15 @@ export default function MyClasses() {
                        <span className="text-xl font-black text-slate-800">{classrooms.length}</span>
                        <span className="text-[8px] font-black text-[var(--text-muted)] uppercase tracking-widest">Sections</span>
                    </div>
+                   {dashboardData?.myClasses && dashboardData.myClasses.length > 0 && (
+                       <>
+                           <div className="w-px h-8 bg-slate-100" />
+                           <div className="flex flex-col items-center gap-1">
+                               <span className="text-xl font-black text-amber-500">{dashboardData.myClasses.length}</span>
+                               <span className="text-[8px] font-black text-[var(--text-muted)] uppercase tracking-widest">Class Teacher</span>
+                           </div>
+                       </>
+                   )}
                    <div className="w-px h-8 bg-slate-100" />
                    <div className="flex flex-col items-center gap-1">
                        <span className="text-xl font-black text-rose-500">{dashboardData?.insights?.urgentMarking?.length || 0}</span>
@@ -148,19 +158,80 @@ export default function MyClasses() {
                         const todaySlots = dashboardData?.todaySchedule?.filter((s: any) => s.classroom_id === cls.id) || [];
                         const isMissingAttendance = todaySlots.some((s: any) => !s.attendance_taken);
                         const classAssignments = dashboardData?.allAssignments?.filter((a: any) => a.classroom_id === cls.id) || [];
+                        const isClassTeacher = dashboardData?.myClasses?.some((mc: any) => mc.id === cls.id);
+                        const studentCount = classAssignments[0]?.student_count || cls.student_count || 0;
 
                         return (
                             <div key={cls.id} className="group bg-[var(--card-bg)] rounded-[2.5rem] border border-[var(--card-border)] p-8 shadow-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-500 flex flex-col relative overflow-hidden">
-                                <div className="space-y-1 mb-8">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-2xl font-black text-slate-800 tracking-tight">{cls.name} - {cls.section}</h3>
-                                        {isMissingAttendance && <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />}
+                                {isClassTeacher && (
+                                    <div className="absolute top-0 right-0 h-24 w-24 overflow-hidden pointer-events-none z-10">
+                                        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white text-[7px] font-black uppercase tracking-[0.2em] text-center py-1.5 absolute top-[18px] right-[-32px] w-[120px] rotate-45 shadow-lg border-b border-white/20">
+                                            Class Teacher
+                                        </div>
                                     </div>
-                                    <div className="flex flex-wrap gap-1.5 pt-1">
-                                        {classAssignments.map((a: any) => (
-                                            <span key={a.id} className="px-2 py-0.5 bg-slate-50 text-[var(--text-muted)] rounded-lg text-[8px] font-black uppercase tracking-widest border border-[var(--card-border)]">{a.subject_name}</span>
-                                        ))}
+                                )}
+                                
+                                <div className="space-y-4 mb-8">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{cls.name} - {cls.section}</h3>
+                                            {isMissingAttendance && <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />}
+                                            {isClassTeacher && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-600 rounded-md text-[8px] font-black uppercase tracking-widest border border-amber-100">
+                                                    <Crown size={8} className="fill-amber-600/10" />
+                                                    Primary
+                                                </span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-4 text-[10px] font-bold text-[var(--text-muted)] pt-0.5">
+                                            {studentCount > 0 && (
+                                                <span className="flex items-center gap-1.5">
+                                                    <Users size={12} className="text-slate-400" />
+                                                    {studentCount} Students
+                                                </span>
+                                            )}
+                                            {cls.grade_name && (
+                                                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] uppercase tracking-wide">
+                                                    {cls.grade_name}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
+
+                                    {/* Display Assigned Subjects clearly */}
+                                    <div className="space-y-2">
+                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">My Assigned Subjects</span>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {classAssignments.map((a: any) => (
+                                                <span key={a.id} className="px-2.5 py-1 bg-primary/5 text-primary rounded-xl text-[9px] font-black uppercase tracking-widest border border-primary/10 shadow-sm flex items-center gap-1.5 transition-all hover:bg-primary hover:text-white hover:shadow-md hover:scale-105 duration-300">
+                                                    <BookOpen size={10} />
+                                                    {a.subject_name}
+                                                </span>
+                                            ))}
+                                            {classAssignments.length === 0 && (
+                                                <span className="text-[10px] text-slate-300 italic">No assigned subjects</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Class Teacher Info */}
+                                    {isClassTeacher ? (
+                                        <div className="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500/5 to-rose-500/5 text-amber-800 rounded-2xl border border-amber-100 shadow-sm w-full">
+                                            <div className="p-1.5 bg-amber-500/10 text-amber-600 rounded-lg"><Crown size={14} className="fill-amber-600/15" /></div>
+                                            <div>
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-amber-700 leading-none">You are Class Teacher</p>
+                                                <p className="text-[8px] text-slate-400 font-medium mt-0.5">Full administrative & schedule oversight</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        cls.teacher_first_name ? (
+                                            <div className="text-[10px] font-medium text-slate-400 bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex items-center justify-between">
+                                                <span>Class Teacher:</span>
+                                                <span className="font-bold text-slate-600">{cls.teacher_first_name} {cls.teacher_last_name}</span>
+                                            </div>
+                                        ) : null
+                                    )}
                                 </div>
 
                                 {/* Today's Context */}
@@ -239,11 +310,20 @@ export default function MyClasses() {
                             <div className="divide-y divide-slate-50">
                                 {subject.classes.map((cls: any) => {
                                     const todaySlot = dashboardData?.todaySchedule?.find((s: any) => s.classroom_id === cls.classroom_id && s.subject_id === cls.subject_id);
+                                    const isClassTeacher = dashboardData?.myClasses?.some((mc: any) => mc.id === cls.classroom_id);
+                                    
                                     return (
                                         <div key={cls.classroom_id} className="p-6 flex items-center justify-between group hover:bg-slate-50 transition-colors">
                                             <div className="flex items-center gap-8">
-                                                <div className="w-24">
-                                                    <span className="text-lg font-black text-slate-800">{cls.classroom_name}</span>
+                                                <div className="w-32 flex flex-col justify-center">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-lg font-black text-slate-800 leading-tight">{cls.classroom_name}</span>
+                                                        {isClassTeacher && (
+                                                            <span title="You are Class Teacher">
+                                                                <Crown size={12} className="text-amber-500 fill-amber-500/10 shrink-0" />
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-tight">{cls.section} Section</p>
                                                 </div>
                                                 <div className="hidden md:flex flex-col">
