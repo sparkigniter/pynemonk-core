@@ -11,12 +11,12 @@ const studentRouter = express.Router();
  * POST /api/v1/school/students
  * Register a new student (requires school admin or principal)
  */
-studentRouter.post("/", apiRateLimiter, sensitiveRateLimiter, requireAuth, requirePermission(["student:write"]), (req, res) => {
+studentRouter.post("/", apiRateLimiter, sensitiveRateLimiter, requireAuth, requirePermission(["student:admin"]), (req, res) => {
     const ctrl = container.resolve(StudentController);
     return ctrl.create(req, res);
 });
 
-studentRouter.get("/next-admission-number", apiRateLimiter, requireAuth, requirePermission(["student:write"]), (req, res) => {
+studentRouter.get("/next-admission-number", apiRateLimiter, requireAuth, requirePermission(["student:admin"]), (req, res) => {
     const ctrl = container.resolve(StudentController);
     return ctrl.getNextAdmissionNumber(req, res);
 });
@@ -103,7 +103,7 @@ studentRouter.post(
     apiRateLimiter,
     sensitiveRateLimiter,
     requireAuth,
-    requirePermission(["student:write"]),
+    requirePermission(["student:admin"]),
     (req, res) => {
         const ctrl = container.resolve(StudentController);
         return ctrl.enroll(req, res);

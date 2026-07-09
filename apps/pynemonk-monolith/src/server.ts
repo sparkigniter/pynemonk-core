@@ -14,6 +14,7 @@ import * as authModule from "pynemonk-core-auth/module";
 import * as schoolModule from "pynemonk-core-school/module";
 import * as accountingModule from "pynemonk-core-accounting/module";
 import * as systemModule from "pynemonk-core-system/module";
+import * as reportsModule from "pynemonk-core-reports/module";
 // import * as notifyModule  from "pynemonk-core-notifications/module";
 
 import path from "path";
@@ -33,6 +34,7 @@ await authModule.init();
 await schoolModule.init();
 await accountingModule.init();
 await systemModule.init();
+await reportsModule.init();
 // notifyModule.init();
 
 // ── App setup ─────────────────────────────────────────────────────────────────
@@ -66,6 +68,7 @@ app.use("/api/v1", authModule.router);
 app.use("/api/v1", schoolModule.router);
 app.use("/api/v1", accountingModule.router);
 app.use("/api/v1", systemModule.router);
+app.use("/api/v1", reportsModule.router);
 // app.use("/api/v1", notifyModule.router);
 
 // ── Health ────────────────────────────────────────────────────────────────────

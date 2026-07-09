@@ -9,6 +9,7 @@ COPY services/pynemonk-core-auth/package.json ./services/pynemonk-core-auth/
 COPY services/pynemonk-core-school/package.json ./services/pynemonk-core-school/
 COPY services/pynemonk-core-accounting/package.json ./services/pynemonk-core-accounting/
 COPY services/pynemonk-core-system/package.json     ./services/pynemonk-core-system/
+COPY services/pynemonk-core-reports/package.json    ./services/pynemonk-core-reports/
 COPY apps/pynemonk-monolith/package.json      ./apps/pynemonk-monolith/
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -19,12 +20,14 @@ COPY services/pynemonk-core-auth/ ./services/pynemonk-core-auth/
 COPY services/pynemonk-core-school/ ./services/pynemonk-core-school/
 COPY services/pynemonk-core-accounting/ ./services/pynemonk-core-accounting/
 COPY services/pynemonk-core-system/     ./services/pynemonk-core-system/
+COPY services/pynemonk-core-reports/    ./services/pynemonk-core-reports/
 COPY apps/pynemonk-monolith/      ./apps/pynemonk-monolith/
 
 RUN npm run build --workspace=services/pynemonk-core-auth
 RUN npm run build --workspace=services/pynemonk-core-school
 RUN npm run build --workspace=services/pynemonk-core-accounting
 RUN npm run build --workspace=services/pynemonk-core-system
+RUN npm run build --workspace=services/pynemonk-core-reports
 RUN npm run build --workspace=apps/pynemonk-monolith
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
@@ -48,6 +51,7 @@ COPY --from=builder /repo/services/pynemonk-core-auth/package.json      ./servic
 COPY --from=builder /repo/services/pynemonk-core-school/package.json    ./services/pynemonk-core-school/package.json
 COPY --from=builder /repo/services/pynemonk-core-accounting/package.json ./services/pynemonk-core-accounting/package.json
 COPY --from=builder /repo/services/pynemonk-core-system/package.json     ./services/pynemonk-core-system/package.json
+COPY --from=builder /repo/services/pynemonk-core-reports/package.json    ./services/pynemonk-core-reports/package.json
 COPY --from=builder /repo/apps/pynemonk-monolith/package.json           ./apps/pynemonk-monolith/package.json
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -61,10 +65,12 @@ COPY --from=builder /repo/services/pynemonk-core-auth/dist              ./servic
 COPY --from=builder /repo/services/pynemonk-core-school/dist            ./services/pynemonk-core-school/dist
 COPY --from=builder /repo/services/pynemonk-core-accounting/dist        ./services/pynemonk-core-accounting/dist
 COPY --from=builder /repo/services/pynemonk-core-system/dist            ./services/pynemonk-core-system/dist
+COPY --from=builder /repo/services/pynemonk-core-reports/dist           ./services/pynemonk-core-reports/dist
 COPY --from=builder /repo/apps/pynemonk-monolith/dist                   ./apps/pynemonk-monolith/dist
 COPY --from=builder /repo/services/pynemonk-core-auth/sql               ./services/pynemonk-core-auth/sql
 COPY --from=builder /repo/services/pynemonk-core-school/sql             ./services/pynemonk-core-school/sql
 COPY --from=builder /repo/services/pynemonk-core-accounting/sql         ./services/pynemonk-core-accounting/sql
+COPY --from=builder /repo/services/pynemonk-core-reports/sql            ./services/pynemonk-core-reports/sql
 COPY --from=builder /repo/services/pynemonk-core-school/src/scripts      ./services/pynemonk-core-school/src/scripts
 COPY --from=builder /repo/apps/pynemonk-monolith/scripts                ./apps/pynemonk-monolith/scripts
 

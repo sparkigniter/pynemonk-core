@@ -161,11 +161,12 @@ export class ExamHelper extends BaseModel {
 
     public async findPapersByExam(tenantId: number, examId: number) {
         const query = `
-            SELECT ep.*, s.name as subject_name, s.code as subject_code,
+            SELECT ep.*, s.name as subject_name, s.code as subject_code, s.grade_id as grade_id, g.name as grade_name,
                    TRIM(CONCAT(st.first_name, ' ', st.last_name)) as supervisor_name,
                    (SELECT COUNT(*) FROM school.exam_marks em WHERE em.paper_id = ep.id) as marked_count
             FROM school.exam_paper ep
             JOIN school.subject s ON ep.subject_id = s.id
+            JOIN school.grade g ON s.grade_id = g.id
             LEFT JOIN school.staff st ON ep.supervisor_id = st.id
             WHERE ep.tenant_id = $1 AND ep.exam_id = $2 AND COALESCE(ep.is_deleted, FALSE) = FALSE
             ORDER BY ep.exam_date ASC, ep.start_time ASC
@@ -256,11 +257,13 @@ export class ExamHelper extends BaseModel {
             SELECT DISTINCT
                 s.id as student_id, s.first_name, s.last_name, s.admission_no,
                 c.id as classroom_id, c.name as classroom_name, c.section as classroom_section,
+                c.grade_id as grade_id, g.name as grade_name,
                 COALESCE(es.is_excluded, FALSE) as is_excluded,
                 es.exclusion_reason
             FROM school.student s
             JOIN school.student_enrollment se ON s.id = se.student_id AND se.is_deleted = FALSE
             JOIN school.classroom c ON se.classroom_id = c.id
+            JOIN school.grade g ON c.grade_id = g.id
             LEFT JOIN school.exam_student es ON s.id = es.student_id AND es.exam_id = $2
             WHERE s.tenant_id = $1 AND s.is_deleted = FALSE
             AND (

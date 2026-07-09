@@ -47,8 +47,7 @@ export default function TrialBalance() {
         try {
             const session = localStorage.getItem('eduerp_session');
             const token = session ? JSON.parse(session).accessToken : '';
-            
-            const response = await fetch(`${getBaseURL()}/accounting/reports/trial-balance/export/pdf`, {
+            const response = await fetch(`${getBaseURL()}/reports/generate/trial_balance?format=pdf`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`

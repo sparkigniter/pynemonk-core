@@ -2,15 +2,13 @@ import { inject, injectable } from "tsyringe";
 import { Pool } from "pg";
 import JournalHelper from "./JournalHelper.js";
 import SystemMappingHelper from "./SystemMappingHelper.js";
-import ReportHelper from "./ReportHelper.js";
 
 @injectable()
 export default class YearEndService {
     constructor(
         @inject("DB") private db: Pool,
         @inject(JournalHelper) private journalHelper: JournalHelper,
-        @inject(SystemMappingHelper) private systemMapping: SystemMappingHelper,
-        @inject(ReportHelper) private reportHelper: ReportHelper
+        @inject(SystemMappingHelper) private systemMapping: SystemMappingHelper
     ) {}
 
     /**
@@ -31,8 +29,35 @@ export default class YearEndService {
             if (!fy) throw new Error("Fiscal year not found.");
             if (fy.status === 'closed') throw new Error("Fiscal year is already closed.");
 
-            // 2. Get all Revenue and Expense account balances for the period
-            const pl = await this.reportHelper.getProfitAndLoss(tenantId, { startDate: fy.start_date, endDate: fy.end_date });
+            // 2. Get all Revenue and Expense account balances for the period natively
+            const plQuery = `
+                SELECT 
+                    a.id,
+                    t.name as category,
+                    a.name as account_name,
+                    a.code,
+                    COALESCE(SUM(ji.credit), 0) - COALESCE(SUM(ji.debit), 0) as balance
+                FROM accounting.chart_of_accounts a
+                JOIN accounting.account_type t ON a.account_type_id = t.id
+                JOIN accounting.journal_item ji ON a.id = ji.account_id
+                JOIN accounting.journal_entry je ON ji.journal_entry_id = je.id
+                WHERE a.tenant_id = $1 AND t.name IN ('Revenue', 'Expense') AND je.entry_date BETWEEN $2 AND $3
+                GROUP BY a.id, t.name, a.name, a.code
+                ORDER BY t.name DESC, a.code ASC
+            `;
+            const plRes = await client.query(plQuery, [tenantId, fy.start_date, fy.end_date]);
+            
+            const revenue = plRes.rows.filter((r: any) => r.category === 'Revenue');
+            const expenses = plRes.rows.filter((r: any) => r.category === 'Expense');
+            
+            const totalRevenue = revenue.reduce((sum: number, r: any) => sum + parseFloat(r.balance), 0);
+            const totalExpenses = expenses.reduce((sum: number, r: any) => sum + Math.abs(parseFloat(r.balance)), 0);
+            
+            const pl = {
+                revenue,
+                expenses,
+                netProfit: totalRevenue - totalExpenses
+            };
             const netProfit = pl.netProfit;
 
             // 3. Get Retained Earnings Account

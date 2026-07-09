@@ -12,7 +12,7 @@ export class ReportCardService {
     async getReportCardData(tenantId: number, examId: number, studentId: number) {
         const query = `
             SELECT 
-                s.first_name, s.last_name, s.admission_number,
+                s.first_name, s.last_name, s.admission_no,
                 c.name as classroom_name,
                 g.name as grade_name,
                 e.name as exam_name,
@@ -25,29 +25,29 @@ export class ReportCardService {
                 em.is_absent,
                 em.remarks,
                 ay.name as academic_year
-            FROM school.student s
+                        FROM school.student s
             JOIN school.student_enrollment se ON s.id = se.student_id
             JOIN school.classroom c ON se.classroom_id = c.id
             JOIN school.grade g ON c.grade_id = g.id
             JOIN school.academic_year ay ON se.academic_year_id = ay.id
             CROSS JOIN school.exam e
             JOIN school.exam_paper ep ON e.id = ep.exam_id
-            JOIN school.subject sub ON ep.subject_id = sub.id
+            JOIN school.subject sub ON ep.subject_id = sub.id AND sub.grade_id = g.id
             LEFT JOIN school.exam_marks em ON ep.id = em.paper_id AND em.student_id = s.id
             WHERE s.tenant_id = $1 AND e.id = $2 AND s.id = $3
-              AND se.is_active = TRUE
+              AND se.status = 'active' AND se.is_deleted = FALSE
         `;
         
         const res = await this.pool.query(query, [tenantId, examId, studentId]);
         
         if (res.rows.length === 0) return null;
-
+ 
         const first = res.rows[0];
         const report = {
             student: {
                 id: studentId,
                 name: `${first.first_name} ${first.last_name}`,
-                admission_no: first.admission_number,
+                admission_no: first.admission_no,
                 classroom: first.classroom_name,
                 grade: first.grade_name,
                 academic_year: first.academic_year
@@ -107,5 +107,46 @@ export class ReportCardService {
         }
         
         return reportCards;
+    }
+
+    async getReportSettings(tenantId: number) {
+        const query = `
+            SELECT value FROM school.settings 
+            WHERE tenant_id = $1 AND key = 'report_card_template'
+        `;
+        const res = await this.pool.query(query, [tenantId]);
+        if (res.rows.length === 0) {
+            return {
+                theme: 'indigo',
+                title: 'Academic Achievement Record',
+                showLogo: true,
+                showStudentInfo: true,
+                showAggregate: true,
+                showRemarks: true,
+                showSignatures: true,
+                teacherLabel: 'Class Teacher',
+                principalLabel: 'Principal',
+                parentLabel: 'Parent'
+            };
+        }
+        try {
+            return JSON.parse(res.rows[0].value);
+        } catch {
+            return res.rows[0].value;
+        }
+    }
+
+    async saveReportSettings(tenantId: number, config: any) {
+        const value = typeof config === 'string' ? config : JSON.stringify(config);
+        const query = `
+            INSERT INTO school.settings (tenant_id, key, value)
+            VALUES ($1, 'report_card_template', $2)
+            ON CONFLICT (tenant_id, key) DO UPDATE SET
+                value = EXCLUDED.value,
+                updated_at = NOW()
+            RETURNING *
+        `;
+        const res = await this.pool.query(query, [tenantId, value]);
+        return res.rows[0];
     }
 }

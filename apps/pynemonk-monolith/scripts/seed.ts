@@ -36,10 +36,22 @@ const CORE_SUBJECTS = ["Mathematics", "Science", "English Literature", "Social S
 
 // Standard role templateSync logic in Auth to make sure everything has correct state
 async function ensureRoleTemplates(client: any) {
+    // Ensure student:admin scope and permission records exist
+    await client.query(`
+        INSERT INTO auth.scope (value, description)
+        VALUES ('student:admin', 'Administrative management of students and onboarding workflows')
+        ON CONFLICT (value) DO NOTHING
+    `);
+    await client.query(`
+        INSERT INTO auth.permission (key, description)
+        VALUES ('student:admin', 'Administer students and onboarding pipelines')
+        ON CONFLICT (key) DO NOTHING
+    `);
+
     const templates = [
-        { slug: "school_admin", name: "School Administrator", description: "School operations staff", tier: 2, is_system: true, data_scope: '["billing:read","billing:write","settings:read","settings:write","plan:change","user:invite","user:deactivate","student:read","student:write","student.basic:read","student.contact:read","student.academic:read","student.academic:write","student.attendance:read","student.attendance:write","student.disciplinary:read","student.disciplinary:write","student.wellbeing:read","student.wellbeing:write","student.health:read","student.health:write","student.medical_history:read","student.medical_history:write","staff:read","staff:write","staff.academic:read","staff.leave:read","staff.leave:write","staff.payroll:read","staff.payroll:write","class:read","class:write","timetable:read","timetable:write","assignment:write","fee:read","fee:write","fee.collection:write","fee.summary:read","report:read","report:export","report.class:read","report.financial:read","report.financial:export","announcement:read","announcement:write","teacher.contact:read","parent:read","parent:write","library:read","library:write","visitor:write","self.academic:read","self.attendance:read","self.timetable:read","self.assignment:read","self.fee:read","child.academic:read","child.attendance:read","child.timetable:read","child.fee:read","child.disciplinary:read","coa:read","coa:write","journal:read","journal:write","invoice:read","invoice:write","payment:read","payment:write","accounting:read","assignment:read","exam:read","exam:write","mark:read","mark:write","teacher_note:read","teacher_note:write","system:manage","system:settings","fee:delete","assignment:delete","timetable:delete","report:write","staff.directory:read","student.directory:read"]' },
+        { slug: "school_admin", name: "School Administrator", description: "School operations staff", tier: 2, is_system: true, data_scope: '["billing:read","billing:write","settings:read","settings:write","plan:change","user:invite","user:deactivate","student:read","student:admin","student:write","student.basic:read","student.contact:read","student.academic:read","student.academic:write","student.attendance:read","student.attendance:write","student.disciplinary:read","student.disciplinary:write","student.wellbeing:read","student.wellbeing:write","student.health:read","student.health:write","student.medical_history:read","student.medical_history:write","staff:read","staff:write","staff.academic:read","staff.leave:read","staff.leave:write","staff.payroll:read","staff.payroll:write","class:read","class:write","timetable:read","timetable:write","assignment:write","fee:read","fee:write","fee.collection:write","fee.summary:read","report:read","report:export","report.class:read","report.financial:read","report.financial:export","announcement:read","announcement:write","teacher.contact:read","parent:read","parent:write","library:read","library:write","visitor:write","self.academic:read","self.attendance:read","self.timetable:read","self.assignment:read","self.fee:read","child.academic:read","child.attendance:read","child.timetable:read","child.fee:read","child.disciplinary:read","coa:read","coa:write","journal:read","journal:write","invoice:read","invoice:write","payment:read","payment:write","accounting:read","assignment:read","exam:read","exam:write","mark:read","mark:write","teacher_note:read","teacher_note:write","system:manage","system:settings","fee:delete","assignment:delete","timetable:delete","report:write","staff.directory:read","student.directory:read"]' },
         { slug: "principal", name: "Principal", description: "Head of the school", tier: 2, is_system: true, data_scope: '["student:read","student.academic:read","student.attendance:read","staff:read","class:read","exam:read","report:read"]' },
-        { slug: "teacher", name: "Teacher", description: "Subject teacher", tier: 3, is_system: true, data_scope: '["student:read","student.academic:read","student.academic:write","student.attendance:read","student.attendance:write","class:read","assignment:read","assignment:write","exam:read","exam:write","mark:read","mark:write","report.class:read","teacher_note:read","teacher_note:write","timetable:read","staff:read","staff.academic:read"]' },
+        { slug: "teacher", name: "Teacher", description: "Subject teacher", tier: 3, is_system: true, data_scope: '["student:read","student:write","student.academic:read","student.academic:write","student.attendance:read","student.attendance:write","class:read","assignment:read","assignment:write","exam:read","exam:write","mark:read","mark:write","report.class:read","teacher_note:read","teacher_note:write","timetable:read","staff:read","staff.academic:read"]' },
         { slug: "accountant", name: "Accountant", description: "Manages financial operations", tier: 3, is_system: true, data_scope: '["coa:read","coa:write","journal:read","journal:write","invoice:read","invoice:write","payment:read","payment:write","accounting:read","accounting:write","fee:read","fee:write","fee.collection:write","fee.summary:read","student:read","report.financial:read","report.financial:export","staff.payroll:read","settings:read"]' },
         { slug: "parent", name: "Parent", description: "Parent / Guardian", tier: 4, is_system: true, data_scope: '["student:read","student.academic:read","student.attendance:read","timetable:read","announcement:read","report:read"]' },
         { slug: "student", name: "Student", description: "Enrolled student", tier: 5, is_system: true, data_scope: '["student.academic:read","student.attendance:read","timetable:read","announcement:read"]' }
@@ -117,20 +129,15 @@ async function seed() {
                 school.academic_year,
                 school.grade,
                 school.certificate_template,
-                school.sequence_tracker,
                 school.admission_config,
-                school.document,
                 school.global_board,
                 school.global_grade,
                 school.global_subject,
                 school.global_syllabus,
+                school.fee_discount,
                 accounting.chart_of_accounts,
                 accounting.fee_category,
                 accounting.late_fee_policy,
-                accounting.fee_discount,
-                accounting.tax_config,
-                accounting.expense_category,
-                accounting.budget,
                 accounting.fiscal_year,
                 accounting.partner,
                 accounting.invoice,
@@ -141,11 +148,7 @@ async function seed() {
                 accounting.vendor_bill,
                 accounting.bill_payment,
                 accounting.bill_payment_allocation,
-                accounting.ledger,
-                accounting.settings,
-                accounting.expense,
-                accounting.salary_slip,
-                accounting.salary_component
+                accounting.settings
             CASCADE;
         `);
 
@@ -1086,13 +1089,7 @@ async function seed() {
         );
         const acctCategoryId = acctCategoryRes.rows[0].id;
 
-        const acctStrucRes = await client.query(
-            `INSERT INTO accounting.fee_structure (tenant_id, academic_year_id, fee_category_id, amount)
-             VALUES ($1, $2, $3, 10000.00)
-             RETURNING id`,
-            [tenantId, ayCurrentId, acctCategoryId]
-        );
-        const acctStructureId = acctStrucRes.rows[0].id;
+        const acctStructureId = structureId;
 
         // Installment items (Term 1 & Term 2 installments)
         const item1Res = await client.query(

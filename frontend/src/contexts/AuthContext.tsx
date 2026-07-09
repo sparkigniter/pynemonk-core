@@ -239,10 +239,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(null);
     }, [session]);
 
-    const can = useCallback((permission: string) => {
+    const can = useCallback((requestedPermission: string) => {
         if (!session?.user?.permissions) return false;
-        // Support exact match or prefix match (e.g., 'exam' matches 'exam:write')
-        return session.user.permissions.some(p => p === permission || p.startsWith(`${permission}:`));
+        
+        // 1. Direct match (exact permission match)
+        if (session.user.permissions.includes(requestedPermission)) return true;
+
+        // 2. Parse the requested permission (e.g. 'student:write')
+        const [reqResource, reqAction] = requestedPermission.split(':');
+        if (!reqAction) {
+            // Fallback for simple scopes
+            return session.user.permissions.some(p => p === requestedPermission || p.startsWith(`${requestedPermission}:`));
+        }
+
+        // 3. Implied scope matching
+        const ACTION_WEIGHTS: Record<string, number> = {
+            'admin': 100,
+            'write': 50,
+            'read': 10,
+        };
+
+        const reqWeight = ACTION_WEIGHTS[reqAction] || 0;
+        return session.user.permissions.some(userPerm => {
+            const [userResource, userAction] = userPerm.split(':');
+            if (userResource !== reqResource) return false;
+            const userWeight = ACTION_WEIGHTS[userAction] || 0;
+            return userWeight >= reqWeight;
+        });
     }, [session]);
 
     return (

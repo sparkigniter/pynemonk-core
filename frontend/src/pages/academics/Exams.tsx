@@ -114,6 +114,13 @@ export default function Exams() {
           {can('exam:write') && (
             <>
               <button
+                onClick={() => navigate('/exams/report-builder')}
+                className="btn-ghost px-6 flex items-center gap-2 border border-slate-200"
+              >
+                <Settings size={14} />
+                Configure Report Cards
+              </button>
+              <button
                 onClick={() => setIsTermModalOpen(true)}
                 className="btn-ghost px-6"
               >

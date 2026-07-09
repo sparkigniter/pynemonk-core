@@ -16,7 +16,7 @@ export default class LeaveHelper {
 
     public async getLeaveTypes(tenantId: number): Promise<any[]> {
         const res = await this.db.query(
-            `SELECT * FROM school.leave_type WHERE tenant_id = $1 ORDER BY name ASC`,
+            `SELECT * FROM school.leave_type WHERE tenant_id = $1 AND is_deleted = FALSE ORDER BY name ASC`,
             [tenantId]
         );
         return res.rows;
@@ -71,6 +71,14 @@ export default class LeaveHelper {
              SET status = $1, approved_by = $2, remarks = $3, approved_at = NOW(), updated_at = NOW()
              WHERE id = $4 AND tenant_id = $5 RETURNING *`,
             [data.status, data.approved_by, data.remarks, id, tenantId]
+        );
+        return res.rows[0];
+    }
+
+    public async deleteLeaveType(tenantId: number, id: number): Promise<any> {
+        const res = await this.db.query(
+            `UPDATE school.leave_type SET is_deleted = TRUE WHERE id = $1 AND tenant_id = $2 RETURNING *`,
+            [id, tenantId]
         );
         return res.rows[0];
     }

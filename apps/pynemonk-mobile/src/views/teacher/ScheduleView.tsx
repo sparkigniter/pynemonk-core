@@ -3,6 +3,40 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Clock, CalendarDays, ChevronRight, CheckCircle2, FileSpreadsheet, BookOpen } from 'lucide-react'
 import { TimetableItem, Assignment } from '../../types'
 
+const getISTTime = () => {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    const parts = formatter.formatToParts(new Date());
+    const hour = (parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)) % 24;
+    const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+    return { hour, minute };
+  } catch (e) {
+    const now = new Date();
+    return { hour: now.getHours(), minute: now.getMinutes() };
+  }
+};
+
+const getISTDay = () => {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      weekday: 'short'
+    });
+    const weekdayStr = formatter.format(new Date());
+    const mapping: Record<string, number> = {
+      'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7
+    };
+    return mapping[weekdayStr] || new Date().getDay() || 7;
+  } catch (e) {
+    return new Date().getDay() || 7;
+  }
+};
+
 export const ScheduleView = ({ 
   timetable, 
   assignments, 
@@ -16,7 +50,7 @@ export const ScheduleView = ({
   const [activeItem, setActiveItem] = useState<TimetableItem | null>(null)
   const [showActions, setShowActions] = useState(false)
 
-  const today = new Date().getDay() || 7
+  const today = getISTDay()
   const filteredTimetable = useMemo(() => {
     let items = timetable.filter(t => t.day_of_week === today)
     if (selectedClassId !== 'all') {
@@ -26,8 +60,8 @@ export const ScheduleView = ({
   }, [timetable, selectedClassId, today, assignments])
 
   const ongoingItem = useMemo(() => {
-    const now = new Date()
-    const currentTime = now.getHours() * 60 + now.getMinutes()
+    const { hour, minute } = getISTTime()
+    const currentTime = hour * 60 + minute
     return filteredTimetable.find(t => {
       const [sh, sm] = t.start_time.split(':').map(Number)
       const [eh, em] = t.end_time.split(':').map(Number)
@@ -38,8 +72,8 @@ export const ScheduleView = ({
   }, [filteredTimetable])
 
   const nextItem = useMemo(() => {
-    const now = new Date()
-    const currentTime = now.getHours() * 60 + now.getMinutes()
+    const { hour, minute } = getISTTime()
+    const currentTime = hour * 60 + minute
     return filteredTimetable.find(t => {
       const [sh, sm] = t.start_time.split(':').map(Number)
       const start = sh * 60 + sm
@@ -124,7 +158,14 @@ export const ScheduleView = ({
         ) : (
           filteredTimetable.map((item, idx) => {
             const isOngoing = ongoingItem?.id === item.id
-            const isPast = !isOngoing && item.end_time.localeCompare(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })) < 0
+            
+            // Robust numeric comparison using timezone-robust IST time
+            const { hour: istH, minute: istM } = getISTTime()
+            const currentTime = istH * 60 + istM
+            const [eh, em] = item.end_time.split(':').map(Number)
+            const endTimeMinutes = eh * 60 + em
+            const isPast = !isOngoing && endTimeMinutes < currentTime
+
             const color = subjectColors[item.subject_name] || '#64748b'
 
             return (

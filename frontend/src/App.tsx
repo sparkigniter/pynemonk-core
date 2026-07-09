@@ -20,6 +20,7 @@ import LogViewer from './pages/admin/LogViewer';
 import AdminFinance from './pages/admin/AdminFinance';
 import BulkFeeAllocation from './pages/finance/BulkFeeAllocation';
 import ReportCardView from './pages/academics/ReportCardView';
+import ReportCardBuilder from './pages/academics/ReportCardBuilder';
 import StudentTimetable from './pages/academics/StudentTimetable';
 import LMSLibrary from './pages/lms/LMSLibrary';
 import AcademicPlanner from './pages/academics/AcademicPlanner';
@@ -38,6 +39,7 @@ import Courses from './pages/academics/Courses';
 import Classrooms from './pages/academics/Classrooms';
 import TeacherDiary from './pages/academics/TeacherDiary';
 import Homework from './pages/academics/Homework';
+import HomeworkForm from './pages/academics/HomeworkForm';
 import Reports from './pages/admin/Reports';
 import Integrations from './pages/admin/Integrations';
 import IAM from './pages/admin/IAM';
@@ -138,6 +140,8 @@ export default function App() {
           <Route path="classrooms" element={<Classrooms />} />
           <Route path="teacher-diary" element={<TeacherDiary />} />
           <Route path="homework" element={<Homework />} />
+          <Route path="homework/new" element={<HomeworkForm />} />
+          <Route path="homework/:id/edit" element={<HomeworkForm />} />
           <Route path="notice-board" element={<NoticeBoard />} />
           <Route path="communications" element={<Communications />} />
           <Route path="reports" element={<Reports />} />
@@ -155,6 +159,7 @@ export default function App() {
           <Route path="onboarding/teachers" element={<Faculty />} />
           <Route path="admin/finance" element={<Navigate to="/fee-management" replace />} />
           <Route path="exams/:examId/students/:studentId/report" element={<ReportCardView />} />
+          <Route path="exams/report-builder" element={<ReportCardBuilder />} />
           <Route path="student/timetable" element={<StudentTimetable />} />
           <Route path="lms/library" element={<LMSLibrary />} />
           <Route path="academic-planner" element={<AcademicPlanner />} />

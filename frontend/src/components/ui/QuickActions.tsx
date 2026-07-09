@@ -21,7 +21,7 @@ const QuickActions: React.FC = () => {
 
     const allActions: Action[] = [
         // Admin Actions
-        { label: 'Register Student', icon: UserPlus, path: '/students/register', scope: 'student:write', roles: ['admin', 'school_admin'] },
+        { label: 'Register Student', icon: UserPlus, path: '/students/register', scope: 'student:admin', roles: ['admin', 'school_admin'] },
         { label: 'Hire Staff', icon: UserPlus, path: '/teachers/register', scope: 'staff:write', roles: ['admin', 'school_admin'] },
         { label: 'Fee Entry', icon: DollarSign, path: '/finance', scope: 'finance:write', roles: ['admin', 'school_admin'] },
         { label: 'School Notice', icon: Bell, path: '/settings', scope: 'announcement:write', roles: ['admin', 'school_admin'] },

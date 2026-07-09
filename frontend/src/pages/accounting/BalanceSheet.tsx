@@ -72,8 +72,7 @@ export default function BalanceSheet() {
         try {
             const session = localStorage.getItem('eduerp_session');
             const token = session ? JSON.parse(session).accessToken : '';
-            
-            const response = await fetch(`${getBaseURL()}/accounting/reports/balance-sheet/export/pdf?date=${asOfDate}`, {
+            const response = await fetch(`${getBaseURL()}/reports/generate/balance_sheet?format=pdf&endDate=${asOfDate}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`

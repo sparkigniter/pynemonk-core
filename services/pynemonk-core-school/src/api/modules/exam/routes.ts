@@ -38,6 +38,17 @@ router.post("/", apiRateLimiter, sensitiveRateLimiter, requirePermission(["exam:
     return controller.createExam(req, res);
 });
 
+// Report Card Template & Settings Routes (Concrete routes must be placed above dynamic /:id)
+router.get("/report-settings", apiRateLimiter, requirePermission(["exam:read"]), (req, res) => {
+    const controller = container.resolve(ReportCardController);
+    return controller.getReportSettings(req, res);
+});
+
+router.post("/report-settings", apiRateLimiter, sensitiveRateLimiter, requirePermission(["exam:write"]), (req, res) => {
+    const controller = container.resolve(ReportCardController);
+    return controller.saveReportSettings(req, res);
+});
+
 router.get("/:id", apiRateLimiter, requirePermission(["exam:read", "student.academic:read", "self.academic:read", "child.academic:read"]), (req, res) => {
     const controller = container.resolve(ExamController);
     return controller.getExam(req, res);
@@ -118,6 +129,11 @@ router.get("/performance/:studentId", apiRateLimiter, requirePermission(["exam:r
 router.get("/:examId/students/:studentId/report", apiRateLimiter, requirePermission(["exam:read", "student.academic:read", "self.academic:read", "child.academic:read"]), (req, res) => {
     const controller = container.resolve(ReportCardController);
     return controller.getStudentReport(req, res);
+});
+
+router.get("/:examId/students/:studentId/report/pdf", apiRateLimiter, requirePermission(["exam:read", "student.academic:read", "self.academic:read", "child.academic:read"]), (req, res) => {
+    const controller = container.resolve(ReportCardController);
+    return controller.downloadStudentReportPDF(req, res);
 });
 
 router.get("/:examId/classrooms/:classroomId/reports", apiRateLimiter, requirePermission(["exam:read", "student.academic:read"]), (req, res) => {

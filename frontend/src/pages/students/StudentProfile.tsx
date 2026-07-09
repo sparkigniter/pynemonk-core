@@ -12,7 +12,8 @@ import {
     Layers, Activity, ClipboardList, AlertCircle, LogOut
 } from 'lucide-react';
 import { 
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    BarChart, Bar, Cell
 } from 'recharts';
 import * as studentApi from '../../api/student.api';
 import * as gradeApi from '../../api/grade.api';
@@ -178,6 +179,42 @@ export default function StudentProfile() {
         return 'Needs Attention';
     };
 
+    const getSubjectAverages = () => {
+        if (!performance.length || !performance[selectedYearIdx]) return [];
+        const subjectsMap: Record<string, { subject: string; code: string; sum: number; count: number }> = {};
+        
+        Object.values(performance[selectedYearIdx].terms || {}).forEach((term: any) => {
+            Object.values(term.exams || {}).forEach((exam: any) => {
+                exam.subjects.forEach((s: any) => {
+                    if (s.marks !== null) {
+                        if (!subjectsMap[s.code]) {
+                            subjectsMap[s.code] = { subject: s.subject, code: s.code, sum: 0, count: 0 };
+                        }
+                        subjectsMap[s.code].sum += (s.marks / s.max) * 100;
+                        subjectsMap[s.code].count++;
+                    }
+                });
+            });
+        });
+
+        return Object.values(subjectsMap).map(s => ({
+            name: s.subject,
+            code: s.code,
+            score: Math.round(s.sum / s.count)
+        }));
+    };
+
+    const handleGradeClick = (gradeName: string) => {
+        const idx = performance.findIndex(p => p.year.toLowerCase().includes(gradeName.toLowerCase()));
+        if (idx !== -1) {
+            setSelectedYearIdx(idx);
+            setActiveTab('performance');
+            notify('success', 'Switched Grade View', `Now viewing complete performance details for ${gradeName}.`);
+        } else {
+            notify('warning', 'No Performance Data', `We couldn't find active marksheets or exam records for ${gradeName} in this academic cycle.`);
+        }
+    };
+
     const tabs = [
         { id: 'journey', label: 'Class History', icon: Layers },
         { id: 'performance', label: 'Marks & Exams', icon: Activity },
@@ -248,31 +285,33 @@ export default function StudentProfile() {
                         </button>
                     )}
                     {can('student:write') && (
+                        <button 
+                            onClick={() => {
+                                setEditForm({
+                                    first_name: student.first_name,
+                                    last_name: student.last_name,
+                                    email: student.email,
+                                    phone: student.phone,
+                                    address: student.address,
+                                    gender: student.gender,
+                                    blood_group: student.blood_group,
+                                    date_of_birth: student.date_of_birth ? new Date(student.date_of_birth).toISOString().split('T')[0] : '',
+                                    admission_date: student.admission_date ? new Date(student.admission_date).toISOString().split('T')[0] : '',
+                                    religion: student.religion,
+                                    nationality: student.nationality,
+                                    mother_tongue: student.mother_tongue,
+                                    classroom_id: student.classroom_id,
+                                    academic_year_id: student.enrollment_year_id || (grades.length > 0 ? grades[0].id : '')
+                                });
+                                setShowEditModal(true);
+                            }}
+                            className="bg-[var(--card-bg)] text-[var(--text-main)] px-6 py-3 rounded-2xl text-xs font-black hover:bg-[var(--background)] transition-all shadow-sm border border-[var(--card-border)] active:scale-95"
+                        >
+                            Edit Profile
+                        </button>
+                    )}
+                    {can('student:admin') && (
                         <>
-                            <button 
-                                onClick={() => {
-                                    setEditForm({
-                                        first_name: student.first_name,
-                                        last_name: student.last_name,
-                                        email: student.email,
-                                        phone: student.phone,
-                                        address: student.address,
-                                        gender: student.gender,
-                                        blood_group: student.blood_group,
-                                        date_of_birth: student.date_of_birth ? new Date(student.date_of_birth).toISOString().split('T')[0] : '',
-                                        admission_date: student.admission_date ? new Date(student.admission_date).toISOString().split('T')[0] : '',
-                                        religion: student.religion,
-                                        nationality: student.nationality,
-                                        mother_tongue: student.mother_tongue,
-                                        classroom_id: student.classroom_id,
-                                        academic_year_id: student.enrollment_year_id || (grades.length > 0 ? grades[0].id : '')
-                                    });
-                                    setShowEditModal(true);
-                                }}
-                                className="bg-[var(--card-bg)] text-[var(--text-main)] px-6 py-3 rounded-2xl text-xs font-black hover:bg-[var(--background)] transition-all shadow-sm border border-[var(--card-border)] active:scale-95"
-                            >
-                                Edit Profile
-                            </button>
                             <button 
                                 onClick={() => navigate(`/students/designer/${student.id}?type=TRANSFER_CERTIFICATE`)}
                                 className="bg-rose-50 text-rose-600 px-6 py-3 rounded-2xl text-xs font-black hover:bg-rose-100 transition-all border border-rose-100 active:scale-95 flex items-center gap-2"
@@ -419,10 +458,15 @@ export default function StudentProfile() {
  
                                 <div className="relative space-y-12 pl-4">
                                     <div className="absolute left-[19px] top-6 bottom-6 w-1 bg-[var(--background)] rounded-full" />
-                                    {grades.map((grade) => {
-                                        const isPassed = grade.sequence_order < (student.current_grade_sequence || 0);
-                                        const isCurrent = grade.id === student.current_grade_id;
-                                        const stats = getGradeStats(grade.name);
+                                    {grades
+                                        .filter(grade => {
+                                            if (!student.current_grade_id) return true;
+                                            return grade.sequence_order <= (student.current_grade_sequence || 0);
+                                        })
+                                        .map((grade) => {
+                                            const isPassed = grade.sequence_order < (student.current_grade_sequence || 0);
+                                            const isCurrent = grade.id === student.current_grade_id;
+                                            const stats = getGradeStats(grade.name);
 
                                         return (
                                             <div key={grade.id} className={`flex items-start gap-8 group ${!isPassed && !isCurrent ? 'opacity-40 grayscale' : ''}`}>
@@ -430,7 +474,10 @@ export default function StudentProfile() {
                                                     ${isPassed ? 'bg-success/100 text-white' : isCurrent ? 'bg-primary text-white scale-125 ring-8 ring-primary/5 rotate-3 group-hover:rotate-0' : 'bg-[var(--card-bg)] text-slate-200 border-[var(--card-border)]'}`}>
                                                     {isPassed ? <CheckCircle2 size={18} /> : isCurrent ? <TrendingUp size={18} /> : <Circle size={18} />}
                                                 </div>
-                                                <div className={`flex-1 p-6 rounded-[2.5rem] border transition-all duration-500 relative overflow-hidden ${isCurrent ? 'bg-surface-dark text-white shadow-2xl border-slate-800' : 'bg-[var(--background)] border-[var(--card-border)]'}`}>
+                                                <div 
+                                                    onClick={() => handleGradeClick(grade.name)}
+                                                    className={`flex-1 p-6 rounded-[2.5rem] border transition-all duration-500 relative overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-0.5 ${isCurrent ? 'bg-surface-dark text-white shadow-2xl border-slate-800' : 'bg-[var(--background)] border-[var(--card-border)]'}`}
+                                                >
                                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-3">
@@ -452,7 +499,10 @@ export default function StudentProfile() {
                                                                 <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${isCurrent ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>Standing</p>
                                                                 <p className="text-lg font-black">{stats.rank}</p>
                                                             </div>
-                                                            <button className={`p-3 rounded-xl transition-all ${isCurrent ? 'bg-primary text-white hover:bg-primary/80' : 'bg-[var(--card-bg)] text-[var(--text-muted)] hover:text-primary border border-[var(--card-border)]'}`}>
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); handleGradeClick(grade.name); }}
+                                                                className={`p-3 rounded-xl transition-all ${isCurrent ? 'bg-primary text-white hover:bg-primary/80' : 'bg-[var(--card-bg)] text-[var(--text-muted)] hover:text-primary border border-[var(--card-border)]'}`}
+                                                            >
                                                                 <ArrowUpRight size={18} />
                                                             </button>
                                                         </div>
@@ -483,43 +533,138 @@ export default function StudentProfile() {
 
                                 {performance.length > 0 && performance[selectedYearIdx] ? (
                                     <div className="space-y-10">
-                                        <div className="bg-[var(--background)] p-8 rounded-[2.5rem] border border-[var(--card-border)]">
-                                            <div className="flex items-center justify-between mb-8">
-                                                <h4 className="text-sm font-black uppercase tracking-widest text-[var(--text-main)] flex items-center gap-2">
-                                                    <TrendingUp size={16} className="text-primary" />
-                                                    Score Progression Trend
-                                                </h4>
-                                            </div>
-                                            <div className="h-[250px] w-full">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <LineChart data={Object.values(performance[selectedYearIdx].terms).map((t: any) => {
-                                                        let sum = 0;
-                                                        let count = 0;
-                                                        Object.values(t.exams).forEach((exam: any) => {
-                                                            exam.subjects.forEach((s: any) => {
-                                                                if (s.marks !== null) {
-                                                                    sum += (s.marks / s.max) * 100;
-                                                                    count++;
-                                                                }
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            {/* Score Progression Line Chart */}
+                                            <div className="bg-[var(--card-bg)] p-8 rounded-[2.5rem] border border-[var(--card-border)]">
+                                                <div className="flex items-center justify-between mb-8">
+                                                    <h4 className="text-sm font-black uppercase tracking-widest text-[var(--text-main)] flex items-center gap-2">
+                                                        <TrendingUp size={16} className="text-primary" />
+                                                        Score Progression Trend
+                                                    </h4>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">Term Averages</span>
+                                                </div>
+                                                <div className="h-[250px] w-full">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <LineChart data={Object.values(performance[selectedYearIdx].terms).map((t: any) => {
+                                                            let sum = 0;
+                                                            let count = 0;
+                                                            Object.values(t.exams).forEach((exam: any) => {
+                                                                exam.subjects.forEach((s: any) => {
+                                                                    if (s.marks !== null) {
+                                                                        sum += (s.marks / s.max) * 100;
+                                                                        count++;
+                                                                    }
+                                                                });
                                                             });
-                                                        });
-                                                        return {
-                                                            name: t.name,
-                                                            score: count > 0 ? Math.round(sum / count) : 0
-                                                        };
-                                                    })}>
-                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} dy={10} />
-                                                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} domain={[0, 100]} />
-                                                        <Tooltip 
-                                                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                                            labelStyle={{ fontWeight: 900, marginBottom: '4px' }}
-                                                        />
-                                                        <Line type="monotone" dataKey="score" stroke="var(--primary)" strokeWidth={4} dot={{ r: 6, fill: 'var(--primary)', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
-                                                    </LineChart>
-                                                </ResponsiveContainer>
+                                                            return {
+                                                                name: t.name,
+                                                                score: count > 0 ? Math.round(sum / count) : 0
+                                                            };
+                                                        })}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} dy={10} />
+                                                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} domain={[0, 100]} />
+                                                            <Tooltip 
+                                                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                                                labelStyle={{ fontWeight: 900, marginBottom: '4px' }}
+                                                            />
+                                                            <Line type="monotone" dataKey="score" stroke="var(--primary)" strokeWidth={4} dot={{ r: 6, fill: 'var(--primary)', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
+                                                        </LineChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+
+                                            {/* Subject-Wise Bar Chart */}
+                                            <div className="bg-[var(--card-bg)] p-8 rounded-[2.5rem] border border-[var(--card-border)]">
+                                                <div className="flex items-center justify-between mb-8">
+                                                    <h4 className="text-sm font-black uppercase tracking-widest text-[var(--text-main)] flex items-center gap-2">
+                                                        <Target size={16} className="text-primary" />
+                                                        Subject-Wise Analysis
+                                                    </h4>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">Subject Averages</span>
+                                                </div>
+                                                <div className="h-[250px] w-full">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <BarChart data={getSubjectAverages()}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                                            <XAxis dataKey="code" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} dy={10} />
+                                                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} domain={[0, 100]} />
+                                                            <Tooltip 
+                                                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                                                labelStyle={{ fontWeight: 900, marginBottom: '4px' }}
+                                                            />
+                                                            <Bar dataKey="score" radius={[8, 8, 0, 0]} maxBarSize={40}>
+                                                                {getSubjectAverages().map((entry, index) => {
+                                                                    let color = "#10b981"; // emerald for >= 75
+                                                                    if (entry.score < 50) color = "#ef4444"; // rose for < 50
+                                                                    else if (entry.score < 75) color = "#4f46e5"; // indigo/primary for 50-75
+                                                                    return <Cell key={`cell-${index}`} fill={color} />;
+                                                                })}
+                                                            </Bar>
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                </div>
                                             </div>
                                         </div>
+
+                                        {/* Attendance Insights & Patterns Hub */}
+                                        {attendance && (
+                                            <div className="bg-[var(--card-bg)] p-8 rounded-[2.5rem] border border-[var(--card-border)] space-y-8">
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                    <div>
+                                                        <h4 className="text-sm font-black uppercase tracking-widest text-[var(--text-main)] flex items-center gap-2">
+                                                            <Calendar size={16} className="text-primary" />
+                                                            Attendance Insights & Behavioral Patterns
+                                                        </h4>
+                                                        <p className="text-[10px] font-medium text-[var(--text-muted)] mt-1">Detailed analysis of student presence and behavioral engagement risk.</p>
+                                                    </div>
+                                                    
+                                                    {/* Risk Warning Logic */}
+                                                    {attendance.absent > 10 ? (
+                                                        <div className="px-3 py-1.5 bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-wider rounded-xl border border-rose-100 flex items-center gap-1.5 shrink-0">
+                                                            <AlertCircle size={14} className="animate-bounce" /> Elevated Absence Risk
+                                                        </div>
+                                                    ) : attendance.late > 5 ? (
+                                                        <div className="px-3 py-1.5 bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-wider rounded-xl border border-amber-100 flex items-center gap-1.5 shrink-0">
+                                                            <Info size={14} /> Attention: Late Pattern Detected
+                                                        </div>
+                                                    ) : (
+                                                        <div className="px-3 py-1.5 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-wider rounded-xl border border-emerald-100 flex items-center gap-1.5 shrink-0">
+                                                            <CheckCircle2 size={14} /> Consistent Attendance Profile
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Metrics Grid */}
+                                                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                                                    <div className="p-6 rounded-2xl bg-[var(--background)] border border-[var(--card-border)] text-center">
+                                                        <span className="text-[9px] font-black uppercase tracking-wider text-primary">Attendance Rate</span>
+                                                        <h3 className="text-2xl font-black text-[var(--text-main)] mt-2">{attendance.percentage}%</h3>
+                                                        <p className="text-[8px] font-bold text-slate-400 mt-1">Target: 95.0%</p>
+                                                    </div>
+                                                    <div className="p-6 rounded-2xl bg-[var(--background)] border border-[var(--card-border)] text-center">
+                                                        <span className="text-[9px] font-black uppercase tracking-wider text-emerald-500">Present</span>
+                                                        <h3 className="text-2xl font-black text-emerald-500 mt-2">{attendance.present}</h3>
+                                                        <p className="text-[8px] font-bold text-slate-400 mt-1">Sessions</p>
+                                                    </div>
+                                                    <div className="p-6 rounded-2xl bg-[var(--background)] border border-[var(--card-border)] text-center">
+                                                        <span className="text-[9px] font-black uppercase tracking-wider text-rose-500">Absent</span>
+                                                        <h3 className="text-2xl font-black text-rose-500 mt-2">{attendance.absent}</h3>
+                                                        <p className="text-[8px] font-bold text-slate-400 mt-1">Unexcused</p>
+                                                    </div>
+                                                    <div className="p-6 rounded-2xl bg-[var(--background)] border border-[var(--card-border)] text-center">
+                                                        <span className="text-[9px] font-black uppercase tracking-wider text-amber-500">Tardy / Late</span>
+                                                        <h3 className="text-2xl font-black text-amber-500 mt-2">{attendance.late}</h3>
+                                                        <p className="text-[8px] font-bold text-slate-400 mt-1">Sessions</p>
+                                                    </div>
+                                                    <div className="p-6 rounded-2xl bg-[var(--background)] border border-[var(--card-border)] text-center col-span-2 md:col-span-1">
+                                                        <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Excused</span>
+                                                        <h3 className="text-2xl font-black text-slate-400 mt-2">{attendance.excused}</h3>
+                                                        <p className="text-[8px] font-bold text-slate-400 mt-1">Approved Leaves</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="space-y-12">
                                             {Object.values(performance[selectedYearIdx].terms).map((term: any) => (

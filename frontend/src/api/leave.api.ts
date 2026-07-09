@@ -1,4 +1,4 @@
-import { get, post } from './base.api';
+import { get, post, del } from './base.api';
 
 export interface LeaveApplication {
     id: number;
@@ -29,3 +29,4 @@ export const approveLeave = (id: number, remarks: string) => post<LeaveApplicati
 export const rejectLeave = (id: number, remarks: string) => post<LeaveApplication>(`/school/leaves/${id}/reject`, { remarks });
 export const getLeaveTypes = () => get<LeaveType[]>('/school/leaves/types');
 export const createLeaveType = (data: any) => post<LeaveType>('/school/leaves/types', data);
+export const deleteLeaveType = (id: number) => del<void>(`/school/leaves/types/${id}`);

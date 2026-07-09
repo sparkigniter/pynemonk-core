@@ -131,7 +131,7 @@ export class LMSService {
 
     async getSubmissionsForHomework(tenantId: number, homeworkId: number) {
         const query = `
-            SELECT sub.*, s.first_name, s.last_name, s.admission_number
+            SELECT sub.*, s.first_name, s.last_name, s.admission_no
             FROM school.lms_submission sub
             JOIN school.student s ON sub.student_id = s.id
             WHERE sub.homework_id = $1 AND sub.tenant_id = $2 AND sub.is_deleted = FALSE

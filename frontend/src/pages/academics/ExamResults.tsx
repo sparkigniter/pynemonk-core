@@ -17,6 +17,8 @@ export default function ExamResults() {
     const [marks, setMarks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedGradeId, setSelectedGradeId] = useState<number | null>(null);
+    const [selectedClassroomId, setSelectedClassroomId] = useState<number | null>(null);
 
     useEffect(() => {
         const loadData = async () => {
@@ -36,6 +38,30 @@ export default function ExamResults() {
         loadData();
     }, [id]);
 
+    // Extract unique grades from exam papers
+    const uniqueGrades: any[] = Array.from(new Map(
+        (exam?.papers || [])
+            .filter((p: any) => p.grade_id && p.grade_name)
+            .map((p: any) => [p.grade_id, { id: p.grade_id, name: p.grade_name }])
+    ).values());
+
+    // Default selection to first available grade
+    useEffect(() => {
+        if (exam && exam.papers && exam.papers.length > 0 && selectedGradeId === null) {
+            const firstPaper = exam.papers.find((p: any) => p.grade_id);
+            if (firstPaper) {
+                setSelectedGradeId(firstPaper.grade_id);
+            } else if (uniqueGrades.length > 0) {
+                setSelectedGradeId(uniqueGrades[0].id);
+            }
+        }
+    }, [exam, selectedGradeId, uniqueGrades]);
+
+    // Reset classroom when grade changes
+    useEffect(() => {
+        setSelectedClassroomId(null);
+    }, [selectedGradeId]);
+
     if (loading) return (
         <div className="flex flex-col items-center justify-center h-[80vh] gap-4">
             <Loader2 size={40} className="animate-spin text-indigo-600" />
@@ -45,11 +71,62 @@ export default function ExamResults() {
 
     if (!exam) return null;
 
-    // Filter students by search
-    const filteredStudents = exam.students?.filter((s: any) =>
-        `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.admission_no.toLowerCase().includes(searchQuery.toLowerCase())
+    // Filter students by selected Grade
+    const filteredStudentsByGrade = exam.students?.filter((s: any) => 
+        selectedGradeId ? s.grade_id === selectedGradeId : true
     ) || [];
+
+    // Extract unique classrooms under the selected Grade
+    const uniqueClassrooms: any[] = Array.from(new Map(
+        filteredStudentsByGrade
+            .filter((s: any) => s.classroom_id)
+            .map((s: any) => [s.classroom_id, { id: s.classroom_id, name: s.classroom_name, section: s.classroom_section }])
+    ).values());
+
+    // Filter papers by selected Grade
+    const filteredPapers = exam.papers?.filter((p: any) => 
+        selectedGradeId ? p.grade_id === selectedGradeId : true
+    ) || [];
+
+    // Filter students by Search and Class
+    const filteredStudents = filteredStudentsByGrade.filter((s: any) => {
+        const matchesClass = selectedClassroomId ? s.classroom_id === selectedClassroomId : true;
+        const matchesSearch = searchQuery ? (
+            `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.admission_no.toLowerCase().includes(searchQuery.toLowerCase())
+        ) : true;
+        return matchesClass && matchesSearch;
+    }) || [];
+
+    // Calculate dynamic stats
+    let classAverage = 0;
+    let topPerformer = 0;
+
+    if (filteredStudents.length > 0 && filteredPapers.length > 0) {
+        let studentPercentages: number[] = [];
+        filteredStudents.forEach((student: any) => {
+            let studentObtained = 0;
+            let studentMax = 0;
+            filteredPapers.forEach((paper: any) => {
+                const studentMark = marks.find(m => m.student_id === student.student_id && m.paper_id === paper.id);
+                if (studentMark && !studentMark.is_absent) {
+                    studentObtained += parseFloat(studentMark.marks_obtained);
+                    studentMax += parseFloat(paper.max_marks);
+                } else if (!studentMark || studentMark.is_absent) {
+                    studentMax += parseFloat(paper.max_marks);
+                }
+            });
+            if (studentMax > 0) {
+                studentPercentages.push((studentObtained / studentMax) * 100);
+            }
+        });
+
+        if (studentPercentages.length > 0) {
+            const sum = studentPercentages.reduce((a, b) => a + b, 0);
+            classAverage = sum / studentPercentages.length;
+            topPerformer = Math.max(...studentPercentages);
+        }
+    }
 
     return (
         <div className="p-10 bg-[#FBFBFE] min-h-screen">
@@ -86,8 +163,8 @@ export default function ExamResults() {
             </header>
 
             {/* Controls */}
-            <div className="bg-[var(--card-bg)] p-8 rounded-[2.5rem] border border-[var(--card-border)] shadow-sm mb-10 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="relative flex-1 max-w-md w-full">
+            <div className="bg-[var(--card-bg)] p-8 rounded-[2.5rem] border border-[var(--card-border)] shadow-sm mb-10 flex flex-col xl:flex-row items-center justify-between gap-6">
+                <div className="relative flex-1 max-w-sm w-full">
                     <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                     <input
                         type="text"
@@ -97,15 +174,49 @@ export default function ExamResults() {
                         className="w-full pl-14 pr-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all"
                     />
                 </div>
-                <div className="flex items-center gap-6">
+
+                {/* Grade & Class Filters */}
+                <div className="flex flex-col sm:flex-row items-center gap-6 w-full xl:w-auto">
+                    {uniqueGrades.length > 0 && (
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                            <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest whitespace-nowrap">Grade</span>
+                            <select
+                                value={selectedGradeId || ''}
+                                onChange={(e) => setSelectedGradeId(e.target.value ? parseInt(e.target.value) : null)}
+                                className="w-full sm:w-48 px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-black text-[var(--text-main)] focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all cursor-pointer hover:bg-slate-100/50"
+                            >
+                                {uniqueGrades.map((g: any) => (
+                                    <option key={g.id} value={g.id}>{g.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest whitespace-nowrap">Class</span>
+                        <select
+                            value={selectedClassroomId || ''}
+                            onChange={(e) => setSelectedClassroomId(e.target.value ? parseInt(e.target.value) : null)}
+                            className="w-full sm:w-48 px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-black text-[var(--text-main)] focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all cursor-pointer hover:bg-slate-100/50"
+                        >
+                            <option value="">All Classes</option>
+                            {uniqueClassrooms.map((c: any) => (
+                                <option key={c.id} value={c.id}>{c.name} ({c.section})</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {/* Stats */}
+                <div className="flex items-center gap-6 self-end xl:self-auto">
                     <div className="text-right">
                         <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Class Average</p>
-                        <p className="text-xl font-black text-indigo-600">84.2%</p>
+                        <p className="text-xl font-black text-indigo-600">{classAverage.toFixed(1)}%</p>
                     </div>
                     <div className="w-px h-10 bg-slate-100" />
                     <div className="text-right">
                         <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Top Performer</p>
-                        <p className="text-xl font-black text-emerald-600">98.5%</p>
+                        <p className="text-xl font-black text-emerald-600">{topPerformer.toFixed(1)}%</p>
                     </div>
                 </div>
             </div>
@@ -117,7 +228,7 @@ export default function ExamResults() {
                         <thead>
                             <tr className="bg-slate-50/50">
                                 <th className="px-8 py-6 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest border-b border-[var(--card-border)]">Student Info</th>
-                                {exam.papers?.map((paper: any) => (
+                                {filteredPapers.map((paper: any) => (
                                     <th key={paper.id} className="px-6 py-6 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest border-b border-[var(--card-border)] text-center">
                                         {paper.subject_name}
                                         <span className="block opacity-50 font-bold mt-1">/{paper.max_marks}</span>
@@ -145,17 +256,15 @@ export default function ExamResults() {
                                                 </div>
                                             </div>
                                         </td>
-                                        {exam.papers?.map((paper: any) => {
+                                        {filteredPapers.map((paper: any) => {
                                             const studentMark = marks.find(m => m.student_id === student.student_id && m.paper_id === paper.id);
                                             const score = studentMark ? (studentMark.is_absent ? 'AB' : studentMark.marks_obtained) : '-';
 
                                             if (studentMark && !studentMark.is_absent) {
                                                 totalObtained += parseFloat(studentMark.marks_obtained);
-                                                totalMax += paper.max_marks;
+                                                totalMax += parseFloat(paper.max_marks);
                                             } else if (!studentMark || studentMark.is_absent) {
-                                                // If absent or not marked, treat as 0 for total but don't add to denominator? 
-                                                // Actually usually schools treat AB as 0.
-                                                totalMax += paper.max_marks;
+                                                totalMax += parseFloat(paper.max_marks);
                                             }
 
                                             const isFailing = studentMark && !studentMark.is_absent && studentMark.marks_obtained < paper.passing_marks;
@@ -171,7 +280,7 @@ export default function ExamResults() {
                                         <td className="px-8 py-6 text-right">
                                             <div className="inline-flex flex-col items-end">
                                                 <span className="text-sm font-black text-indigo-600">
-                                                    {((totalObtained / totalMax) * 100).toFixed(1)}%
+                                                    {totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(1) : '0.0'}%
                                                 </span>
                                                 <span className="text-[9px] font-black uppercase text-slate-300">
                                                     {totalObtained}/{totalMax}
